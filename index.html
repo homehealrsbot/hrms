@@ -6,6 +6,7 @@
 <title>نظام إدارة الموارد البشرية | HRMS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --pine:#0F4C3F; --pine-deep:#0A342C; --pine-soft:#E7F0EC;
@@ -204,22 +205,22 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="login-form-wrap">
     <div class="login-form">
-      <h2>تسجيل الدخول</h2>
-      <div class="sub">اختر نوع الحساب ثم أدخل بياناتك</div>
+      <h2 id="authTitle">تسجيل الدخول</h2>
+      <div class="sub" id="authSub">أدخل بريد العمل وكلمة المرور</div>
       <div class="role-switch">
-        <button id="roleAdmin" class="active" onclick="setRole('admin')">دخول الأدمن</button>
-        <button id="roleEmp" onclick="setRole('emp')">دخول الموظف</button>
+        <button id="modeLogin" class="active" onclick="setAuthMode('login')">تسجيل الدخول</button>
+        <button id="modeSignup" onclick="setAuthMode('signup')">تفعيل حساب جديد</button>
       </div>
       <div class="field">
         <label>البريد الإلكتروني</label>
-        <input id="loginEmail" type="email" placeholder="admin@company.com">
+        <input id="loginEmail" type="email" placeholder="name@company.com">
       </div>
       <div class="field">
         <label>كلمة المرور</label>
-        <input id="loginPass" type="password" placeholder="••••••••">
+        <input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
       </div>
-      <button class="btn btn-primary btn-block" onclick="doLogin()">دخول</button>
-      <div class="login-note" id="loginNote">تجربة الأدمن: <b>admin@company.com</b> / كلمة المرور: <b>123456</b></div>
+      <button class="btn btn-primary btn-block" id="authBtn" onclick="doAuth()">دخول</button>
+      <div class="login-note" id="loginNote">أول حساب يتم تسجيله في النظام يصبح <b>حساب مدير النظام</b> تلقائياً. الموظفون يفعّلون حساباتهم بعد إضافتهم من الإدارة بنفس بريدهم المسجل.</div>
     </div>
   </div>
 </div>
@@ -476,7 +477,7 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page" id="page-files">
   <div class="page-head">
     <div><h1>إدارة الملفات</h1><p>جميع الملفات المرفوعة في النظام — مع إمكانية إنشاء المجلدات وتعديل الصلاحيات</p></div>
-    <div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="toast('تم إنشاء مجلد جديد')">+ مجلد جديد</button><button class="btn btn-primary" onclick="toast('تم رفع الملف بنجاح')">⬆ رفع ملف</button></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="uploadGeneralFile()">⬆ رفع ملف</button></div>
   </div>
   <div class="grid-4" style="margin-bottom:18px" id="fileCats"></div>
   <div class="card">
@@ -788,155 +789,169 @@ tbody tr:hover{background:#FAFCFB}
 
 <div class="toast" id="toast"></div>
 <script>
-/* ================= البيانات التجريبية ================= */
+/* ================= الاتصال بقاعدة البيانات ================= */
+const SUPABASE_URL = 'https://xvchtlxxxfmhonvgoiul.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y2h0bHh4eGZtaG9udmdvaXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTYwOTUsImV4cCI6MjA5OTYzMjA5NX0.tZai7Ivqu9B_887AkJCj63M3-5NMWkS0_2Drswq8mEI';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ================= الحالة العامة ================= */
 const today = new Date();
-const D = (offset)=>{const d=new Date(today);d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
+const D = o=>{const d=new Date(today);d.setDate(d.getDate()+o);return d.toISOString().slice(0,10)};
 const DEPTS = ['التسويق','التقنية','المالية','العمليات','B2B'];
-const MEETINGS = ['اجتماع التسويق','اجتماع التقنية','اجتماع المالية','اجتماع العمليات','اجتماع B2B'];
+let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[];
+let empById={},empByName={},me=null,currentEmp=null;
 
-let employees = [
- {num:'EMP-001',name:'أحمد محمد سعد العتيبي',nat:'سعودي',dept:'التقنية',job:'مطوّر برمجيات',type:'حضوري',work:'كامل',status:'نشط',email:'ahmad@company.com',phone:'0551112222',city:'الرياض',hire:D(-400),probEnd:D(-310),salary:12000,currency:'ريال سعودي',contractDur:'سنة',gender:'ذكر'},
- {num:'EMP-002',name:'نورة خالد عبدالله الشمري',nat:'سعودية',dept:'التسويق',job:'أخصائية تسويق',type:'عن بعد',work:'كامل',status:'نشط',email:'noura@company.com',phone:'0553334444',city:'جدة',hire:D(-200),probEnd:D(6),salary:9500,currency:'ريال سعودي',contractDur:'سنة',gender:'أنثى'},
- {num:'EMP-003',name:'فهد سلطان ناصر القحطاني',nat:'سعودي',dept:'المالية',job:'محاسب أول',type:'حضوري',work:'كامل',status:'نشط',email:'fahad@company.com',phone:'0555556666',city:'الدمام',hire:D(-700),probEnd:D(-610),salary:11000,currency:'ريال سعودي',contractDur:'سنتان',gender:'ذكر'},
- {num:'EMP-004',name:'سارة عبدالعزيز فهد الدوسري',nat:'سعودية',dept:'العمليات',job:'منسقة عمليات',type:'حضوري',work:'جزئي',status:'نشط',email:'sara@company.com',phone:'0557778888',city:'الدمام',hire:D(-90),probEnd:D(-1),salary:7000,currency:'ريال سعودي',contractDur:'سنة',gender:'أنثى'},
- {num:'EMP-005',name:'عمر يوسف حمد المطيري',nat:'سعودي',dept:'B2B',job:'مدير حسابات',type:'عن بعد',work:'كامل',status:'غير نشط',email:'omar@company.com',phone:'0559990000',city:'الرياض',hire:D(-500),probEnd:D(-410),salary:13000,currency:'ريال سعودي',contractDur:'سنة',gender:'ذكر'},
-];
-
-let contracts = [
- {emp:'أحمد محمد سعد العتيبي',start:D(-340),end:D(25),dur:'سنة',versions:1},
- {emp:'نورة خالد عبدالله الشمري',start:D(-200),end:D(165),dur:'سنة',versions:1},
- {emp:'فهد سلطان ناصر القحطاني',start:D(-320),end:D(6),dur:'سنة',versions:2},
- {emp:'عمر يوسف حمد المطيري',start:D(-500),end:D(-10),dur:'سنة',versions:1},
-];
-
-let leaves = [
- {emp:'أحمد محمد سعد العتيبي',dept:'التقنية',job:'مطوّر برمجيات',type:'سنوية',req:D(-40),start:D(-30),end:D(-24),days:7,reason:'',status:'تمت الموافقة',head:'م. خالد الحربي',manager:'أ. سعود العنزي',notes:''},
- {emp:'أحمد محمد سعد العتيبي',dept:'التقنية',job:'مطوّر برمجيات',type:'سنوية',req:D(-9),start:D(-2),end:D(8),days:11,reason:'',status:'تمت الموافقة',head:'م. خالد الحربي',manager:'أ. سعود العنزي',notes:'إجازة حالية'},
- {emp:'نورة خالد عبدالله الشمري',dept:'التسويق',job:'أخصائية تسويق',type:'مرضية',req:D(-15),start:D(-14),end:D(-12),days:3,reason:'',status:'تمت الموافقة',head:'أ. منى السبيعي',manager:'أ. سعود العنزي',notes:''},
- {emp:'فهد سلطان ناصر القحطاني',dept:'المالية',job:'محاسب أول',type:'خاصة',req:D(-3),start:D(4),end:D(6),days:3,reason:'ظرف عائلي',status:'بانتظار الموافقة',head:'أ. بدر الرشيد',manager:'أ. سعود العنزي',notes:''},
- {emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',job:'منسقة عمليات',type:'سنوية',req:D(-1),start:D(10),end:D(14),days:5,reason:'',status:'بانتظار الموافقة',head:'أ. ماجد الغامدي',manager:'أ. سعود العنزي',notes:''},
- {emp:'فهد سلطان ناصر القحطاني',dept:'المالية',job:'محاسب أول',type:'سنوية',req:D(-120),start:D(-110),end:D(-94),days:17,reason:'',status:'تمت الموافقة',head:'أ. بدر الرشيد',manager:'أ. سعود العنزي',notes:''},
- {emp:'نورة خالد عبدالله الشمري',dept:'التسويق',job:'أخصائية تسويق',type:'بدون راتب',req:D(-60),start:D(-55),end:D(-53),days:3,reason:'',status:'تم الرفض',head:'أ. منى السبيعي',manager:'أ. سعود العنزي',notes:'ضغط عمل في الحملة'},
-];
-
-let meetAtt = [
- {meet:'اجتماع التقنية',dept:'التقنية',title:'مراجعة السبرنت',goal:'متابعة إنجاز المهام',date:D(-2),time:'10:00',emp:'أحمد محمد سعد العتيبي',notes:''},
- {meet:'اجتماع التسويق',dept:'التسويق',title:'خطة الربع الثالث',goal:'اعتماد الحملات',date:D(-1),time:'11:30',emp:'نورة خالد عبدالله الشمري',notes:''},
- {meet:'اجتماع المالية',dept:'المالية',title:'إقفال الشهر',goal:'مراجعة الميزانية',date:D(-3),time:'09:00',emp:'فهد سلطان ناصر القحطاني',notes:''},
-];
-let meetAbs = [
- {meet:'اجتماع العمليات',dept:'العمليات',title:'تحسين الإجراءات',goal:'رفع الكفاءة',date:D(-2),time:'13:00',emp:'سارة عبدالعزيز فهد الدوسري',notes:'بدون عذر'},
-];
-let siteAtt = [
- {date:D(-1),in:'08:02',out:'16:05',emp:'أحمد محمد سعد العتيبي',dept:'التقنية',notes:''},
- {date:D(-1),in:'08:15',out:'16:00',emp:'فهد سلطان ناصر القحطاني',dept:'المالية',notes:''},
- {date:D(0),in:'07:58',out:'—',emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',notes:''},
-];
-let siteAbs = [
- {date:D(-6),emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',reason:'ظرف طارئ',sick:'لا',notes:''},
- {date:D(-4),emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',reason:'مرض',sick:'نعم',notes:''},
- {date:D(-2),emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',reason:'بدون عذر',sick:'لا',notes:''},
- {date:D(-1),emp:'سارة عبدالعزيز فهد الدوسري',dept:'العمليات',reason:'بدون عذر',sick:'لا',notes:''},
-];
-
-let permits = [
- {emp:'نورة خالد عبدالله الشمري',date:D(1),time:'13:30',type:'مقر العمل',status:'بانتظار الموافقة',notes:'موعد طبي'},
- {emp:'أحمد محمد سعد العتيبي',date:D(-5),time:'10:00',type:'اجتماع',status:'معتمد',notes:''},
-];
-
-let policies = [
- {name:'سياسة الموظفين',status:'متاح للتنزيل',updated:D(-20),ver:3},
- {name:'سياسة العمل',status:'متاح للتنزيل',updated:D(-45),ver:2},
- {name:'سياسة آلية التسليم والاستلام',status:'قيد العرض',updated:D(-5),ver:1},
- {name:'سياسة الأخصائيين',status:'متاح للتنزيل',updated:D(-60),ver:1},
- {name:'سياسة استخدام العميل',status:'قيد العرض',updated:D(-2),ver:2},
-];
-
-let filesData = [
- {name:'هوية_EMP-001.pdf',type:'PDF',size:'1.2 MB',up:D(-100),by:'مدير النظام',last:D(-100),src:'ملفات الموظفين',cat:'ملفات الموظفين'},
- {name:'عقد_أحمد_العتيبي.pdf',type:'PDF',size:'800 KB',up:D(-340),by:'مدير النظام',last:D(-30),src:'عقود الموظفين',cat:'عقود الموظفين'},
- {name:'عرض_وظيفي_نورة.pdf',type:'PDF',size:'450 KB',up:D(-200),by:'مدير النظام',last:D(-200),src:'العروض الوظيفية',cat:'العروض الوظيفية'},
- {name:'طلب_إجازة_فهد.pdf',type:'PDF',size:'300 KB',up:D(-3),by:'فهد القحطاني',last:D(-3),src:'طلبات الإجازة',cat:'طلبات الإجازة'},
- {name:'تقرير_الحضور_الشهري.xlsx',type:'Excel',size:'95 KB',up:D(-15),by:'النظام (تلقائي)',last:D(-15),src:'التقارير',cat:'التقارير'},
- {name:'السيرة_الذاتية_سارة.pdf',type:'PDF',size:'620 KB',up:D(-90),by:'مدير النظام',last:D(-90),src:'ملفات الموظفين',cat:'ملفات الموظفين'},
-];
-
-let formsData = [
- {name:'نموذج طلب إجازة',goal:'تقديم طلبات الإجازات الرسمية',date:D(-30)},
- {name:'نموذج تسليم واستلام عهدة',goal:'توثيق تسليم الأجهزة والعهد',date:D(-80)},
-];
-
-/* ================= أدوات مساعدة ================= */
 const $=id=>document.getElementById(id);
 const fmt=d=>d? new Date(d).toLocaleDateString('ar-SA-u-nu-latn',{year:'numeric',month:'short',day:'numeric'}):'—';
+const tfmt=t=>t?String(t).slice(0,5):'—';
 const daysTo=d=>Math.ceil((new Date(d)-today)/864e5);
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2600)}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200)}
 function openModal(id){$(id).classList.add('on')}
 function closeModal(id){$(id).classList.remove('on')}
 document.querySelectorAll('.modal-back').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')}));
+const err=e=>{console.error(e);toast('خطأ: '+(e.message||e));};
 
-/* ================= تسجيل الدخول ================= */
-let role='admin';
-function setRole(r){role=r;$('roleAdmin').classList.toggle('active',r==='admin');$('roleEmp').classList.toggle('active',r==='emp');
- $('loginNote').innerHTML = r==='admin' ? 'تجربة الأدمن: <b>admin@company.com</b> / كلمة المرور: <b>123456</b>' : 'تجربة الموظف: <b>ahmad@company.com</b> / كلمة المرور: <b>123456</b>'}
-let currentEmp=null;
-function doLogin(){
- const em=$('loginEmail').value.trim(), pw=$('loginPass').value.trim();
- if(role==='emp'){
-   const e=employees.find(x=>x.email===em);
-   if(!e||pw!=='123456'){toast('بيانات الدخول غير صحيحة — جرّب ahmad@company.com / 123456');return}
-   currentEmp=e;$('loginScreen').style.display='none';$('empApp').classList.add('on');initEmpPortal();return;
- }
- if(em!=='admin@company.com'||pw!=='123456'){toast('بيانات الدخول غير صحيحة');return}
- $('loginScreen').style.display='none';$('app').classList.add('on');initAll();
+/* ================= المصادقة ================= */
+let authMode='login';
+function setAuthMode(m){authMode=m;
+ $('modeLogin').classList.toggle('active',m==='login');$('modeSignup').classList.toggle('active',m==='signup');
+ $('authTitle').textContent=m==='login'?'تسجيل الدخول':'تفعيل حساب جديد';
+ $('authBtn').textContent=m==='login'?'دخول':'إنشاء الحساب';
+ $('authSub').textContent=m==='login'?'أدخل بريد العمل وكلمة المرور':'أنشئ كلمة مرور لبريدك المسجل لدى الإدارة';
 }
-function logout(){location.reload()}
+async function doAuth(){
+ const email=$('loginEmail').value.trim(), password=$('loginPass').value.trim();
+ if(!email||!password){toast('أدخل البريد وكلمة المرور');return}
+ if(password.length<6){toast('كلمة المرور 6 أحرف على الأقل');return}
+ $('authBtn').disabled=true;$('authBtn').textContent='لحظات...';
+ try{
+  let res;
+  if(authMode==='signup'){
+    res=await sb.auth.signUp({email,password});
+    if(res.error)throw res.error;
+    if(!res.data.session){toast('تم إنشاء الحساب — فعّل بريدك من رسالة التأكيد ثم سجّل الدخول');resetAuthBtn();return}
+  }else{
+    res=await sb.auth.signInWithPassword({email,password});
+    if(res.error)throw res.error;
+  }
+  await enterApp();
+ }catch(e){
+  toast(e.message==='Invalid login credentials'?'بيانات الدخول غير صحيحة':'خطأ: '+e.message);
+ }
+ resetAuthBtn();
+}
+function resetAuthBtn(){$('authBtn').disabled=false;$('authBtn').textContent=authMode==='login'?'دخول':'إنشاء الحساب'}
+async function enterApp(){
+ const {data:{user}}=await sb.auth.getUser();
+ if(!user)return;
+ const {data:profile,error}=await sb.from('employees').select('*').eq('auth_id',user.id).maybeSingle();
+ if(error){err(error);return}
+ if(!profile){toast('لا يوجد ملف موظف مرتبط بهذا البريد — تواصل مع الإدارة لإضافتك أولاً');await sb.auth.signOut();return}
+ me=mapEmp(profile);
+ $('loginScreen').style.display='none';
+ await loadAll();
+ if(me.role==='admin'){$('app').classList.add('on');initAll()}
+ else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
+}
+async function logout(){await sb.auth.signOut();location.reload()}
+// جلسة محفوظة؟ دخول تلقائي
+sb.auth.getSession().then(({data:{session}})=>{if(session)enterApp()});
+
+/* ================= تحميل البيانات من قاعدة البيانات ================= */
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id}}
+const empName=id=>empById[id]?empById[id].name:'—';
+const empDept=id=>empById[id]?empById[id].dept:'—';
+
+async function loadAll(){
+ const [E,C,L,M,S,P,PL,FL,FM]=await Promise.all([
+  sb.from('employees').select('*').order('created_at'),
+  sb.from('contracts').select('*').order('version'),
+  sb.from('leaves').select('*').order('created_at',{ascending:false}),
+  sb.from('meeting_records').select('*').order('meeting_date',{ascending:false}),
+  sb.from('site_attendance').select('*').order('record_date',{ascending:false}),
+  sb.from('permits').select('*').order('permit_date',{ascending:false}),
+  sb.from('policies').select('*').order('name'),
+  sb.from('files_registry').select('*').order('uploaded_at',{ascending:false}),
+  sb.from('forms').select('*').order('created_at',{ascending:false}),
+ ]);
+ for(const r of [E,C,L,M,S,P,PL,FL,FM]) if(r.error){err(r.error);}
+ employees=(E.data||[]).map(mapEmp);
+ empById={};empByName={};employees.forEach(e=>{empById[e.id]=e;empByName[e.name]=e});
+ // العقود: تجميع النسخ لكل موظف — الأحدث هو الساري
+ const byEmp={};
+ (C.data||[]).forEach(r=>{(byEmp[r.employee_id]=byEmp[r.employee_id]||[]).push(r)});
+ contracts=Object.entries(byEmp).map(([eid,rows])=>{rows.sort((a,b)=>a.version-b.version);const cur=rows[rows.length-1];
+  return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,history:rows}});
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,notes:r.notes}));
+ meetAtt=[];meetAbs=[];
+ (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
+ siteAtt=[];siteAbs=[];
+ (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
+ policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
+ filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,path:r.storage_path}));
+ formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url}));
+}
+async function refresh(){await loadAll();if(me.role==='admin')renderAll();else epRenderAll()}
+
+/* ================= رفع الملفات الفعلي ================= */
+async function uploadToStorage(file,folder){
+ const path=folder+'/'+Date.now()+'_'+file.name.replace(/[^\w.\-\u0600-\u06FF]/g,'_');
+ const {error}=await sb.storage.from('hrms-files').upload(path,file);
+ if(error)throw error;
+ return path;
+}
+async function registerFile(file,category,source,path){
+ await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
+}
+function pickFile(accept){return new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept=accept||'';i.onchange=()=>res(i.files[0]||null);i.click()})}
+async function openStoredFile(path){
+ if(!path){toast('لا يوجد ملف مرفوع');return}
+ const {data,error}=await sb.storage.from('hrms-files').createSignedUrl(path,3600);
+ if(error){err(error);return}
+ window.open(data.signedUrl,'_blank');
+}
 
 /* ================= التنقل ================= */
 const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج'};
-document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
-function go(p){
- document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
- document.querySelectorAll('.page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
- $('topTitle').textContent=PAGE_TITLES[p]||'';window.scrollTo({top:0});
-}
+document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
+function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
+ document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
+ $('topTitle').textContent=PAGE_TITLES[p]||'';window.scrollTo({top:0})}
 
 /* ================= التنبيهات التلقائية ================= */
 function buildAlerts(){
  const A=[];
  contracts.forEach(c=>{const n=daysTo(c.end);
-   if(n>=0&&n<=30)A.push({t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍'});
- });
- employees.forEach(e=>{const n=daysTo(e.probEnd);
-   if(n>=0&&n<=14)A.push({t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳'});
- });
+  if(n>=0&&n<=30)A.push({t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍'})});
+ employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
+  if(n>=0&&n<=14)A.push({t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳'})});
  leaves.forEach(l=>{
-   if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴'});
-   if(l.status==='بانتظار الموافقة')A.push({t:'طلب إجازة جديد',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار الاعتماد`,k:'sand',ic:'🌴'});
- });
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴'});
+  if(l.status==='بانتظار الموافقة')A.push({t:'طلب إجازة جديد',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار الاعتماد`,k:'sand',ic:'🌴'})});
  permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪'})});
  employees.forEach(e=>{const b=balance(e.name);
-   if(b.annualLeft<=5&&b.annualLeft>0)A.push({t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉'});
-   if(b.sickLeft<=5&&b.sickLeft>0)A.push({t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺'});
-   if(b.annualLeft<=0)A.push({t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔'});
- });
- const absCount={};siteAbs.forEach(a=>absCount[a.emp]=(absCount[a.emp]||0)+1);
- Object.entries(absCount).forEach(([emp,n])=>{if(n>3)A.push({t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫'})});
+  if(b.annualLeft<=5&&b.annualLeft>0)A.push({t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉'});
+  if(b.sickLeft<=5&&b.sickLeft>0)A.push({t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺'});
+  if(b.annualUsed>0&&b.annualLeft<=0)A.push({t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔'})});
+ const monthAbs={};const mNow=D(0).slice(0,7);
+ siteAbs.filter(a=>String(a.date).startsWith(mNow)).forEach(a=>monthAbs[a.emp]=(monthAbs[a.emp]||0)+1);
+ Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫'})});
  policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§'})});
  return A;
 }
 function renderAlerts(){
  const A=buildAlerts();$('alertCount').textContent=A.length;
  $('alertsList').innerHTML=A.length?A.map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>';
- $('dashAlerts').innerHTML=A.slice(0,4).map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join('');
+ $('dashAlerts').innerHTML=A.slice(0,4).map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join('')||'<div class="empty">لا توجد تنبيهات</div>';
 }
 
 /* ================= لوحة التحكم ================= */
 function renderDashboard(){
  const onLeave=leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0).map(l=>l.emp);
- const probation=employees.filter(e=>daysTo(e.probEnd)>=0).length;
+ const probation=employees.filter(e=>e.probEnd&&daysTo(e.probEnd)>=0).length;
  const exp30=contracts.filter(c=>{const n=daysTo(c.end);return n>=0&&n<=30}).length;
- const monthAbs=siteAbs.length;
+ const mNow=D(0).slice(0,7);
  const S=[
   {n:employees.length,l:'إجمالي عدد الموظفين',k:''},
   {n:employees.filter(e=>e.status==='نشط').length,l:'الموظفون النشطون',k:'ok'},
@@ -946,7 +961,7 @@ function renderDashboard(){
   {n:exp30,l:'عقود تنتهي خلال 30 يوم',k:'danger'},
   {n:leaves.filter(l=>l.status==='بانتظار الموافقة').length,l:'طلبات إجازات جديدة',k:'sand'},
   {n:permits.filter(p=>p.status==='بانتظار الموافقة').length,l:'طلبات استئذان جديدة',k:'sand'},
-  {n:monthAbs,l:'غيابات هذا الشهر',k:'danger'},
+  {n:siteAbs.filter(a=>String(a.date).startsWith(mNow)).length,l:'غيابات هذا الشهر',k:'danger'},
  ];
  $('dashStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
  $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${c.emp}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد عقود قريبة الانتهاء</td></tr>';
@@ -954,50 +969,68 @@ function renderDashboard(){
 
 /* ================= السياسات ================= */
 function renderPolicies(){
- $('policiesList').innerHTML=policies.map((p,i)=>`
+ $('policiesList').innerHTML=policies.length?policies.map(p=>`
   <div class="policy"><div class="pic">§</div>
    <div class="pinfo"><b>${p.name}</b><small>آخر تحديث: ${fmt(p.updated)} — الإصدار ${p.ver} — <span class="tag ${p.status==='متاح للتنزيل'?'ok':'sand'}">${p.status}</span></small></div>
    <div class="actions">
-     <button class="btn btn-ghost btn-sm" onclick="toast('عرض ${p.name}')">عرض</button>
-     <button class="btn btn-ghost btn-sm" onclick="toast('جاري تحميل ${p.name}')">تحميل</button>
-     <button class="btn btn-sand btn-sm" onclick="toast('فتح وضع التعديل')">تعديل</button>
-     <button class="btn btn-ok btn-sm" onclick="policyNewVer(${i})">رفع إصدار جديد</button>
-     <button class="btn btn-danger btn-sm" onclick="delPolicy(${i})">حذف</button>
-   </div></div>`).join('');
- $('pName').innerHTML=policies.map(p=>`<option>${p.name}</option>`).join('');
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">عرض</button>
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">تحميل</button>
+     <button class="btn btn-sand btn-sm" onclick="togglePolicyStatus('${p.id}','${p.status}')">${p.status==='متاح للتنزيل'?'جعلها قيد العرض':'إتاحة للتنزيل'}</button>
+     <button class="btn btn-ok btn-sm" onclick="policyNewVer('${p.id}')">رفع إصدار جديد</button>
+     <button class="btn btn-danger btn-sm" onclick="delPolicy('${p.id}')">حذف</button>
+   </div></div>`).join(''):'<div class="empty">لا توجد سياسات — نفّذ سكربت قاعدة البيانات أولاً</div>';
+ $('pName').innerHTML=policies.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
 }
-function policyNewVer(i){policies[i].ver++;policies[i].updated=D(0);policies[i].status='قيد العرض';renderPolicies();renderAlerts();toast('تم رفع إصدار جديد للسياسة')}
-function delPolicy(i){if(confirm('حذف هذه السياسة؟')){policies.splice(i,1);renderPolicies();renderAlerts();toast('تم الحذف')}}
-function uploadPolicy(){const n=$('pName').value;const p=policies.find(x=>x.name===n);if(p){p.ver++;p.updated=D(0);p.status='قيد العرض'}closeModal('policyModal');renderPolicies();renderAlerts();toast('تم رفع الإصدار الجديد')}
+async function policyNewVer(id){
+ try{const f=await pickFile('.pdf,.doc,.docx');if(!f)return;
+  toast('جاري رفع الملف...');
+  const path=await uploadToStorage(f,'policies');
+  const p=policies.find(x=>x.id===id);
+  const {error}=await sb.from('policies').update({version:p.ver+1,status:'قيد العرض',file_url:path,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)throw error;
+  await registerFile(f,'التقارير','الأنظمة والسياسات',path).catch(()=>{});
+  await refresh();toast('تم رفع الإصدار الجديد');
+ }catch(e){err(e)}
+}
+async function togglePolicyStatus(id,cur){
+ const {error}=await sb.from('policies').update({status:cur==='متاح للتنزيل'?'قيد العرض':'متاح للتنزيل'}).eq('id',id);
+ if(error){err(error);return} await refresh();toast('تم تحديث حالة السياسة');
+}
+async function delPolicy(id){if(!confirm('حذف هذه السياسة؟'))return;
+ const {error}=await sb.from('policies').delete().eq('id',id);
+ if(error){err(error);return} await refresh();toast('تم الحذف')}
+async function uploadPolicy(){await policyNewVer($('pName').value);closeModal('policyModal')}
 
 /* ================= الموظفون ================= */
-let editIndex=-1;
+let editId=null;
 function fillDeptFilter(){const opts=DEPTS.map(d=>`<option>${d}</option>`).join('');$('fEmpDept').innerHTML='<option value="">القسم: الكل</option>'+opts;$('flvDept').innerHTML='<option value="">القسم: الكل</option>'+opts}
 function renderEmployees(){
  const q=$('fEmpNum').value.trim(),st=$('fEmpStatus').value,tp=$('fEmpType').value,dp=$('fEmpDept').value;
- const rows=employees.filter(e=>(!q||e.num.includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
- $('empTbody').innerHTML=rows.length?rows.map((e)=>{const i=employees.indexOf(e);return `<tr>
-  <td><b>${e.num}</b></td><td>${e.name}</td><td>${e.dept}</td><td>${e.job}</td><td>${e.type}</td><td>${e.work}</td>
-  <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td>
-  <td><button class="btn btn-sand btn-sm" onclick="editEmp(${i})">تعديل البيانات</button></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد نتائج مطابقة</td></tr>';
+ const rows=employees.filter(e=>(!q||(e.num||'').includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
+ $('empTbody').innerHTML=rows.length?rows.map(e=>`<tr>
+  <td><b>${e.num}</b></td><td>${e.name}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td>${e.work||'—'}</td>
+  <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span>${e.role==='admin'?' <span class="tag info">أدمن</span>':''}${e.auth_id?'':' <span class="tag gray">لم يفعّل حسابه</span>'}</td>
+  <td><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
  fillEmpSelects();
 }
-function fillEmpSelects(){const opts=employees.map(e=>`<option>${e.name}</option>`).join('');
- ['cEmp','lvEmp','maEmp','mbEmp','saEmp','sbEmp','prEmp'].forEach(id=>{if($(id))$(id).innerHTML=opts});
- syncLeaveEmp();
-}
-function openEmpModal(){editIndex=-1;$('empModalTitle').textContent='إضافة موظف جديد';
+function fillEmpSelects(){const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+ ['cEmp','lvEmp','maEmp','mbEmp','saEmp','sbEmp','prEmp'].forEach(id=>{if($(id))$(id).innerHTML=opts});syncLeaveEmp()}
+function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة موظف جديد';
  ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur'].forEach(id=>$(id).value='');
  openModal('empModal')}
-function editEmp(i){editIndex=i;const e=employees[i];$('empModalTitle').textContent='تعديل بيانات الموظف';
- $('eNum').value=e.num;$('eName').value=e.name;$('eNat').value=e.nat;$('eCity').value=e.city;$('eEmail').value=e.email;$('ePhone').value=e.phone;$('eGender').value=e.gender;
- $('eHire').value=e.hire;$('eProbEnd').value=e.probEnd;$('eJob').value=e.job;$('eDept').value=e.dept;$('eType').value=e.type;$('eSalary').value=e.salary;$('eCurrency').value=e.currency;$('eWork').value=e.work;$('eContractDur').value=e.contractDur;$('eStatus').value=e.status;
+function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textContent='تعديل بيانات الموظف';
+ $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
+ $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';
  openModal('empModal')}
-function saveEmployee(){
- if(!$('eName').value.trim()||!$('eNum').value.trim()){toast('أدخل رقم الموظف والاسم الرباعي');return}
- const e={num:$('eNum').value,name:$('eName').value,nat:$('eNat').value,dept:$('eDept').value,job:$('eJob').value,type:$('eType').value,work:$('eWork').value,status:$('eStatus').value,email:$('eEmail').value,phone:$('ePhone').value,city:$('eCity').value,hire:$('eHire').value,probEnd:$('eProbEnd').value||D(0),salary:$('eSalary').value,currency:$('eCurrency').value,contractDur:$('eContractDur').value,gender:$('eGender').value};
- if(editIndex>=0)employees[editIndex]=e;else employees.push(e);
- closeModal('empModal');renderEmployees();renderDashboard();renderAlerts();toast(editIndex>=0?'تم تحديث بيانات الموظف':'تمت إضافة الموظف بنجاح')}
+async function saveEmployee(){
+ if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم والبريد حقول أساسية');return}
+ const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value};
+ const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
+ const {error}=await q;
+ if(error){err(error);return}
+ closeModal('empModal');await refresh();
+ toast(editId?'تم تحديث بيانات الموظف':'تمت الإضافة — يستطيع الموظف الآن تفعيل حسابه من شاشة الدخول ببريده');
+}
 
 /* ================= العقود ================= */
 function contractTag(c){const n=daysTo(c.end);
@@ -1005,46 +1038,60 @@ function contractTag(c){const n=daysTo(c.end);
  if(n<=30)return '<span class="tag sand">قارب على الانتهاء</span>';
  return '<span class="tag ok">ساري</span>'}
 function renderContracts(){
- $('contractTbody').innerHTML=contracts.map((c,i)=>`<tr>
-  <td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur}</td>
+ $('contractTbody').innerHTML=contracts.length?contracts.map(c=>`<tr>
+  <td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td>
   <td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="renewContract(${i})">تجديد العقد</button>
-   <button class="btn btn-ghost btn-sm" onclick="toast('عرض نسخ العقد السابقة وتواريخها')">النسخ السابقة</button></td></tr>`).join('');
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد العقد</button>
+   <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عقود</td></tr>';
 }
-function renewContract(i){const c=contracts[i];
+function showVersions(eid){const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
+ alert('نسخ عقد '+c.emp+':\n'+c.history.map(h=>`النسخة ${h.version}: من ${h.start_date} إلى ${h.end_date}${h.is_current?' (الحالية)':''}`).join('\n'))}
+async function renewContract(eid){
+ const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
  const len=new Date(c.end)-new Date(c.start);
  const ns=new Date(Math.max(new Date(c.end),today));const ne=new Date(ns.getTime()+len);
- c.start=ns.toISOString().slice(0,10);c.end=ne.toISOString().slice(0,10);c.versions++;
- renderContracts();renderDashboard();renderAlerts();toast('تم إنشاء نسخة جديدة وتمديد المدة بنفس الفترة السابقة مع حفظ النسخ القديمة')}
-function addContract(){
+ const {error}=await sb.from('contracts').insert({employee_id:eid,start_date:ns.toISOString().slice(0,10),end_date:ne.toISOString().slice(0,10),duration:c.dur,version:c.versions+1,is_current:true});
+ if(error){err(error);return}
+ await sb.from('contracts').update({is_current:false}).eq('id',c.id);
+ await refresh();toast('تم إنشاء نسخة جديدة بنفس المدة مع حفظ النسخ السابقة');
+}
+async function addContract(){
  if(!$('cStart').value||!$('cEnd').value){toast('حدد تاريخ البداية والنهاية');return}
- contracts.push({emp:$('cEmp').value,start:$('cStart').value,end:$('cEnd').value,dur:$('cDur').value||'—',versions:1});
- closeModal('contractModal');renderContracts();renderDashboard();renderAlerts();toast('تمت إضافة العقد')}
+ const {error}=await sb.from('contracts').insert({employee_id:$('cEmp').value,start_date:$('cStart').value,end_date:$('cEnd').value,duration:$('cDur').value});
+ if(error){err(error);return}
+ closeModal('contractModal');await refresh();toast('تمت إضافة العقد');
+}
+
 /* ================= الحضور والغياب ================= */
 let attFilters={meetAtt:'',siteAtt:'',meetAbs:'',siteAbs:''};
 function setAttTab(t,btn){document.querySelectorAll('#page-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  document.querySelectorAll('.att-tab').forEach(d=>d.style.display='none');$('att-'+t).style.display='block'}
-function deptChips(containerId,key,renderFn){
- $(containerId).innerHTML=['الكل',...DEPTS].map(d=>`<button class="${(attFilters[key]===(d==='الكل'?'':d))?'active':''}" onclick="attFilters['${key}']='${d==='الكل'?'':d}';renderAttendance()">${d}</button>`).join('');
-}
+function deptChips(cid,key){$(cid).innerHTML=['الكل',...DEPTS].map(d=>`<button class="${(attFilters[key]===(d==='الكل'?'':d))?'active':''}" onclick="attFilters['${key}']='${d==='الكل'?'':d}';renderAttendance()">${d}</button>`).join('')}
 function renderAttendance(){
  deptChips('meetAttFilter','meetAtt');deptChips('siteAttFilter','siteAtt');deptChips('meetAbsFilter','meetAbs');deptChips('siteAbsFilter','siteAbs');
  const f=(arr,k)=>arr.filter(r=>!attFilters[k]||r.dept===attFilters[k]);
- $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title}</td><td>${r.goal}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
- $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title}</td><td>${r.goal}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  const dayName=d=>new Date(d).toLocaleDateString('ar',{weekday:'long'});
+ $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
+ $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('siteAttTbody').innerHTML=f(siteAtt,'siteAtt').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
- $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
+ $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason||'—'}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
 }
-function addMeetRec(kind){
+async function addMeetRec(kind){
  const p=kind==='meetAtt'?'ma':'mb';
- const rec={meet:$(p+'Meet').value,dept:$(p+'Dept').value,title:$(p+'Title').value,goal:$(p+'Goal').value,date:$(p+'Date').value||D(0),time:$(p+'Time').value||'—',emp:$(p+'Emp').value,notes:$(p+'Notes').value};
- (kind==='meetAtt'?meetAtt:meetAbs).push(rec);
- closeModal(kind+'Modal');renderAttendance();toast('تم حفظ السجل')}
-function addSiteAtt(){siteAtt.push({date:$('saDate').value||D(0),in:$('saIn').value||'—',out:$('saOut').value||'—',emp:$('saEmp').value,dept:$('saDept').value,notes:$('saNotes').value});closeModal('siteAttModal');renderAttendance();toast('تم تسجيل الحضور')}
-function addSiteAbs(){siteAbs.push({date:$('sbDate').value||D(0),emp:$('sbEmp').value,dept:$('sbDept').value,reason:$('sbReason').value||'—',sick:'لا',notes:$('sbNotes').value});closeModal('siteAbsModal');renderAttendance();renderDashboard();renderAlerts();toast('تم تسجيل الغياب')}
-
-/* تصدير CSV (تقرير Excel) */
+ const {error}=await sb.from('meeting_records').insert({employee_id:$(p+'Emp').value,record_type:kind==='meetAtt'?'حضور':'غياب',meeting_name:$(p+'Meet').value,department:$(p+'Dept').value,meeting_title:$(p+'Title').value,meeting_goal:$(p+'Goal').value,meeting_date:$(p+'Date').value||D(0),meeting_time:$(p+'Time').value||null,notes:$(p+'Notes').value});
+ if(error){err(error);return}
+ closeModal(kind+'Modal');await refresh();toast('تم حفظ السجل');
+}
+async function addSiteAtt(){
+ const {error}=await sb.from('site_attendance').insert({employee_id:$('saEmp').value,record_type:'حضور',record_date:$('saDate').value||D(0),check_in:$('saIn').value||null,check_out:$('saOut').value||null,department:$('saDept').value,notes:$('saNotes').value});
+ if(error){err(error);return}
+ closeModal('siteAttModal');await refresh();toast('تم تسجيل الحضور');
+}
+async function addSiteAbs(){
+ const {error}=await sb.from('site_attendance').insert({employee_id:$('sbEmp').value,record_type:'غياب',record_date:$('sbDate').value||D(0),department:$('sbDept').value,absence_reason:$('sbReason').value,notes:$('sbNotes').value});
+ if(error){err(error);return}
+ closeModal('siteAbsModal');await refresh();toast('تم تسجيل الغياب');
+}
 function exportCSV(kind){
  let rows,headers,name;
  if(kind==='meetAtt'){headers=['الموظف','عنوان الاجتماع','الاجتماع','القسم','التاريخ','الوقت'];rows=meetAtt.map(r=>[r.emp,r.title,r.meet,r.dept,r.date,r.time]);name='تقرير_حضور_الاجتماعات'}
@@ -1067,12 +1114,12 @@ function balance(empName){
 }
 function setLeaveTab(t,btn){document.querySelectorAll('#page-leaves .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  document.querySelectorAll('.leave-tab').forEach(d=>d.style.display='none');$('leave-'+t).style.display='block'}
-function syncLeaveEmp(){const e=employees.find(x=>x.name===$('lvEmp').value)||employees[0];if(e){$('lvDept').value=e.dept;$('lvJob').value=e.job}}
+function syncLeaveEmp(){const e=empById[$('lvEmp')?.value];if(e){$('lvDept').value=e.dept||'';$('lvJob').value=e.job||''}}
 document.addEventListener('change',e=>{if(e.target.id==='lvEmp')syncLeaveEmp()});
 function calcLeaveDays(){const s=$('lvStart').value,en=$('lvEnd').value;if(s&&en){const n=Math.round((new Date(en)-new Date(s))/864e5)+1;if(n>0)$('lvDays').value=n}}
 function renderLeaveStats(){
  const onLeave=new Set(leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0).map(l=>l.emp)).size;
- const lowBal=employees.filter(e=>{const b=balance(e.name);return b.annualLeft<=5}).length;
+ const lowBal=employees.filter(e=>{const b=balance(e.name);return b.annualUsed>0&&b.annualLeft<=5}).length;
  const S=[
   {n:leaves.length,l:'إجمالي طلبات الإجازات',k:''},
   {n:leaves.filter(l=>l.status==='تمت الموافقة').length,l:'الإجازات المعتمدة',k:'ok'},
@@ -1083,22 +1130,30 @@ function renderLeaveStats(){
  ];
  $('leaveStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 }
-function addLeave(){
- const emp=$('lvEmp').value;if(!$('lvStart').value||!$('lvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
- leaves.push({emp,dept:$('lvDept').value,job:$('lvJob').value,type:$('lvType').value,req:D(0),start:$('lvStart').value,end:$('lvEnd').value,days:+$('lvDays').value||1,reason:$('lvReason').value,status:'بانتظار الموافقة',head:$('lvHead').value||'—',manager:$('lvManager').value||'—',notes:$('lvNotes').value});
- renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderDashboard();renderAlerts();toast('تم حفظ الطلب — بانتظار الموافقة');
+async function addLeave(){
+ if(!$('lvEmp').value){toast('اختر الموظف');return}
+ if(!$('lvStart').value||!$('lvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
+ let attachment=null;
+ const {error}=await sb.from('leaves').insert({employee_id:$('lvEmp').value,leave_type:$('lvType').value,start_date:$('lvStart').value,end_date:$('lvEnd').value,days:+$('lvDays').value||1,reason:$('lvReason').value,dept_head:$('lvHead').value,admin_manager:$('lvManager').value,notes:$('lvNotes').value,attachment_url:attachment});
+ if(error){err(error);return}
+ await refresh();toast('تم حفظ الطلب — بانتظار الموافقة');
  ['lvStart','lvEnd','lvDays','lvNotes','lvReason'].forEach(id=>$(id).value='');
+}
+async function setLeaveStatus(id,status){
+ const {error}=await sb.from('leaves').update({status}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();closeModal('leaveDetailModal');toast('تم تحديث حالة الطلب: '+status);
 }
 function renderLeaveLog(){
  const q=$('flvName').value.trim(),dp=$('flvDept').value,tp=$('flvType').value,st=$('flvStatus').value,mo=$('flvMonth').value;
  const byEmp={};
- leaves.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||l.start.startsWith(mo)))
+ leaves.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||String(l.start).startsWith(mo)))
   .forEach(l=>{if(!byEmp[l.emp])byEmp[l.emp]={dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start};
    const g=byEmp[l.emp];if(l.type==='سنوية')g.annual+=l.days;if(l.type==='مرضية')g.sick+=l.days;if(l.type==='خاصة')g.special+=l.days;
    if(l.start>g.last)g.last=l.start});
  const keys=Object.keys(byEmp);
  $('leaveLogTbody').innerHTML=keys.length?keys.map(emp=>{const g=byEmp[emp];
-  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp}')">${emp}</span></td><td>${g.dept}</td><td>${g.job}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد نتائج</td></tr>';
+  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp.replace(/'/g,"\\'")}')">${emp}</span></td><td>${g.dept}</td><td>${g.job}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد نتائج</td></tr>';
 }
 function openLeaveDetail(emp){
  const list=leaves.filter(l=>l.emp===emp);const b=balance(emp);
@@ -1117,8 +1172,9 @@ function openLeaveDetail(emp){
    <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.sickLeft}</div><div class="lbl">الرصيد المرضي المتبقي</div></div>
   </div>
   <div class="tbl-wrap"><table>
-   <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>المرفق</th><th>ملاحظات</th></tr></thead>
-   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head}</td><td>${l.manager}</td><td><button class="btn btn-ghost btn-sm" onclick="toast('عرض / تحميل مستند الطلب PDF')">PDF</button></td><td>${l.notes||'—'}</td></tr>`).join('')}</tbody>
+   <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.notes||'—'}</td>
+   <td style="white-space:nowrap">${l.status==='بانتظار الموافقة'?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
   </table></div>`;
  openModal('leaveDetailModal');
 }
@@ -1128,7 +1184,7 @@ function renderLeaveTypes(){
  $('leaveTypeTabs').innerHTML=types.map(t=>`<button class="${currentLeaveType===t?'active':''}" onclick="currentLeaveType='${t}';renderLeaveTypes()">الإجازة ${t==='بدون راتب'?'بدون راتب':'ال'+t}</button>`).join('');
  const stTag=s=>s==='تمت الموافقة'?'ok':s==='تم الرفض'?'danger':'sand';
  const rows=leaves.filter(l=>l.type===currentLeaveType);
- $('leaveTypeTbody').innerHTML=rows.length?rows.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.dept}</td><td>${l.job}</td><td>${l.days}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إجازات من هذا النوع</td></tr>';
+ $('leaveTypeTbody').innerHTML=rows.length?rows.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.dept}</td><td>${l.job}</td><td>${l.days}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span>${l.status==='بانتظار الموافقة'?` <button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:''}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إجازات من هذا النوع</td></tr>';
 }
 
 /* ================= الاستئذانات ================= */
@@ -1136,15 +1192,20 @@ function renderPermits(){
  const q=$('fPermName').value.trim(),tp=$('fPermType').value,st=$('fPermStatus').value;
  const stTag=s=>s==='معتمد'?'ok':s==='مرفوض'?'danger':'sand';
  const rows=permits.filter(p=>(!q||p.emp.includes(q))&&(!tp||p.type===tp)&&(!st||p.status===st));
- $('permitTbody').innerHTML=rows.length?rows.map((p)=>{const i=permits.indexOf(p);return `<tr>
-  <td><span class="link-name" onclick="toast('تفاصيل الإذن: ${p.emp} — ${p.type} — ${p.time}')">${p.emp}</span></td>
-  <td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td>
+ $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
+  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td>
   <td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td>
-  <td style="white-space:nowrap">${p.status==='بانتظار الموافقة'?`<button class="btn btn-ok btn-sm" onclick="setPermit(${i},'معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit(${i},'مرفوض')">رفض</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+  <td style="white-space:nowrap">${p.status==='بانتظار الموافقة'?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
 }
-function setPermit(i,s){permits[i].status=s;renderPermits();renderDashboard();renderAlerts();toast('تم تحديث حالة الاستئذان')}
-function addPermit(){permits.push({emp:$('prEmp').value,date:$('prDate').value||D(0),time:$('prTime').value||'—',type:$('prType').value,status:$('prStatus').value,notes:$('prNotes').value});
- closeModal('permitModal');renderPermits();renderDashboard();renderAlerts();toast('تم إنشاء طلب الاستئذان')}
+async function setPermit(id,status){
+ const {error}=await sb.from('permits').update({status}).eq('id',id);
+ if(error){err(error);return} await refresh();toast('تم تحديث حالة الاستئذان')}
+async function addPermit(){
+ if(!$('prEmp').value){toast('اختر الموظف');return}
+ const {error}=await sb.from('permits').insert({employee_id:$('prEmp').value,permit_date:$('prDate').value||D(0),permit_time:$('prTime').value||null,permit_type:$('prType').value,status:$('prStatus').value,notes:$('prNotes').value});
+ if(error){err(error);return}
+ closeModal('permitModal');await refresh();toast('تم إنشاء طلب الاستئذان');
+}
 
 /* ================= البحث العام ================= */
 function runGlobalSearch(q){
@@ -1153,7 +1214,7 @@ function runGlobalSearch(q){
  const hit=s=>String(s||'').includes(q);
  let html='';
  const emps=employees.filter(e=>hit(e.num)||hit(e.name)||hit(e.dept));
- if(emps.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">👥 الموظفون (${emps.length})</h3>`+emps.map(e=>`<div class="alert-item"><div class="aic ok">👤</div><div><b>${e.name} — ${e.num}</b><small>${e.dept} · ${e.job} · ${e.status}</small></div></div>`).join('');
+ if(emps.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">👥 الموظفون (${emps.length})</h3>`+emps.map(e=>`<div class="alert-item"><div class="aic ok">👤</div><div><b>${e.name} — ${e.num}</b><small>${e.dept||''} · ${e.job||''} · ${e.status}</small></div></div>`).join('');
  const cts=contracts.filter(c=>hit(c.emp));
  if(cts.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">✍ العقود (${cts.length})</h3>`+cts.map(c=>`<div class="alert-item"><div class="aic info">✍</div><div><b>عقد ${c.emp}</b><small>من ${fmt(c.start)} إلى ${fmt(c.end)}</small></div></div>`).join('');
  const lvs=leaves.filter(l=>hit(l.emp)||hit(l.type)||hit(l.dept));
@@ -1172,10 +1233,18 @@ function renderFiles(){
  $('fileCats').innerHTML=cats.map(c=>`<div class="file-cat ${currentFileCat===(c==='الكل'?'':c)?'active':''}" onclick="currentFileCat='${c==='الكل'?'':c}';renderFiles()">🗂 ${c}</div>`).join('');
  const rows=filesData.filter(f=>!currentFileCat||f.cat===currentFileCat);
  $('filesTbody').innerHTML=rows.length?rows.map(f=>`<tr>
-  <td><b>${f.name}</b></td><td><span class="tag ${f.type==='PDF'?'danger':'ok'}">${f.type}</span></td><td>${f.size}</td>
-  <td>${fmt(f.up)}</td><td>${f.by}</td><td>${fmt(f.last)}</td><td>${f.src}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="toast('عرض الملف')">عرض</button>
-   <button class="btn btn-sand btn-sm" onclick="toast('تعديل صلاحيات من يمكنه رؤية الملف')">الصلاحيات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
+  <td><b>${f.name}</b></td><td><span class="tag ${f.type==='PDF'?'danger':'ok'}">${f.type||'—'}</span></td><td>${f.size||'—'}</td>
+  <td>${fmt(f.up)}</td><td>${f.by||'—'}</td><td>${fmt(f.last)}</td><td>${f.src||'—'}</td>
+  <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}')">عرض / تحميل</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
+}
+async function uploadGeneralFile(){
+ try{const f=await pickFile('');if(!f)return;
+  toast('جاري رفع الملف...');
+  const cat=currentFileCat||'ملفات الموظفين';
+  const path=await uploadToStorage(f,'general');
+  await registerFile(f,cat,'إدارة الملفات',path);
+  await refresh();toast('تم رفع الملف وحفظه');
+ }catch(e){err(e)}
 }
 
 /* ================= التقارير ================= */
@@ -1201,24 +1270,22 @@ function renderReports(){
 function renderForms(){
  $('formsList').innerHTML=formsData.length?formsData.map(f=>`
   <div class="policy"><div class="pic">📄</div>
-   <div class="pinfo"><b>${f.name}</b><small>${f.goal} — أُضيف بتاريخ ${fmt(f.date)}</small></div>
+   <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}</small></div>
    <div class="actions">
-     <button class="btn btn-ghost btn-sm" onclick="toast('تحميل صيغة DOC')">DOC</button>
-     <button class="btn btn-ghost btn-sm" onclick="toast('تحميل صيغة PDF')">PDF</button>
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.doc||''}')">DOC</button>
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.pdf||''}')">PDF</button>
    </div></div>`).join(''):'<div class="empty">لا توجد نماذج مضافة — ابدأ بإضافة نموذج جديد</div>';
 }
-function addForm(){
+async function addForm(){
  if(!$('fmName').value.trim()){toast('أدخل اسم النموذج');return}
- formsData.push({name:$('fmName').value,goal:$('fmGoal').value||'—',date:D(0)});
- closeModal('formModal');renderForms();toast('تمت إضافة النموذج');$('fmName').value='';$('fmGoal').value='';
+ const {error}=await sb.from('forms').insert({name:$('fmName').value,goal:$('fmGoal').value});
+ if(error){err(error);return}
+ closeModal('formModal');await refresh();toast('تمت إضافة النموذج');$('fmName').value='';$('fmGoal').value='';
 }
 
-/* ================= التهيئة ================= */
-function initAll(){
- fillDeptFilter();renderEmployees();renderContracts();renderPolicies();renderAttendance();
- renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();
- renderDashboard();renderAlerts();
-}
+/* ================= تهيئة لوحة الإدارة ================= */
+function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts()}
+function initAll(){fillDeptFilter();renderAll()}
 
 /* ================= بوابة الموظف ================= */
 const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقودي',leaves:'إجازاتي',attendance:'حضوري وغيابي',permits:'استئذاناتي',policies:'الأنظمة والسياسات'};
@@ -1234,13 +1301,13 @@ function epAttTab(t,btn){document.querySelectorAll('#ep-attendance .tabs button'
 function initEmpPortal(){
  const e=currentEmp;
  $('epAvatar').textContent=e.name[0];$('epHeroAvatar').textContent=e.name[0];
- $('epTopName').textContent=e.name.split(' ').slice(0,2).join(' ');$('epTopJob').textContent=e.job;
- $('epHeroName').textContent=e.name;$('epHeroMeta').textContent=`${e.num} · ${e.dept} · ${e.job}`;
+ $('epTopName').textContent=e.name.split(' ').slice(0,2).join(' ');$('epTopJob').textContent=e.job||'';
+ $('epHeroName').textContent=e.name;$('epHeroMeta').textContent=`${e.num} · ${e.dept||''} · ${e.job||''}`;
  $('epHeroStatus').textContent=e.status;$('epHeroStatus').className='tag '+(e.status==='نشط'?'ok':'gray');
  const item=(k,v)=>`<div class="info-item"><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
  $('epPersonal').innerHTML=item('رقم الموظف',e.num)+item('الاسم الرباعي',e.name)+item('الجنسية',e.nat)+item('الدولة / المدينة',e.city)+item('البريد الإلكتروني',e.email)+item('رقم الجوال',e.phone)+item('الجنس',e.gender);
- $('epJobInfo').innerHTML=item('تاريخ التعيين',fmt(e.hire))+item('نهاية فترة التجربة',fmt(e.probEnd))+item('المسمى الوظيفي',e.job)+item('القسم',e.dept)+item('نوع التوظيف',e.type)+item('نوع العمل',e.work)+item('الراتب الشهري',e.salary+' '+e.currency)+item('مدة العقد',e.contractDur);
- $('epDocs').innerHTML=['هوية الموظف','شهادة تعليمية','شهادة خبرة','العرض الوظيفي','عقد العمل','السيرة الذاتية'].map(d=>`<div class="info-item" style="cursor:pointer" onclick="toast('عرض / تحميل: ${d}')"><div class="k">مستند</div><div class="v">📎 ${d}</div></div>`).join('');
+ $('epJobInfo').innerHTML=item('تاريخ التعيين',fmt(e.hire))+item('نهاية فترة التجربة',fmt(e.probEnd))+item('المسمى الوظيفي',e.job)+item('القسم',e.dept)+item('نوع التوظيف',e.type)+item('نوع العمل',e.work)+item('الراتب الشهري',e.salary?e.salary+' '+(e.currency||''):'—')+item('مدة العقد',e.contractDur);
+ $('epDocs').innerHTML=['هوية الموظف','شهادة تعليمية','شهادة خبرة','العرض الوظيفي','عقد العمل','السيرة الذاتية'].map(d=>`<div class="info-item"><div class="k">مستند</div><div class="v">📎 ${d}</div></div>`).join('');
  epRenderAll();
 }
 function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies()}
@@ -1252,12 +1319,12 @@ function epRenderAlerts(){
  $('epAlertsList').innerHTML=A.length?A.map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>';
 }
 function epRenderContracts(){
- const rows=contracts.filter(c=>c.emp===currentEmp.name);
- $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="toast('عرض / تحميل نسخة العقد PDF')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+ const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="toast('اطلب نسخة العقد من الإدارة')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
 }
 function epRenderLeaves(){
  const b=balance(currentEmp.name);
- const my=leaves.filter(l=>l.emp===currentEmp.name);
+ const my=leaves.filter(l=>l.employee_id===currentEmp.id);
  const S=[
   {n:b.annualLeft,l:'الرصيد السنوي المتبقي (من 21)',k:'ok'},
   {n:b.annualUsed,l:'أيام سنوية مستخدمة',k:''},
@@ -1270,37 +1337,40 @@ function epRenderLeaves(){
  $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 function epCalcDays(){const s=$('eplStart').value,en=$('eplEnd').value;if(s&&en){const n=Math.round((new Date(en)-new Date(s))/864e5)+1;if(n>0)$('eplDays').value=n}}
-function epAddLeave(){
+async function epAddLeave(){
  if(!$('eplStart').value||!$('eplEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
- leaves.push({emp:currentEmp.name,dept:currentEmp.dept,job:currentEmp.job,type:$('eplType').value,req:D(0),start:$('eplStart').value,end:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,status:'بانتظار الموافقة',head:'—',manager:'—',notes:$('eplNotes').value});
- closeModal('epLeaveModal');epRenderLeaves();epRenderAlerts();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
+ const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value});
+ if(error){err(error);return}
+ closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
  ['eplStart','eplEnd','eplDays','eplNotes','eplReason'].forEach(id=>$(id).value='');
 }
 function epRenderAttendance(){
- const n=currentEmp.name;
- $('epSiteAttTbody').innerHTML=siteAtt.filter(r=>r.emp===n).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>';
- $('epSiteAbsTbody').innerHTML=siteAbs.filter(r=>r.emp===n).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.reason}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
- $('epMeetAttTbody').innerHTML=meetAtt.filter(r=>r.emp===n).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات</td></tr>';
- $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.emp===n).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
+ const eid=currentEmp.id;
+ $('epSiteAttTbody').innerHTML=siteAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>';
+ $('epSiteAbsTbody').innerHTML=siteAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.reason||'—'}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
+ $('epMeetAttTbody').innerHTML=meetAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات</td></tr>';
+ $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
 }
 function epRenderPermits(){
  const stTag=st=>st==='معتمد'?'ok':st==='مرفوض'?'danger':'sand';
- const rows=permits.filter(p=>p.emp===currentEmp.name);
+ const rows=permits.filter(p=>p.employee_id===currentEmp.id);
  $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>';
 }
-function epAddPermit(){
- permits.push({emp:currentEmp.name,date:$('eppDate').value||D(0),time:$('eppTime').value||'—',type:$('eppType').value,status:'بانتظار الموافقة',notes:$('eppNotes').value});
- closeModal('epPermitModal');epRenderPermits();epRenderAlerts();toast('تم إرسال طلب الاستئذان — بانتظار موافقة الإدارة');
+async function epAddPermit(){
+ const {error}=await sb.from('permits').insert({employee_id:currentEmp.id,permit_date:$('eppDate').value||D(0),permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value});
+ if(error){err(error);return}
+ closeModal('epPermitModal');await refresh();toast('تم إرسال طلب الاستئذان — بانتظار موافقة الإدارة');
 }
 function epRenderPolicies(){
  $('epPoliciesList').innerHTML=policies.map(p=>`
   <div class="policy"><div class="pic">§</div>
    <div class="pinfo"><b>${p.name}</b><small>آخر تحديث: ${fmt(p.updated)} — الإصدار ${p.ver} — <span class="tag ${p.status==='متاح للتنزيل'?'ok':'sand'}">${p.status}</span></small></div>
    <div class="actions">
-     <button class="btn btn-ghost btn-sm" onclick="toast('عرض ${p.name}')">عرض</button>
-     ${p.status==='متاح للتنزيل'?`<button class="btn btn-ok btn-sm" onclick="toast('جاري تحميل ${p.name}')">تحميل</button>`:''}
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">عرض</button>
+     ${p.status==='متاح للتنزيل'?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${p.file||''}')">تحميل</button>`:''}
    </div></div>`).join('');
 }
 </script>
+
 </body>
 </html>
