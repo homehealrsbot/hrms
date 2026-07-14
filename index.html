@@ -147,6 +147,20 @@ tbody tr:hover{background:#FAFCFB}
 .file-cat{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--pine-soft);border-radius:11px;font-weight:700;cursor:pointer;transition:.13s;border:1.5px solid transparent}
 .file-cat:hover,.file-cat.active{border-color:var(--pine);background:#fff;color:var(--pine)}
 
+/* ---------- بوابة الموظف ---------- */
+.empapp{display:none;min-height:100vh}
+.empapp.on{display:flex}
+.empapp aside{background:#123A5C}
+.profile-hero{background:linear-gradient(140deg,var(--pine-deep),var(--pine));color:#fff;border-radius:var(--radius);padding:26px;display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.empapp .profile-hero{background:linear-gradient(140deg,#0E2E49,#1B5788)}
+.profile-hero .avatar{width:70px;height:70px;font-size:26px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35)}
+.profile-hero h2{font-size:22px;font-weight:900}
+.profile-hero small{opacity:.85}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.info-item{background:var(--bg);border-radius:11px;padding:11px 14px}
+.info-item .k{font-size:11.5px;color:var(--muted);font-weight:600}
+.info-item .v{font-weight:700;font-size:14px}
+
 /* ---------- النوافذ المنبثقة ---------- */
 .modal-back{position:fixed;inset:0;background:rgba(12,26,21,.55);z-index:90;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
 .modal-back.on{display:flex}
@@ -489,6 +503,135 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 </main>
 </div>
+<!-- ================= بوابة الموظف ================= -->
+<div id="empApp" class="empapp">
+<aside>
+  <div class="side-head">
+    <div class="logo-mark">HR</div>
+    <div><b>الموارد البشرية</b><small>بوابة الموظف</small></div>
+  </div>
+  <nav>
+    <button class="nav-item active" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
+    <div class="nav-label">خدماتي</div>
+    <button class="nav-item" data-ep="alerts"><span class="ic">🔔</span> الإشعارات <span class="nav-badge" id="epAlertCount">0</span></button>
+    <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقودي</button>
+    <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> إجازاتي</button>
+    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> حضوري وغيابي</button>
+    <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> استئذاناتي</button>
+    <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+  </nav>
+  <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
+</aside>
+<main>
+<div class="topbar">
+  <h2 id="epTopTitle">الملف الشخصي</h2>
+  <div class="top-user">
+    <button class="bell" onclick="epGo('alerts')">🔔<span class="dot"></span></button>
+    <div class="avatar" id="epAvatar">م</div>
+    <div style="line-height:1.3"><b style="font-size:13px" id="epTopName">موظف</b><br><small style="color:var(--muted);font-size:11px" id="epTopJob"></small></div>
+  </div>
+</div>
+
+<section class="page on" id="ep-profile">
+  <div class="profile-hero">
+    <div class="avatar" id="epHeroAvatar">م</div>
+    <div style="flex:1"><h2 id="epHeroName"></h2><small id="epHeroMeta"></small></div>
+    <span class="tag ok" id="epHeroStatus" style="font-size:13px;padding:6px 16px"></span>
+  </div>
+  <div class="card"><h3>👤 بيانات الموظف</h3><div class="info-grid" id="epPersonal"></div></div>
+  <div class="card"><h3>💼 بيانات الوظيفة</h3><div class="info-grid" id="epJobInfo"></div></div>
+  <div class="card"><h3>📎 مستنداتي</h3><div class="info-grid" id="epDocs"></div></div>
+</section>
+
+<section class="page" id="ep-alerts">
+  <div class="page-head"><div><h1>إشعاراتي</h1><p>التنبيهات الخاصة بك فقط</p></div></div>
+  <div class="card" id="epAlertsList"></div>
+</section>
+
+<section class="page" id="ep-contracts">
+  <div class="page-head"><div><h1>عقودي</h1><p>عقود العمل الخاصة بك وحالتها</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>بداية العقد</th><th>نهاية العقد</th><th>المدة</th><th>الحالة</th><th>النسخ</th><th>الملف</th></tr></thead>
+    <tbody id="epContractTbody"></tbody></table></div></div>
+</section>
+
+<section class="page" id="ep-leaves">
+  <div class="page-head">
+    <div><h1>إجازاتي</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
+    <button class="btn btn-primary" onclick="openModal('epLeaveModal')">+ طلب إجازة جديد</button>
+  </div>
+  <div class="stats" id="epLeaveStats"></div>
+  <div class="card"><h3>سجل طلباتي</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <tbody id="epLeaveTbody"></tbody></table></div></div>
+</section>
+
+<section class="page" id="ep-attendance">
+  <div class="page-head"><div><h1>حضوري وغيابي</h1><p>سجلاتك في المقر والاجتماعات</p></div></div>
+  <div class="tabs">
+    <button class="active" onclick="epAttTab('site',this)">المقر</button>
+    <button onclick="epAttTab('meet',this)">الاجتماعات</button>
+  </div>
+  <div id="epAtt-site">
+    <div class="card"><h3>✅ حضوري في المقر</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>التاريخ</th><th>وقت الدخول</th><th>وقت الخروج</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAttTbody"></tbody></table></div></div>
+    <div class="card"><h3>🚫 غيابي في المقر</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>التاريخ</th><th>سبب الغياب</th><th>تقرير مرضي</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAbsTbody"></tbody></table></div></div>
+  </div>
+  <div id="epAtt-meet" style="display:none">
+    <div class="card"><h3>✅ حضوري في الاجتماعات</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>الاجتماع</th><th>العنوان</th><th>التاريخ</th><th>الوقت</th></tr></thead><tbody id="epMeetAttTbody"></tbody></table></div></div>
+    <div class="card"><h3>🚫 غيابي عن الاجتماعات</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>الاجتماع</th><th>العنوان</th><th>التاريخ</th><th>الوقت</th></tr></thead><tbody id="epMeetAbsTbody"></tbody></table></div></div>
+  </div>
+</section>
+
+<section class="page" id="ep-permits">
+  <div class="page-head">
+    <div><h1>استئذاناتي</h1><p>طلبات الاستئذان الخاصة بك</p></div>
+    <button class="btn btn-primary" onclick="openModal('epPermitModal')">+ طلب استئذان جديد</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>التاريخ</th><th>موعد الاستئذان</th><th>النوع</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <tbody id="epPermitTbody"></tbody></table></div></div>
+</section>
+
+<section class="page" id="ep-policies">
+  <div class="page-head"><div><h1>الأنظمة والسياسات</h1><p>اطّلع على سياسات الشركة وحمّلها</p></div></div>
+  <div class="card" id="epPoliciesList"></div>
+</section>
+</main>
+</div>
+
+<!-- طلب إجازة (موظف) -->
+<div class="modal-back" id="epLeaveModal"><div class="modal">
+  <div class="modal-head"><h3>طلب إجازة جديد</h3><button class="x-btn" onclick="closeModal('epLeaveModal')">✕</button></div>
+  <div class="grid-2">
+    <div><label>نوع الإجازة</label>
+      <select id="eplType" onchange="document.getElementById('eplReasonWrap').style.display=this.value==='خاصة'?'block':'none'">
+        <option>سنوية</option><option>مرضية</option><option>خاصة</option><option>بدون راتب</option></select></div>
+    <div id="eplReasonWrap" style="display:none"><label>سبب الإجازة</label><input id="eplReason"></div>
+    <div><label>بداية الإجازة</label><input id="eplStart" type="date" onchange="epCalcDays()"></div>
+    <div><label>نهاية الإجازة</label><input id="eplEnd" type="date" onchange="epCalcDays()"></div>
+    <div><label>عدد الأيام (تلقائي مع إمكانية التعديل)</label><input id="eplDays" type="number" min="1"></div>
+    <div><label>ملاحظات</label><input id="eplNotes"></div>
+  </div>
+  <div class="upload-box" style="margin-top:12px" onclick="toast('تم إرفاق مستند الطلب PDF')">📎 إرفاق مستند طلب الإجازة (PDF)</div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddLeave()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epLeaveModal')">إلغاء</button></div>
+</div></div>
+
+<!-- طلب استئذان (موظف) -->
+<div class="modal-back" id="epPermitModal"><div class="modal sm">
+  <div class="modal-head"><h3>طلب استئذان جديد</h3><button class="x-btn" onclick="closeModal('epPermitModal')">✕</button></div>
+  <div class="grid-2">
+    <div><label>التاريخ</label><input id="eppDate" type="date"></div>
+    <div><label>موعد الاستئذان</label><input id="eppTime" type="time"></div>
+    <div><label>نوع الاستئذان</label><select id="eppType"><option>اجتماع</option><option>مقر العمل</option></select></div>
+    <div><label>ملاحظات</label><input id="eppNotes"></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPermit()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epPermitModal')">إلغاء</button></div>
+</div></div>
+
 <!-- ================= النوافذ المنبثقة ================= -->
 
 <!-- إضافة موظف -->
@@ -735,10 +878,15 @@ document.querySelectorAll('.modal-back').forEach(m=>m.addEventListener('click',e
 /* ================= تسجيل الدخول ================= */
 let role='admin';
 function setRole(r){role=r;$('roleAdmin').classList.toggle('active',r==='admin');$('roleEmp').classList.toggle('active',r==='emp');
- $('loginNote').innerHTML = r==='admin' ? 'تجربة الأدمن: <b>admin@company.com</b> / كلمة المرور: <b>123456</b>' : 'بوابة الموظف تُنفَّذ في مرحلة لاحقة حسب الآلية — المتاح حالياً لوحة تحكم الإدارة فقط.'}
+ $('loginNote').innerHTML = r==='admin' ? 'تجربة الأدمن: <b>admin@company.com</b> / كلمة المرور: <b>123456</b>' : 'تجربة الموظف: <b>ahmad@company.com</b> / كلمة المرور: <b>123456</b>'}
+let currentEmp=null;
 function doLogin(){
- if(role==='emp'){toast('بوابة الموظف ضمن المرحلة الثانية — جرّب دخول الأدمن');return}
  const em=$('loginEmail').value.trim(), pw=$('loginPass').value.trim();
+ if(role==='emp'){
+   const e=employees.find(x=>x.email===em);
+   if(!e||pw!=='123456'){toast('بيانات الدخول غير صحيحة — جرّب ahmad@company.com / 123456');return}
+   currentEmp=e;$('loginScreen').style.display='none';$('empApp').classList.add('on');initEmpPortal();return;
+ }
  if(em!=='admin@company.com'||pw!=='123456'){toast('بيانات الدخول غير صحيحة');return}
  $('loginScreen').style.display='none';$('app').classList.add('on');initAll();
 }
@@ -1070,6 +1218,88 @@ function initAll(){
  fillDeptFilter();renderEmployees();renderContracts();renderPolicies();renderAttendance();
  renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();
  renderDashboard();renderAlerts();
+}
+
+/* ================= بوابة الموظف ================= */
+const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقودي',leaves:'إجازاتي',attendance:'حضوري وغيابي',permits:'استئذاناتي',policies:'الأنظمة والسياسات'};
+document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
+function epGo(p){
+ document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
+ document.querySelectorAll('#empApp .page').forEach(sc=>sc.classList.toggle('on',sc.id==='ep-'+p));
+ $('epTopTitle').textContent=EP_TITLES[p]||'';window.scrollTo({top:0});
+}
+function epAttTab(t,btn){document.querySelectorAll('#ep-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+ $('epAtt-site').style.display=t==='site'?'block':'none';$('epAtt-meet').style.display=t==='meet'?'block':'none'}
+
+function initEmpPortal(){
+ const e=currentEmp;
+ $('epAvatar').textContent=e.name[0];$('epHeroAvatar').textContent=e.name[0];
+ $('epTopName').textContent=e.name.split(' ').slice(0,2).join(' ');$('epTopJob').textContent=e.job;
+ $('epHeroName').textContent=e.name;$('epHeroMeta').textContent=`${e.num} · ${e.dept} · ${e.job}`;
+ $('epHeroStatus').textContent=e.status;$('epHeroStatus').className='tag '+(e.status==='نشط'?'ok':'gray');
+ const item=(k,v)=>`<div class="info-item"><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
+ $('epPersonal').innerHTML=item('رقم الموظف',e.num)+item('الاسم الرباعي',e.name)+item('الجنسية',e.nat)+item('الدولة / المدينة',e.city)+item('البريد الإلكتروني',e.email)+item('رقم الجوال',e.phone)+item('الجنس',e.gender);
+ $('epJobInfo').innerHTML=item('تاريخ التعيين',fmt(e.hire))+item('نهاية فترة التجربة',fmt(e.probEnd))+item('المسمى الوظيفي',e.job)+item('القسم',e.dept)+item('نوع التوظيف',e.type)+item('نوع العمل',e.work)+item('الراتب الشهري',e.salary+' '+e.currency)+item('مدة العقد',e.contractDur);
+ $('epDocs').innerHTML=['هوية الموظف','شهادة تعليمية','شهادة خبرة','العرض الوظيفي','عقد العمل','السيرة الذاتية'].map(d=>`<div class="info-item" style="cursor:pointer" onclick="toast('عرض / تحميل: ${d}')"><div class="k">مستند</div><div class="v">📎 ${d}</div></div>`).join('');
+ epRenderAll();
+}
+function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies()}
+
+function epRenderAlerts(){
+ const A=buildAlerts().filter(a=>a.d.includes(currentEmp.name)||a.t.includes('سياسة'));
+ leaves.filter(l=>l.emp===currentEmp.name&&l.status!=='بانتظار الموافقة').forEach(l=>A.push({t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴'}));
+ $('epAlertCount').textContent=A.length;
+ $('epAlertsList').innerHTML=A.length?A.map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>';
+}
+function epRenderContracts(){
+ const rows=contracts.filter(c=>c.emp===currentEmp.name);
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="toast('عرض / تحميل نسخة العقد PDF')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+}
+function epRenderLeaves(){
+ const b=balance(currentEmp.name);
+ const my=leaves.filter(l=>l.emp===currentEmp.name);
+ const S=[
+  {n:b.annualLeft,l:'الرصيد السنوي المتبقي (من 21)',k:'ok'},
+  {n:b.annualUsed,l:'أيام سنوية مستخدمة',k:''},
+  {n:b.sickLeft,l:'الرصيد المرضي المتبقي (من 21)',k:'ok'},
+  {n:b.sickUsed,l:'أيام مرضية مستخدمة',k:''},
+  {n:my.filter(l=>l.status==='بانتظار الموافقة').length,l:'طلبات بانتظار الموافقة',k:'sand'},
+ ];
+ $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
+ const stTag=st=>st==='تمت الموافقة'?'ok':st==='تم الرفض'?'danger':'sand';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات إجازة</td></tr>';
+}
+function epCalcDays(){const s=$('eplStart').value,en=$('eplEnd').value;if(s&&en){const n=Math.round((new Date(en)-new Date(s))/864e5)+1;if(n>0)$('eplDays').value=n}}
+function epAddLeave(){
+ if(!$('eplStart').value||!$('eplEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
+ leaves.push({emp:currentEmp.name,dept:currentEmp.dept,job:currentEmp.job,type:$('eplType').value,req:D(0),start:$('eplStart').value,end:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,status:'بانتظار الموافقة',head:'—',manager:'—',notes:$('eplNotes').value});
+ closeModal('epLeaveModal');epRenderLeaves();epRenderAlerts();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
+ ['eplStart','eplEnd','eplDays','eplNotes','eplReason'].forEach(id=>$(id).value='');
+}
+function epRenderAttendance(){
+ const n=currentEmp.name;
+ $('epSiteAttTbody').innerHTML=siteAtt.filter(r=>r.emp===n).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>';
+ $('epSiteAbsTbody').innerHTML=siteAbs.filter(r=>r.emp===n).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.reason}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
+ $('epMeetAttTbody').innerHTML=meetAtt.filter(r=>r.emp===n).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات</td></tr>';
+ $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.emp===n).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
+}
+function epRenderPermits(){
+ const stTag=st=>st==='معتمد'?'ok':st==='مرفوض'?'danger':'sand';
+ const rows=permits.filter(p=>p.emp===currentEmp.name);
+ $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>';
+}
+function epAddPermit(){
+ permits.push({emp:currentEmp.name,date:$('eppDate').value||D(0),time:$('eppTime').value||'—',type:$('eppType').value,status:'بانتظار الموافقة',notes:$('eppNotes').value});
+ closeModal('epPermitModal');epRenderPermits();epRenderAlerts();toast('تم إرسال طلب الاستئذان — بانتظار موافقة الإدارة');
+}
+function epRenderPolicies(){
+ $('epPoliciesList').innerHTML=policies.map(p=>`
+  <div class="policy"><div class="pic">§</div>
+   <div class="pinfo"><b>${p.name}</b><small>آخر تحديث: ${fmt(p.updated)} — الإصدار ${p.ver} — <span class="tag ${p.status==='متاح للتنزيل'?'ok':'sand'}">${p.status}</span></small></div>
+   <div class="actions">
+     <button class="btn btn-ghost btn-sm" onclick="toast('عرض ${p.name}')">عرض</button>
+     ${p.status==='متاح للتنزيل'?`<button class="btn btn-ok btn-sm" onclick="toast('جاري تحميل ${p.name}')">تحميل</button>`:''}
+   </div></div>`).join('');
 }
 </script>
 </body>
