@@ -667,14 +667,7 @@ tbody tr:hover{background:#FAFCFB}
     </div>
   </fieldset>
   <fieldset><legend>المستندات المطلوبة</legend>
-    <div class="grid-3">
-      <div class="upload-box" onclick="toast('تم إرفاق هوية الموظف')">📎 هوية الموظف</div>
-      <div class="upload-box" onclick="toast('تم إرفاق الشهادة التعليمية')">📎 شهادة تعليمية</div>
-      <div class="upload-box" onclick="toast('تم إرفاق شهادة الخبرة')">📎 شهادة خبرة (إن وجدت)</div>
-      <div class="upload-box" onclick="toast('تم إرفاق العرض الوظيفي')">📎 العرض الوظيفي</div>
-      <div class="upload-box" onclick="toast('تم إرفاق عقد العمل')">📎 عقد العمل</div>
-      <div class="upload-box" onclick="toast('تم إرفاق السيرة الذاتية')">📎 السيرة الذاتية</div>
-    </div>
+    <div class="section-note">احفظ بيانات الموظف أولاً، ثم ارفع مستنداته من زر <b>📎 المستندات</b> بجانب اسمه في الجدول.</div>
   </fieldset>
   <div class="modal-foot"><button class="btn btn-primary" onclick="saveEmployee()">حفظ الموظف</button><button class="btn btn-ghost" onclick="closeModal('empModal')">إلغاء</button></div>
 </div></div>
@@ -784,6 +777,12 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-foot"><button class="btn btn-primary" onclick="addForm()">حفظ النموذج</button><button class="btn btn-ghost" onclick="closeModal('formModal')">إلغاء</button></div>
 </div></div>
 
+<!-- مستندات الموظف -->
+<div class="modal-back" id="docsModal"><div class="modal">
+  <div class="modal-head"><h3 id="docsModalTitle">مستندات الموظف</h3><button class="x-btn" onclick="closeModal('docsModal')">✕</button></div>
+  <div id="docsModalBody"></div>
+</div></div>
+
 <!-- تفاصيل إجازات موظف -->
 <div class="modal-back" id="leaveDetailModal"><div class="modal lg" id="leaveDetailBody"></div></div>
 
@@ -889,7 +888,7 @@ async function loadAll(){
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
- filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,path:r.storage_path}));
+ filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url}));
 }
 async function refresh(){await loadAll();if(me.role==='admin')renderAll();else epRenderAll()}
@@ -1010,7 +1009,7 @@ function renderEmployees(){
  $('empTbody').innerHTML=rows.length?rows.map(e=>`<tr>
   <td><b>${e.num}</b></td><td>${e.name}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td>${e.work||'—'}</td>
   <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span>${e.role==='admin'?' <span class="tag info">أدمن</span>':''}${e.auth_id?'':' <span class="tag gray">لم يفعّل حسابه</span>'}</td>
-  <td><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
+  <td style="white-space:nowrap"><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button> <button class="btn btn-ghost btn-sm" onclick="openDocsModal('${e.id}')">📎 المستندات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
  fillEmpSelects();
 }
 function fillEmpSelects(){const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
@@ -1287,6 +1286,38 @@ async function addForm(){
 function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts()}
 function initAll(){fillDeptFilter();renderAll()}
 
+
+/* ================= مستندات الموظفين ================= */
+const DOC_TYPES=['هوية الموظف','شهادة تعليمية','شهادة خبرة','العرض الوظيفي','عقد العمل','السيرة الذاتية'];
+let docsEmpId=null;
+function openDocsModal(eid){docsEmpId=eid;renderDocsModal();openModal('docsModal')}
+function renderDocsModal(){
+ const e=empById[docsEmpId];if(!e)return;
+ $('docsModalTitle').textContent='مستندات الموظف: '+e.name;
+ const myFiles=filesData.filter(f=>f.employee_id===docsEmpId);
+ $('docsModalBody').innerHTML=DOC_TYPES.map(t=>{
+  const f=myFiles.find(x=>x.sub===t);
+  return `<div class="policy" style="padding:12px 14px"><div class="pic">📎</div>
+   <div class="pinfo"><b>${t}</b><small>${f?f.name+' — رُفع '+fmt(f.up):'لم يُرفع بعد'}</small></div>
+   <div class="actions">
+    ${f?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path}')">عرض / تحميل</button>`:''}
+    <button class="btn btn-primary btn-sm" onclick="uploadEmpDoc('${t}')">${f?'استبدال':'رفع'}</button>
+   </div></div>`}).join('');
+}
+async function uploadEmpDoc(docType){
+ try{
+  const f=await pickFile('.pdf,.doc,.docx,.jpg,.jpeg,.png');if(!f)return;
+  toast('جاري رفع '+docType+'...');
+  const path=await uploadToStorage(f,'employees/'+docsEmpId);
+  // استبدال المستند القديم من نفس النوع إن وجد
+  const old=filesData.find(x=>x.employee_id===docsEmpId&&x.sub===docType);
+  if(old)await sb.from('files_registry').delete().eq('id',old.id);
+  const {error}=await sb.from('files_registry').insert({file_name:f.name,file_type:(f.name.split('.').pop()||'').toUpperCase(),file_size:(f.size/1024/1024).toFixed(2)+' MB',category:'ملفات الموظفين',subcategory:docType,source:'ملف الموظف: '+empById[docsEmpId].name,uploaded_by:me.name,storage_path:path,employee_id:docsEmpId});
+  if(error)throw error;
+  await loadAll();renderDocsModal();renderFiles();toast('تم رفع '+docType+' بنجاح ✅');
+ }catch(e){err(e)}
+}
+
 /* ================= بوابة الموظف ================= */
 const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقودي',leaves:'إجازاتي',attendance:'حضوري وغيابي',permits:'استئذاناتي',policies:'الأنظمة والسياسات'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
@@ -1307,7 +1338,9 @@ function initEmpPortal(){
  const item=(k,v)=>`<div class="info-item"><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
  $('epPersonal').innerHTML=item('رقم الموظف',e.num)+item('الاسم الرباعي',e.name)+item('الجنسية',e.nat)+item('الدولة / المدينة',e.city)+item('البريد الإلكتروني',e.email)+item('رقم الجوال',e.phone)+item('الجنس',e.gender);
  $('epJobInfo').innerHTML=item('تاريخ التعيين',fmt(e.hire))+item('نهاية فترة التجربة',fmt(e.probEnd))+item('المسمى الوظيفي',e.job)+item('القسم',e.dept)+item('نوع التوظيف',e.type)+item('نوع العمل',e.work)+item('الراتب الشهري',e.salary?e.salary+' '+(e.currency||''):'—')+item('مدة العقد',e.contractDur);
- $('epDocs').innerHTML=['هوية الموظف','شهادة تعليمية','شهادة خبرة','العرض الوظيفي','عقد العمل','السيرة الذاتية'].map(d=>`<div class="info-item"><div class="k">مستند</div><div class="v">📎 ${d}</div></div>`).join('');
+ const myDocs=filesData.filter(f=>f.employee_id===e.id);
+ $('epDocs').innerHTML=DOC_TYPES.map(d=>{const f=myDocs.find(x=>x.sub===d);
+  return `<div class="info-item" ${f?`style="cursor:pointer" onclick="openStoredFile('${f.path}')"`:''}><div class="k">${f?'متوفر — اضغط للعرض':'لم يُرفع بعد'}</div><div class="v">📎 ${d}</div></div>`}).join('');
  epRenderAll();
 }
 function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies()}
