@@ -263,7 +263,7 @@ tbody tr:hover{background:#FAFCFB}
     <input id="topSearchInput" placeholder="ابحث في كل النظام… ثم اضغط Enter" onkeydown="if(event.key==='Enter'){go('search');runGlobalSearch(this.value)}">
   </div>
   <div class="top-user">
-    <button class="bell" onclick="go('alerts')">🔔<span class="dot"></span></button>
+    <button class="bell" onclick="go('alerts')">🔔<span class="dot" id="bellDot" style="display:none"></span></button>
     <div class="avatar">أ</div>
     <div style="line-height:1.3"><b style="font-size:13px">مدير النظام</b><br><small style="color:var(--muted);font-size:11px">صلاحية كاملة</small></div>
   </div>
@@ -540,7 +540,7 @@ tbody tr:hover{background:#FAFCFB}
 <div class="topbar">
   <h2 id="epTopTitle">الملف الشخصي</h2>
   <div class="top-user">
-    <button class="bell" onclick="epGo('alerts')">🔔<span class="dot"></span></button>
+    <button class="bell" onclick="epGo('alerts')">🔔<span class="dot" id="epBellDot" style="display:none"></span></button>
     <div class="avatar" id="epAvatar">م</div>
     <div style="line-height:1.3"><b style="font-size:13px" id="epTopName">موظف</b><br><small style="color:var(--muted);font-size:11px" id="epTopJob"></small></div>
   </div>
@@ -919,8 +919,30 @@ async function enterApp(){
  if(me.role==='admin'){$('app').classList.add('on');initAll();renderMeetings()}
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
  runCheckin();
+ initRealtime();
 }
 async function logout(){await sb.auth.signOut();location.reload()}
+/* البث اللحظي: التحديث الفوري بدون تحديث الصفحة */
+let rtTimer=null,rtStarted=false;
+function initRealtime(){
+ if(rtStarted)return;rtStarted=true;
+ try{
+  const ch=sb.channel('hrms-live');
+  ['leaves','permits','meeting_records','site_attendance','contracts','policies'].forEach(t=>{
+   ch.on('postgres_changes',{event:'*',schema:'public',table:t},payload=>{
+     clearTimeout(rtTimer);
+     rtTimer=setTimeout(()=>{refresh().catch(()=>{})},700);
+     try{
+      if(payload.eventType==='INSERT'&&t==='leaves'&&me.role!=='employee')toast('🔔 وصل طلب إجازة جديد الآن');
+      else if(payload.eventType==='INSERT'&&t==='permits'&&me.role==='admin')toast('🔔 وصل طلب استئذان جديد الآن');
+      else if(payload.eventType==='UPDATE'&&t==='leaves'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد طلباتك');
+      else if(payload.eventType==='INSERT'&&t==='meeting_records'&&me.role==='admin')toast('✋ موظف سجّل حضوره الآن');
+     }catch(e){}
+   });
+  });
+  ch.subscribe();
+ }catch(e){console.log('realtime',e)}
+}
 /* استعادة كلمة المرور */
 let recovering=location.hash.includes('type=recovery');
 async function forgotPassword(){
@@ -1023,7 +1045,7 @@ function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classLis
 
 /* ================= المقروء وغير المقروء ================= */
 let readKeys=new Set();
-function alertKey(a){let h=5381,str=a.t+'|'+a.d;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return 'k'+h.toString(16)}
+function alertKey(a){if(a.sid)return 'k'+a.sid;let h=5381,str=a.t+'|'+a.d;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return 'k'+h.toString(16)}
 async function loadReads(){
  const {data,error}=await sb.from('alert_reads').select('alert_key');
  readKeys=new Set(error?[]:(data||[]).map(r=>r.alert_key));
@@ -1050,22 +1072,22 @@ function alertItem(a,i){
 function buildAlerts(){
  const A=[];
  contracts.forEach(c=>{const n=daysTo(c.end);
-  if(n>=0&&n<=30)A.push({t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍',nav:{p:'contracts',f:'exp30'}})});
+  if(n>=0&&n<=30)A.push({sid:'ct-'+c.employee_id,t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍',nav:{p:'contracts',f:'exp30'}})});
  employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
-  if(n>=0&&n<=14)A.push({t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num}})});
+  if(n>=0&&n<=14)A.push({sid:'prob-'+e.num,t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num}})});
  leaves.forEach(l=>{
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp}});
-  if(l.status===LV_P1)A.push({t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
-  if(l.status===LV_P2)A.push({t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
- permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp,status:'بانتظار الموافقة'}})});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp}});
+  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
+  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
+ permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({sid:'pr-'+p.id,t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp,status:'بانتظار الموافقة'}})});
  employees.forEach(e=>{const b=balance(e.name);
-  if(b.annualLeft<=5&&b.annualLeft>0)A.push({t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name}});
-  if(b.sickLeft<=5&&b.sickLeft>0)A.push({t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name}});
-  if(b.annualUsed>0&&b.annualLeft<=0)A.push({t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name}})});
+  if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name}});
+  if(b.sickLeft<=5&&b.sickLeft>0)A.push({sid:'balS-'+e.num,t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name}});
+  if(b.annualUsed>0&&b.annualLeft<=0)A.push({sid:'balZ-'+e.num,t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name}})});
  const monthAbs={};const mNow=D(0).slice(0,7);
  siteAbs.filter(a=>String(a.date).startsWith(mNow)).forEach(a=>monthAbs[a.emp]=(monthAbs[a.emp]||0)+1);
- Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'}})});
- policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
+ Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({sid:'abs-'+emp+'-'+mNow,t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'}})});
+ policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
  return A;
 }
 function renderAlerts(){
@@ -1074,6 +1096,7 @@ function renderAlerts(){
  $('alertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
  _alertsList=A;
+ if($('bellDot'))$('bellDot').style.display=unreadCount?'block':'none';
  $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
   (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>');
  $('dashAlerts').innerHTML=A.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد تنبيهات</div>';
@@ -1694,12 +1717,13 @@ async function mgrDecide(id,approve){
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>a.d.includes(currentEmp.name)||a.t.includes('سياسة'));
- if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
- leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
+ if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
+ leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('epAlertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
  _alertsList=A;
+ if($('epBellDot'))$('epBellDot').style.display=unreadCount?'block':'none';
  $('epAlertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
   (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>');
 }
