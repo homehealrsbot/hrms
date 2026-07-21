@@ -1830,3 +1830,45 @@ try{
 }catch(e){}
 })();
 </script>
+<script>
+(function(){
+ var nameField=document.getElementById('pNewName');
+ if(nameField){
+  var wrap=nameField.closest('.field');
+  var div=document.createElement('div');div.className='field';
+  div.innerHTML='<label>القسم المستهدف</label><select id="pNewDept"><option value="عام">عام — لجميع الموظفين</option><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select>';
+  wrap.parentNode.insertBefore(div,wrap.nextSibling);
+ }
+ window.addNewPolicy=async function(){
+  var name=document.getElementById('pNewName').value.trim();
+  if(!name){toast('أدخل اسم السياسة');return}
+  var dept=(document.getElementById('pNewDept')||{}).value||'عام';
+  try{
+   var path=null;var f=takeStaged('policyNew','pNewFileBox','📎 اختر ملف السياسة (PDF / DOC)');
+   if(f){toast('جاري رفع الملف...');path=await uploadToStorage(f,'policies');try{await registerFile(f,'التقارير','الأنظمة والسياسات',path)}catch(e){}}
+   var r=await sb.from('policies').insert({name:name,file_url:path,status:'قيد العرض',department:dept});
+   if(r.error)throw r.error;
+   closeModal('policyModal');document.getElementById('pNewName').value='';
+   await refresh();toast('تمت إضافة السياسة — قسم: '+dept);
+  }catch(e){err(e)}
+ };
+ if(window.renderPolicies){
+  var orig=window.renderPolicies;
+  window.renderPolicies=function(){
+   orig();
+   sb.from('policies').select('id,department').then(function(r){
+    var map={};(r.data||[]).forEach(function(x){map[x.id]=x.department});
+    document.querySelectorAll('#policiesList .policy').forEach(function(c,i){
+     var p=policies[i];if(!p)return;
+     var info=c.querySelector('.pinfo small');
+     if(info&&!info.querySelector('.dept-tag')){
+      var t=document.createElement('span');t.className='tag info dept-tag';t.style.marginInlineStart='6px';
+      t.textContent=(map[p.id]&&map[p.id]!=='عام')?('قسم '+map[p.id]):'عامة لجميع الأقسام';
+      info.appendChild(t);
+     }
+    });
+   });
+  };
+ }
+})();
+</script>
