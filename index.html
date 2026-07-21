@@ -340,6 +340,12 @@ tbody tr:hover{background:#FAFCFB}
 
   <div id="att-meetAtt" class="att-tab">
     <div class="card">
+      <div class="page-head" style="margin-bottom:12px"><h3 style="margin:0">🔗 اجتماعات برابط حضور ذاتي</h3>
+        <button class="btn btn-primary btn-sm" onclick="openModal('meetingModal')">+ إنشاء اجتماع برابط حضور</button></div>
+      <div class="section-note">أنشئ الاجتماع ← انسخ رابط الحضور ← أرسله في شات Google Meet ← كل موظف يضغطه يُسجَّل حضوره تلقائياً. وبنهاية الاجتماع اضغط «توليد الغياب» لتسجيل من لم يحضر.</div>
+      <div class="tbl-wrap"><table><thead><tr><th>الاجتماع</th><th>العنوان</th><th>القسم</th><th>التاريخ</th><th>الوقت</th><th>الحضور</th><th>إجراءات</th></tr></thead><tbody id="meetingsTbody"></tbody></table></div>
+    </div>
+    <div class="card">
       <div class="page-head" style="margin-bottom:12px"><h3 style="margin:0">سجل حضور الاجتماعات</h3>
         <div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" onclick="openModal('meetAttModal')">+ تسجيل حضور اجتماع</button><button class="btn btn-ghost btn-sm" onclick="exportCSV('meetAtt')">⬇ تصدير تقرير الشهر (Excel)</button></div></div>
       <div class="subtabs" id="meetAttFilter"></div>
@@ -773,6 +779,27 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-foot"><button class="btn btn-primary" onclick="addSiteAbs()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('siteAbsModal')">إلغاء</button></div>
 </div></div>
 
+<!-- إنشاء اجتماع برابط حضور -->
+<div class="modal-back" id="meetingModal"><div class="modal">
+  <div class="modal-head"><h3>إنشاء اجتماع برابط حضور</h3><button class="x-btn" onclick="closeModal('meetingModal')">✕</button></div>
+  <div class="grid-2">
+    <div><label>الاجتماع</label><select id="mgMeet"><option>اجتماع التسويق</option><option>اجتماع التقنية</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع B2B</option></select></div>
+    <div><label>القسم</label><select id="mgDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>عنوان الاجتماع <b style="color:var(--danger)">*</b></label><input id="mgTitle"></div>
+    <div><label>الهدف من الاجتماع</label><input id="mgGoal"></div>
+    <div><label>التاريخ</label><input id="mgDate" type="date"></div>
+    <div><label>الوقت</label><input id="mgTime" type="time"></div>
+    <div style="grid-column:1/-1"><label>رابط Google Meet (اختياري)</label><input id="mgLink" placeholder="https://meet.google.com/..."></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="createMeeting()">إنشاء وتوليد رابط الحضور</button><button class="btn btn-ghost" onclick="closeModal('meetingModal')">إلغاء</button></div>
+</div></div>
+
+<!-- تسجيل الحضور الذاتي -->
+<div class="modal-back" id="checkinModal"><div class="modal sm">
+  <div class="modal-head"><h3>تسجيل الحضور</h3><button class="x-btn" onclick="closeModal('checkinModal')">✕</button></div>
+  <div id="checkinBody"></div>
+</div></div>
+
 <!-- استئذان -->
 <div class="modal-back" id="permitModal"><div class="modal">
   <div class="modal-head"><h3>إنشاء طلب استئذان</h3><button class="x-btn" onclick="closeModal('permitModal')">✕</button></div>
@@ -888,9 +915,10 @@ async function enterApp(){
  if(!profile){toast('لا يوجد ملف موظف مرتبط بهذا البريد — تواصل مع الإدارة لإضافتك أولاً');await sb.auth.signOut();return}
  me=mapEmp(profile);
  $('loginScreen').style.display='none';
- await loadAll();
- if(me.role==='admin'){$('app').classList.add('on');initAll()}
+ await loadAll();await loadMeetings();
+ if(me.role==='admin'){$('app').classList.add('on');initAll();renderMeetings()}
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
+ runCheckin();
 }
 async function logout(){await sb.auth.signOut();location.reload()}
 /* استعادة كلمة المرور */
@@ -942,7 +970,7 @@ async function loadAll(){
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,file:cur.pdf_url,history:rows}});
  leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,notes:r.notes}));
  meetAtt=[];meetAbs=[];
- (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
+ (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
@@ -950,7 +978,7 @@ async function loadAll(){
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url}));
 }
-async function refresh(){await loadAll();if(me.role==='admin')renderAll();else epRenderAll()}
+async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
 /* ================= رفع الملفات الفعلي ================= */
 async function uploadToStorage(file,folder){
@@ -1289,6 +1317,70 @@ function downloadCSV(name,headers,rows){
  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name+'.csv';a.click();
  toast('تم تصدير التقرير بنجاح')}
+
+/* ================= الاجتماعات برابط الحضور ================= */
+let meetingsList=[];
+async function loadMeetings(){
+ const {data,error}=await sb.from('meetings').select('*').order('meeting_date',{ascending:false});
+ meetingsList=error?[]:(data||[]);
+}
+function renderMeetings(){
+ if(!$('meetingsTbody'))return;
+ $('meetingsTbody').innerHTML=meetingsList.length?meetingsList.map(m=>{
+  const att=meetAtt.filter(r=>r.meeting_id===m.id).length;
+  return `<tr><td><b>${m.meeting_name}</b></td><td>${m.title||'—'}</td><td>${m.department}</td><td>${fmt(m.meeting_date)}</td><td>${tfmt(m.meeting_time)}</td>
+  <td><span class="tag ok">${att} حاضر</span></td>
+  <td style="white-space:nowrap">
+   <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ رابط الحضور</button>
+   ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="window.open('${m.meet_link}','_blank')">فتح Meet</button>`:''}
+   <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
+  </td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد اجتماعات منشأة — أنشئ أول اجتماع برابط حضور</td></tr>';
+}
+async function createMeeting(){
+ if(!$('mgTitle').value.trim()){toast('أدخل عنوان الاجتماع');return}
+ const code=Math.random().toString(36).slice(2,10);
+ const {error}=await sb.from('meetings').insert({meeting_name:$('mgMeet').value,department:$('mgDept').value,title:$('mgTitle').value,goal:$('mgGoal').value,meeting_date:$('mgDate').value||D(0),meeting_time:$('mgTime').value||null,meet_link:$('mgLink').value||null,code});
+ if(error){err(error);return}
+ closeModal('meetingModal');await loadMeetings();renderMeetings();
+ copyCheckinLink(code);
+}
+function copyCheckinLink(code){
+ const link=location.origin+location.pathname+'#checkin='+code;
+ navigator.clipboard.writeText(link).then(()=>toast('تم نسخ رابط الحضور — أرسله في شات الاجتماع'),()=>prompt('انسخ الرابط:',link));
+}
+async function generateAbsence(mid){
+ const m=meetingsList.find(x=>x.id===mid);if(!m)return;
+ if(!confirm('سيتم تسجيل غياب لكل موظفي قسم '+m.department+' الذين لم يسجلوا حضورهم. متابعة؟'))return;
+ const attended=new Set(meetAtt.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
+ const absentees=employees.filter(e=>e.dept===m.department&&e.status==='نشط'&&e.role!=='admin'&&!attended.has(e.id));
+ if(!absentees.length){toast('الجميع سجلوا حضورهم 🎉');return}
+ const rows=absentees.map(e=>({employee_id:e.id,record_type:'غياب',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:m.meeting_time,meeting_id:mid,notes:'غياب مولد تلقائياً'}));
+ const {error}=await sb.from('meeting_records').insert(rows);
+ if(error){err(error);return}
+ await refresh();renderMeetings();toast('تم تسجيل غياب '+absentees.length+' موظف');
+}
+/* تسجيل الحضور الذاتي عبر الرابط */
+let pendingCheckin=(location.hash.match(/checkin=([a-z0-9]+)/i)||[])[1]||null;
+async function runCheckin(){
+ if(!pendingCheckin)return;
+ const code=pendingCheckin;pendingCheckin=null;history.replaceState(null,'',location.pathname);
+ const {data:m,error}=await sb.from('meetings').select('*').eq('code',code).maybeSingle();
+ if(error||!m){toast('رابط الحضور غير صالح');return}
+ const {data:existing}=await sb.from('meeting_records').select('id').eq('meeting_id',m.id).eq('employee_id',me.id);
+ $('checkinBody').innerHTML=`
+  <div class="section-note">📅 <b>${m.meeting_name}</b> — ${m.title||''}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
+  ${existing&&existing.length?'<p style="text-align:center;font-weight:700;color:var(--ok);padding:10px">✅ حضورك مسجّل مسبقاً لهذا الاجتماع</p>':
+  `<button class="btn btn-primary btn-block" onclick="confirmCheckin('${m.id}')">✋ تسجيل حضوري الآن — ${me.name}</button>`}`;
+ openModal('checkinModal');
+}
+async function confirmCheckin(mid){
+ const m=meetingsList.find(x=>x.id===mid)||await sb.from('meetings').select('*').eq('id',mid).maybeSingle().then(r=>r.data);
+ const now=new Date();
+ const {error}=await sb.from('meeting_records').insert({employee_id:me.id,record_type:'حضور',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:(now.getHours()+'').padStart(2,'0')+':'+(now.getMinutes()+'').padStart(2,'0'),meeting_id:m.id,notes:'حضور ذاتي عبر الرابط'});
+ if(error){err(error);return}
+ $('checkinBody').innerHTML='<p style="text-align:center;font-weight:800;color:var(--ok);font-size:17px;padding:16px">✅ تم تسجيل حضورك بنجاح</p>';
+ await refresh();
+}
 
 /* ================= الإجازات ================= */
 function balance(empName){
