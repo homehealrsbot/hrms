@@ -1385,10 +1385,22 @@ async function confirmCheckin(mid){
 
 /* ================= الإجازات ================= */
 function balance(empName){
- const ok=leaves.filter(l=>l.emp===empName&&l.status==='تمت الموافقة');
+ const mine=leaves.filter(l=>l.emp===empName);
+ const ok=mine.filter(l=>l.status==='تمت الموافقة');
+ const pend=mine.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const annualUsed=ok.filter(l=>l.type==='سنوية').reduce((s,l)=>s+l.days,0);
  const sickUsed=ok.filter(l=>l.type==='مرضية').reduce((s,l)=>s+l.days,0);
- return {annualUsed,sickUsed,annualLeft:Math.max(0,21-annualUsed),sickLeft:Math.max(0,21-sickUsed)};
+ const annualPend=pend.filter(l=>l.type==='سنوية').reduce((s,l)=>s+l.days,0);
+ const sickPend=pend.filter(l=>l.type==='مرضية').reduce((s,l)=>s+l.days,0);
+ return {annualUsed,sickUsed,annualPend,sickPend,
+  annualLeft:Math.max(0,21-annualUsed),sickLeft:Math.max(0,21-sickUsed),
+  annualAvail:Math.max(0,21-annualUsed-annualPend),sickAvail:Math.max(0,21-sickUsed-sickPend)};
+}
+function checkLeaveBalance(empName,type,days){
+ const b=balance(empName);
+ if(type==='سنوية'&&days>b.annualAvail)return `الرصيد السنوي المتاح ${b.annualAvail} يوم فقط (مستخدم: ${b.annualUsed} + قيد الطلب: ${b.annualPend}) — لا يمكن طلب ${days} يوم`;
+ if(type==='مرضية'&&days>b.sickAvail)return `الرصيد المرضي المتاح ${b.sickAvail} يوم فقط (مستخدم: ${b.sickUsed} + قيد الطلب: ${b.sickPend}) — لا يمكن طلب ${days} يوم`;
+ return null;
 }
 function setLeaveTab(t,btn){document.querySelectorAll('#page-leaves .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  document.querySelectorAll('.leave-tab').forEach(d=>d.style.display='none');$('leave-'+t).style.display='block'}
@@ -1414,6 +1426,9 @@ async function addLeave(){
  if(!$('lvEmp').value){toast('اختر الموظف');return}
  if(!$('lvStart').value||!$('lvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
  if($('lvEnd').value<$('lvStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
+ const lvEmpName=(empById[$('lvEmp').value]||{}).name||'';
+ const balErr2=checkLeaveBalance(lvEmpName,$('lvType').value,+$('lvDays').value||1);
+ if(balErr2){toast(balErr2);return}
  try{
   let attachment=null;const f=takeStaged('leaveAdmin','lvFileBox','📎 اضغط لرفع مستند طلب الإجازة');
   if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+$('lvEmp').value+'/leaves');await registerFile(f,'طلبات الإجازة','إجازة: '+(empById[$('lvEmp').value]||{}).name,attachment).catch(()=>{})}
@@ -1460,8 +1475,10 @@ function openLeaveDetail(emp){
    <div class="mini-stat"><div class="num">${b.sickUsed}</div><div class="lbl">أيام مرضية مستخدمة</div></div>
    <div class="mini-stat"><div class="num">${totalSpecial}</div><div class="lbl">أيام إجازات خاصة</div></div>
    <div class="mini-stat"><div class="num">${totalNoPay}</div><div class="lbl">أيام بدون راتب</div></div>
-   <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.annualLeft}</div><div class="lbl">الرصيد السنوي المتبقي</div></div>
-   <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.sickLeft}</div><div class="lbl">الرصيد المرضي المتبقي</div></div>
+   <div class="mini-stat"><div class="num" style="color:#9A6C1E">${b.annualPend}</div><div class="lbl">سنوية قيد الطلب</div></div>
+   <div class="mini-stat"><div class="num" style="color:#9A6C1E">${b.sickPend}</div><div class="lbl">مرضية قيد الطلب</div></div>
+   <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.annualAvail}</div><div class="lbl">السنوي المتاح (بعد المحجوز)</div></div>
+   <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.sickAvail}</div><div class="lbl">المرضي المتاح (بعد المحجوز)</div></div>
   </div>
   <div class="tbl-wrap"><table>
    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
@@ -1694,11 +1711,13 @@ function epRenderLeaves(){
  const b=balance(currentEmp.name);
  const my=leaves.filter(l=>l.employee_id===currentEmp.id);
  const S=[
-  {n:b.annualLeft,l:'الرصيد السنوي المتبقي (من 21)',k:'ok'},
-  {n:b.annualUsed,l:'أيام سنوية مستخدمة',k:''},
-  {n:b.sickLeft,l:'الرصيد المرضي المتبقي (من 21)',k:'ok'},
-  {n:b.sickUsed,l:'أيام مرضية مستخدمة',k:''},
-  {n:my.filter(l=>l.status==='بانتظار الموافقة').length,l:'طلبات بانتظار الموافقة',k:'sand'},
+  {n:b.annualAvail,l:'الرصيد السنوي المتاح (من 21)',k:'ok'},
+  {n:b.annualUsed,l:'سنوية معتمدة (مخصومة)',k:''},
+  {n:b.annualPend,l:'سنوية قيد الطلب (محجوزة)',k:'sand'},
+  {n:b.sickAvail,l:'الرصيد المرضي المتاح (من 21)',k:'ok'},
+  {n:b.sickUsed,l:'مرضية معتمدة (مخصومة)',k:''},
+  {n:b.sickPend,l:'مرضية قيد الطلب (محجوزة)',k:'sand'},
+  {n:my.filter(l=>l.status===LV_P1||l.status===LV_P2).length,l:'طلبات معلّقة',k:'info'},
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
@@ -1708,6 +1727,8 @@ function epCalcDays(){const s=$('eplStart').value,en=$('eplEnd').value;if(s&&en)
 async function epAddLeave(){
  if(!$('eplStart').value||!$('eplEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
  if($('eplEnd').value<$('eplStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
+ const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1);
+ if(balErr){toast(balErr);return}
  try{
   let attachment=null;const f=takeStaged('leaveEmp','eplFileBox','📎 إرفاق مستند طلب الإجازة');
   if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+currentEmp.id);
