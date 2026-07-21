@@ -302,7 +302,7 @@ tbody tr:hover{background:#FAFCFB}
     <div class="filters">
       <input id="fEmpNum" placeholder="بحث بالاسم أو رقم الموظف" oninput="renderEmployees()">
       <select id="fEmpStatus" onchange="renderEmployees()"><option value="">الحالة: الكل</option><option>نشط</option><option>غير نشط</option></select>
-      <select id="fEmpType" onchange="renderEmployees()"><option value="">نوع التوظيف: الكل</option><option>عن بعد</option><option>حضوري</option></select>
+      <select id="fEmpType" onchange="renderEmployees()"><option value="">نوع التوظيف: الكل</option><option>عن بعد / حضوري</option><option>عن بعد</option><option>حضوري</option></select>
       <select id="fEmpDept" onchange="renderEmployees()"><option value="">القسم: الكل</option></select>
     </div>
     <div id="empChipWrap"></div>
@@ -685,10 +685,10 @@ tbody tr:hover{background:#FAFCFB}
       <div><label>بداية فترة التجربة</label><input id="eProbStart" type="date"></div>
       <div><label>نهاية فترة التجربة</label><input id="eProbEnd" type="date"></div>
       <div><label>المسمى الوظيفي</label><input id="eJob"></div>
-      <div><label>القسم</label><select id="eDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
-      <div><label>نوع التوظيف</label><select id="eType"><option>حضوري</option><option>عن بعد</option></select></div>
+      <div><label>القسم</label><select id="eDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
+      <div><label>نوع التوظيف</label><select id="eType"><option>عن بعد / حضوري</option><option>حضوري</option><option>عن بعد</option></select></div>
       <div><label>الراتب الشهري</label><input id="eSalary" type="number"></div>
-      <div><label>عملة الراتب</label><select id="eCurrency"><option>ريال سعودي</option><option>دولار أمريكي</option><option>يورو</option></select></div>
+      <div><label>عملة الراتب</label><select id="eCurrency"><option>ريال سعودي</option><option>جنيه مصري</option><option>دولار أمريكي</option><option>يورو</option></select></div>
       <div><label>نوع العمل</label><select id="eWork"><option>كامل</option><option>جزئي</option></select></div>
       <div><label>مدة العقد</label><input id="eContractDur" placeholder="مثال: سنة"></div>
       <div><label>حالة الموظف</label><select id="eStatus"><option>نشط</option><option>غير نشط</option></select></div>
@@ -726,8 +726,8 @@ tbody tr:hover{background:#FAFCFB}
 <div class="modal-back" id="meetAttModal"><div class="modal">
   <div class="modal-head"><h3>تسجيل حضور اجتماع</h3><button class="x-btn" onclick="closeModal('meetAttModal')">✕</button></div>
   <div class="grid-2">
-    <div><label>الاجتماع</label><select id="maMeet"><option>اجتماع التسويق</option><option>اجتماع التقنية</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="maDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>الاجتماع</label><select id="maMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع تطوير شراكات</option></select></div>
+    <div><label>القسم</label><select id="maDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
     <div><label>عنوان الاجتماع</label><input id="maTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="maGoal"></div>
     <div><label>التاريخ</label><input id="maDate" type="date"></div>
@@ -741,8 +741,8 @@ tbody tr:hover{background:#FAFCFB}
 <div class="modal-back" id="meetAbsModal"><div class="modal">
   <div class="modal-head"><h3>تسجيل غياب اجتماع</h3><button class="x-btn" onclick="closeModal('meetAbsModal')">✕</button></div>
   <div class="grid-2">
-    <div><label>الاجتماع</label><select id="mbMeet"><option>اجتماع التسويق</option><option>اجتماع التقنية</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="mbDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>الاجتماع</label><select id="mbMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع تطوير شراكات</option></select></div>
+    <div><label>القسم</label><select id="mbDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
     <div><label>عنوان الاجتماع</label><input id="mbTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="mbGoal"></div>
     <div><label>التاريخ</label><input id="mbDate" type="date"></div>
@@ -760,7 +760,7 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>اسم الموظف</label><select id="saEmp"></select></div>
     <div><label>وقت الدخول</label><input id="saIn" type="time"></div>
     <div><label>وقت الخروج</label><input id="saOut" type="time"></div>
-    <div><label>القسم</label><select id="saDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="saDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
     <div><label>ملاحظات</label><input id="saNotes"></div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="addSiteAtt()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('siteAttModal')">إلغاء</button></div>
@@ -771,7 +771,7 @@ tbody tr:hover{background:#FAFCFB}
   <div class="grid-2">
     <div><label>التاريخ</label><input id="sbDate" type="date"></div>
     <div><label>اسم الموظف</label><select id="sbEmp"></select></div>
-    <div><label>القسم</label><select id="sbDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="sbDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
     <div><label>سبب الغياب</label><input id="sbReason"></div>
     <div><label>تقرير مرضي (إن وجد)</label><div class="upload-box" id="sbFileBox" onclick="stageFile('sickReport','.pdf,.jpg,.jpeg,.png,.doc,.docx','sbFileBox')">📎 إرفاق التقرير</div></div>
     <div><label>ملاحظات</label><input id="sbNotes"></div>
@@ -783,8 +783,8 @@ tbody tr:hover{background:#FAFCFB}
 <div class="modal-back" id="meetingModal"><div class="modal">
   <div class="modal-head"><h3>إنشاء اجتماع برابط حضور</h3><button class="x-btn" onclick="closeModal('meetingModal')">✕</button></div>
   <div class="grid-2">
-    <div><label>الاجتماع</label><select id="mgMeet"><option>اجتماع التسويق</option><option>اجتماع التقنية</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="mgDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
+    <div><label>الاجتماع</label><select id="mgMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع تطوير شراكات</option></select></div>
+    <div><label>القسم</label><select id="mgDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select></div>
     <div><label>عنوان الاجتماع <b style="color:var(--danger)">*</b></label><input id="mgTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="mgGoal"></div>
     <div><label>التاريخ</label><input id="mgDate" type="date"></div>
@@ -862,7 +862,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* ================= الحالة العامة ================= */
 const today = new Date();
 const D = o=>{const d=new Date(today);d.setDate(d.getDate()+o);return d.toISOString().slice(0,10)};
-const DEPTS = ['التسويق','التقنية','المالية','العمليات','B2B'];
+const DEPTS = ['التقنية', 'التسويق', 'المالية', 'العمليات', 'الطبي', 'خدمة العملاء', 'الإداري', 'الموارد البشرية', 'تطوير شراكات'];
 const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظار الاعتماد النهائي';
 let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[];
 let empById={},empByName={},me=null,currentEmp=null;
@@ -1836,7 +1836,7 @@ try{
  if(nameField){
   var wrap=nameField.closest('.field');
   var div=document.createElement('div');div.className='field';
-  div.innerHTML='<label>القسم المستهدف</label><select id="pNewDept"><option value="عام">عام — لجميع الموظفين</option><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select>';
+  div.innerHTML='<label>القسم المستهدف</label><select id="pNewDept"><option value="عام">عام — لجميع الموظفين</option><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>تطوير شراكات</option></select>';
   wrap.parentNode.insertBefore(div,wrap.nextSibling);
  }
  window.addNewPolicy=async function(){
