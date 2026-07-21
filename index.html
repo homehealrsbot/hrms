@@ -96,6 +96,11 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 /* ---------- البطاقات ---------- */
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px;margin-bottom:26px}
 .stat{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-inline-start:4px solid var(--pine);display:flex;flex-direction:column;gap:2px}
+.stat{cursor:pointer;transition:transform .12s, box-shadow .12s}
+.stat:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(20,37,31,.12)}
+.alert-item[data-nav]{cursor:pointer;transition:background .12s}
+.alert-item[data-nav]:hover{background:#F7FAF8}
+.chip-filter{display:inline-flex;align-items:center;gap:6px;background:var(--sand-soft);color:#9A6C1E;font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:20px;cursor:pointer;margin-bottom:12px}
 .stat .num{font-family:'Tajawal';font-size:28px;font-weight:900;line-height:1.2}
 .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:600}
 .stat.sand{border-color:var(--sand)} .stat.danger{border-color:var(--danger)} .stat.info{border-color:var(--info)} .stat.ok{border-color:var(--ok)}
@@ -300,6 +305,7 @@ tbody tr:hover{background:#FAFCFB}
       <select id="fEmpType" onchange="renderEmployees()"><option value="">نوع التوظيف: الكل</option><option>عن بعد</option><option>حضوري</option></select>
       <select id="fEmpDept" onchange="renderEmployees()"><option value="">القسم: الكل</option></select>
     </div>
+    <div id="empChipWrap"></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>رقم الموظف</th><th>الاسم الرباعي</th><th>القسم</th><th>المسمى الوظيفي</th><th>نوع التوظيف</th><th>نوع العمل</th><th>الحالة</th><th>إجراء</th></tr></thead>
       <tbody id="empTbody"></tbody>
@@ -314,6 +320,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="btn btn-primary" onclick="openModal('contractModal')">+ إضافة عقد</button>
   </div>
   <div class="card">
+    <div id="ctChipWrap"></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>بداية العقد</th><th>نهاية العقد</th><th>المدة</th><th>الحالة</th><th>النسخ</th><th>إجراءات</th></tr></thead>
       <tbody id="contractTbody"></tbody>
@@ -414,6 +421,7 @@ tbody tr:hover{background:#FAFCFB}
   <div id="leave-log" class="leave-tab" style="display:none">
     <div class="card">
       <h3>سجل الإجازات</h3>
+      <div id="lvChipWrap"></div>
       <div class="filters">
         <input id="flvName" placeholder="بحث باسم الموظف" oninput="renderLeaveLog()">
         <select id="flvDept" onchange="renderLeaveLog()"><option value="">القسم: الكل</option></select>
@@ -1002,34 +1010,34 @@ async function markAllRead(keys){
  if(keys.length)await sb.from('alert_reads').upsert(keys.map(k=>({employee_id:me.id,alert_key:k}))).then(()=>{});
  if(me.role==='admin'){renderAlerts()}else{epRenderAlerts()}
 }
-function alertItem(a){
+function alertItem(a,i){
  const k=alertKey(a),unread=!readKeys.has(k);
- return `<div class="alert-item" style="${unread?'border-inline-start:4px solid var(--sand);background:#FFFDF7':'opacity:.75'}">
+ return `<div class="alert-item" data-nav="1" onclick="alertGo(${i})" title="اضغط للانتقال إلى الطلب" style="${unread?'border-inline-start:4px solid var(--sand);background:#FFFDF7':'opacity:.78'}">
   <div class="aic ${a.k}">${a.ic}</div>
   <div style="flex:1"><b>${unread?'● ':''}${a.t}</b><small>${a.d}</small></div>
-  ${unread?`<button class="btn btn-ghost btn-sm" onclick="markRead('${k}')">✓ مقروء</button>`:'<span class="tag gray">مقروء</span>'}
+  ${unread?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();markRead('${k}')">✓ مقروء</button>`:'<span class="tag gray">مقروء</span>'}
  </div>`}
 
 /* ================= التنبيهات التلقائية ================= */
 function buildAlerts(){
  const A=[];
  contracts.forEach(c=>{const n=daysTo(c.end);
-  if(n>=0&&n<=30)A.push({t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍'})});
+  if(n>=0&&n<=30)A.push({t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍',nav:{p:'contracts',f:'exp30'}})});
  employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
-  if(n>=0&&n<=14)A.push({t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳'})});
+  if(n>=0&&n<=14)A.push({t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num}})});
  leaves.forEach(l=>{
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴'});
-  if(l.status===LV_P1)A.push({t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴'});
-  if(l.status===LV_P2)A.push({t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅'})});
- permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪'})});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp}});
+  if(l.status===LV_P1)A.push({t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
+  if(l.status===LV_P2)A.push({t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
+ permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp,status:'بانتظار الموافقة'}})});
  employees.forEach(e=>{const b=balance(e.name);
-  if(b.annualLeft<=5&&b.annualLeft>0)A.push({t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉'});
-  if(b.sickLeft<=5&&b.sickLeft>0)A.push({t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺'});
-  if(b.annualUsed>0&&b.annualLeft<=0)A.push({t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔'})});
+  if(b.annualLeft<=5&&b.annualLeft>0)A.push({t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name}});
+  if(b.sickLeft<=5&&b.sickLeft>0)A.push({t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name}});
+  if(b.annualUsed>0&&b.annualLeft<=0)A.push({t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name}})});
  const monthAbs={};const mNow=D(0).slice(0,7);
  siteAbs.filter(a=>String(a.date).startsWith(mNow)).forEach(a=>monthAbs[a.emp]=(monthAbs[a.emp]||0)+1);
- Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫'})});
- policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§'})});
+ Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'}})});
+ policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
  return A;
 }
 function renderAlerts(){
@@ -1037,9 +1045,10 @@ function renderAlerts(){
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('alertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
+ _alertsList=A;
  $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
-  (A.length?A.map(alertItem).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>');
- $('dashAlerts').innerHTML=A.slice(0,4).map(alertItem).join('')||'<div class="empty">لا توجد تنبيهات</div>';
+  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>');
+ $('dashAlerts').innerHTML=A.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد تنبيهات</div>';
 }
 
 /* ================= لوحة التحكم ================= */
@@ -1059,7 +1068,7 @@ function renderDashboard(){
   {n:permits.filter(p=>p.status==='بانتظار الموافقة').length,l:'طلبات استئذان جديدة',k:'sand'},
   {n:siteAbs.filter(a=>String(a.date).startsWith(mNow)).length,l:'غيابات هذا الشهر',k:'danger'},
  ];
- $('dashStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+ $('dashStats').innerHTML=S.map((s,i)=>`<div class="stat ${s.k}" onclick="dashNav(${i})" title="اضغط للانتقال والفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
  $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${c.emp}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد عقود قريبة الانتهاء</td></tr>';
 }
 
@@ -1108,10 +1117,56 @@ async function delPolicy(id){if(!confirm('حذف هذه السياسة؟'))retur
 
 /* ================= الموظفون ================= */
 let editId=null;
+/* فلاتر البطاقات الإحصائية */
+let empExtraFilter='', contractsFilter='', leaveExtra='';
+function chipHtml(label,clearJs){return `<span class="chip-filter" onclick="${clearJs}">✕ ${label}</span>`}
+function clickTab(sel,idx){const b=document.querySelectorAll(sel)[idx];if(b)b.click()}
+/* التنقل من التنبيهات إلى الطلب نفسه */
+let _alertsList=[];
+function alertGo(i){
+ const a=_alertsList[i];if(!a)return;
+ const k=alertKey(a);if(!readKeys.has(k))markRead(k);
+ const n=a.nav||{};
+ if(me.role!=='admin'){
+   const map={contracts:'contracts',employees:'profile',leaves:'leaves',permits:'permits',attendance:'attendance',policies:'policies',approvals:'approvals'};
+   epGo(map[n.p]||'alerts');return;
+ }
+ if(n.p==='contracts'){go('contracts');contractsFilter=n.f||'';renderContracts()}
+ else if(n.p==='employees'){go('employees');if(n.q!==undefined)$('fEmpNum').value=n.q;empExtraFilter=n.x||'';renderEmployees()}
+ else if(n.p==='leaves'){go('leaves');clickTab('#page-leaves .tabs button',1);if(n.status!==undefined)$('flvStatus').value=n.status;leaveExtra=n.x||'';renderLeaveLog();if(n.detail)openLeaveDetail(n.detail)}
+ else if(n.p==='permits'){go('permits');if(n.name!==undefined)$('fPermName').value=n.name;if(n.status!==undefined)$('fPermStatus').value=n.status;renderPermits()}
+ else if(n.p==='attendance'){go('attendance');clickTab('#page-attendance .tabs button',n.tab==='siteAbs'?3:n.tab==='siteAtt'?1:0)}
+ else if(n.p==='policies'){go('policies')}
+ else if(n.p==='alerts'){go('alerts')}
+}
+/* فلترة من بطاقات لوحة التحكم */
+function dashNav(i){
+ const acts=[
+  ()=>{go('employees');$('fEmpNum').value='';$('fEmpStatus').value='';empExtraFilter='';renderEmployees()},
+  ()=>{go('employees');$('fEmpStatus').value='نشط';empExtraFilter='';renderEmployees()},
+  ()=>{go('employees');$('fEmpStatus').value='غير نشط';empExtraFilter='';renderEmployees()},
+  ()=>{go('employees');$('fEmpStatus').value='';empExtraFilter='probation';renderEmployees()},
+  ()=>{go('leaves');clickTab('#page-leaves .tabs button',1);$('flvStatus').value='';leaveExtra='current';renderLeaveLog()},
+  ()=>{go('contracts');contractsFilter='exp30';renderContracts()},
+  ()=>{go('leaves');clickTab('#page-leaves .tabs button',1);$('flvStatus').value='';leaveExtra='pending';renderLeaveLog()},
+  ()=>{go('permits');$('fPermName').value='';$('fPermStatus').value='بانتظار الموافقة';renderPermits()},
+  ()=>{go('attendance');clickTab('#page-attendance .tabs button',3)},
+ ];
+ if(acts[i])acts[i]();
+}
+/* فلترة من بطاقات صفحة الإجازات */
+function leaveStatNav(i){
+ clickTab('#page-leaves .tabs button',1);
+ const set=(st,x)=>{$('flvStatus').value=st;leaveExtra=x||''};
+ [()=>set('',''),()=>set('تمت الموافقة'),()=>set('تم الرفض'),()=>set(LV_P1),()=>set(LV_P2),()=>set('','current'),()=>set('','lowbal')][i]?.();
+ renderLeaveLog();
+}
 function fillDeptFilter(){const opts=DEPTS.map(d=>`<option>${d}</option>`).join('');$('fEmpDept').innerHTML='<option value="">القسم: الكل</option>'+opts;$('flvDept').innerHTML='<option value="">القسم: الكل</option>'+opts}
 function renderEmployees(){
  const q=$('fEmpNum').value.trim(),st=$('fEmpStatus').value,tp=$('fEmpType').value,dp=$('fEmpDept').value;
- const rows=employees.filter(e=>(!q||(e.num||'').includes(q)||(e.name||'').includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
+ let rows=employees.filter(e=>(!q||(e.num||'').includes(q)||(e.name||'').includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
+ if(empExtraFilter==='probation')rows=rows.filter(e=>e.probEnd&&daysTo(e.probEnd)>=0);
+ $('empChipWrap').innerHTML=empExtraFilter==='probation'?chipHtml('فلتر: موظفو فترة التجربة',"empExtraFilter='';renderEmployees()"):'';
  $('empTbody').innerHTML=rows.length?rows.map(e=>`<tr>
   <td><b>${e.num}</b></td><td>${e.name}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td>${e.work||'—'}</td>
   <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span>${e.role==='admin'?' <span class="tag info">أدمن</span>':''}${e.role==='manager'?' <span class="tag info">رئيس قسم</span>':''}${e.auth_id?'':' <span class="tag gray">لم يفعّل حسابه</span>'}</td>
@@ -1151,12 +1206,15 @@ function contractTag(c){const n=daysTo(c.end);
  if(n<=30)return '<span class="tag sand">قارب على الانتهاء</span>';
  return '<span class="tag ok">ساري</span>'}
 function renderContracts(){
- $('contractTbody').innerHTML=contracts.length?contracts.map(c=>`<tr>
+ let list=contracts;
+ if(contractsFilter==='exp30')list=contracts.filter(c=>{const n=daysTo(c.end);return n>=0&&n<=30});
+ $('ctChipWrap').innerHTML=contractsFilter==='exp30'?chipHtml('فلتر: تنتهي خلال 30 يوم',"contractsFilter='';renderContracts()"):'';
+ $('contractTbody').innerHTML=list.length?list.map(c=>`<tr>
   <td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td>
   <td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد العقد</button>
    <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button>
-   <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">📎 المرفق</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عقود</td></tr>';
+   <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">📎 المرفق</button></td></tr>`).join(''):`<tr><td colspan="7" class="empty">${contractsFilter?'لا توجد عقود مطابقة للفلتر':'لا توجد عقود'}</td></tr>`;
 }
 function showVersions(eid){const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
  alert('نسخ عقد '+c.emp+':\n'+c.history.map(h=>`النسخة ${h.version}: من ${h.start_date} إلى ${h.end_date}${h.is_current?' (الحالية)':''}`).join('\n'))}
@@ -1257,7 +1315,7 @@ function renderLeaveStats(){
   {n:onLeave,l:'في إجازة حالياً',k:'info'},
   {n:lowBal,l:'رصيدهم أوشك على الانتهاء',k:'danger'},
  ];
- $('leaveStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+ $('leaveStats').innerHTML=S.map((s,i)=>`<div class="stat ${s.k}" onclick="leaveStatNav(${i})" title="اضغط للفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 }
 async function addLeave(){
  if(!$('lvEmp').value){toast('اختر الموظف');return}
@@ -1281,12 +1339,18 @@ async function setLeaveStatus(id,status){
 }
 function renderLeaveLog(){
  const q=$('flvName').value.trim(),dp=$('flvDept').value,tp=$('flvType').value,st=$('flvStatus').value,mo=$('flvMonth').value;
+ const chips={current:'فلتر: في إجازة حالياً',pending:'فلتر: الطلبات المعلّقة',lowbal:'فلتر: رصيدهم أوشك على الانتهاء'};
+ $('lvChipWrap').innerHTML=chips[leaveExtra]?chipHtml(chips[leaveExtra],"leaveExtra='';renderLeaveLog()"):'';
+ let base=leaves;
+ if(leaveExtra==='current')base=leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0);
+ if(leaveExtra==='pending')base=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const byEmp={};
- leaves.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||String(l.start).startsWith(mo)))
+ base.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||String(l.start).startsWith(mo)))
   .forEach(l=>{if(!byEmp[l.emp])byEmp[l.emp]={dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start};
    const g=byEmp[l.emp];if(l.type==='سنوية')g.annual+=l.days;if(l.type==='مرضية')g.sick+=l.days;if(l.type==='خاصة')g.special+=l.days;
    if(l.start>g.last)g.last=l.start});
- const keys=Object.keys(byEmp);
+ let keys=Object.keys(byEmp);
+ if(leaveExtra==='lowbal')keys=keys.filter(emp=>{const b=balance(emp);return b.annualUsed>0&&b.annualLeft<=5});
  $('leaveLogTbody').innerHTML=keys.length?keys.map(emp=>{const g=byEmp[emp];
   return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp.replace(/'/g,"\\'")}')">${emp}</span></td><td>${g.dept}</td><td>${g.job}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد نتائج</td></tr>';
 }
@@ -1520,13 +1584,14 @@ async function mgrDecide(id,approve){
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>a.d.includes(currentEmp.name)||a.t.includes('سياسة'));
- if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅'}));
- leaves.filter(l=>l.emp===currentEmp.name&&l.status!=='بانتظار الموافقة').forEach(l=>A.push({t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴'}));
+ if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
+ leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('epAlertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
+ _alertsList=A;
  $('epAlertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
-  (A.length?A.map(alertItem).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>');
+  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>');
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
