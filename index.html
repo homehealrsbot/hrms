@@ -220,6 +220,7 @@ tbody tr:hover{background:#FAFCFB}
         <input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
       </div>
       <button class="btn btn-primary btn-block" id="authBtn" onclick="doAuth()">دخول</button>
+      <div style="text-align:center;margin-top:12px"><a href="#" onclick="forgotPassword();return false" style="color:var(--pine);font-size:13px;font-weight:600">نسيت كلمة المرور؟</a></div>
       <div class="login-note" id="loginNote">أول حساب يتم تسجيله في النظام يصبح <b>حساب مدير النظام</b> تلقائياً. الموظفون يفعّلون حساباتهم بعد إضافتهم من الإدارة بنفس بريدهم المسجل.</div>
     </div>
   </div>
@@ -242,7 +243,6 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
     <button class="nav-item" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
     <button class="nav-item" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-    <button class="nav-item" data-page="search"><span class="ic">🔍</span> البحث العام</button>
     <button class="nav-item" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
     <button class="nav-item" data-page="reports"><span class="ic">📊</span> التقارير</button>
     <button class="nav-item" data-page="forms"><span class="ic">📄</span> النماذج</button>
@@ -255,7 +255,7 @@ tbody tr:hover{background:#FAFCFB}
   <h2 id="topTitle">لوحة التحكم</h2>
   <div class="top-search">
     <span class="ic">🔍</span>
-    <input id="topSearchInput" placeholder="بحث سريع… (اضغط Enter للبحث الشامل)" onkeydown="if(event.key==='Enter'){go('search');runGlobalSearch(this.value)}">
+    <input id="topSearchInput" placeholder="ابحث في كل النظام… ثم اضغط Enter" onkeydown="if(event.key==='Enter'){go('search');runGlobalSearch(this.value)}">
   </div>
   <div class="top-user">
     <button class="bell" onclick="go('alerts')">🔔<span class="dot"></span></button>
@@ -268,10 +268,8 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page on" id="page-dashboard">
   <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة عامة على مؤشرات الموارد البشرية</p></div></div>
   <div class="stats" id="dashStats"></div>
-  <div class="grid-2">
-    <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
-    <div class="card"><h3>✍ عقود تنتهي قريباً</h3><div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>نهاية العقد</th><th>الحالة</th></tr></thead><tbody id="dashContracts"></tbody></table></div></div>
-  </div>
+  <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
+  <div style="display:none"><table><tbody id="dashContracts"></tbody></table></div>
 </section>
 
 <!-- ===== التنبيهات ===== -->
@@ -284,7 +282,7 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page" id="page-policies">
   <div class="page-head">
     <div><h1>الأنظمة والسياسات</h1><p>داخل كل سياسة: رفع ملف PDF / DOC مع حالة العرض والتنزيل وتاريخ آخر تحديث</p></div>
-    <button class="btn btn-primary" onclick="openModal('policyModal')">+ رفع إصدار جديد</button>
+    <button class="btn btn-primary" onclick="openModal('policyModal')">+ إضافة سياسة جديدة</button>
   </div>
   <div class="card" id="policiesList"></div>
 </section>
@@ -297,7 +295,7 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="card">
     <div class="filters">
-      <input id="fEmpNum" placeholder="بحث برقم الموظف" oninput="renderEmployees()">
+      <input id="fEmpNum" placeholder="بحث بالاسم أو رقم الموظف" oninput="renderEmployees()">
       <select id="fEmpStatus" onchange="renderEmployees()"><option value="">الحالة: الكل</option><option>نشط</option><option>غير نشط</option></select>
       <select id="fEmpType" onchange="renderEmployees()"><option value="">نوع التوظيف: الكل</option><option>عن بعد</option><option>حضوري</option></select>
       <select id="fEmpDept" onchange="renderEmployees()"><option value="">القسم: الكل</option></select>
@@ -407,7 +405,7 @@ tbody tr:hover{background:#FAFCFB}
         </div>
       </fieldset>
       <fieldset><legend>المرفقات</legend>
-        <div class="upload-box" onclick="toast('تم إرفاق مستند طلب الإجازة (PDF)')">📎 اضغط لرفع مستند طلب الإجازة (PDF)</div>
+        <div class="upload-box" id="lvFileBox" onclick="stageFile('leaveAdmin','.pdf,.doc,.docx,.jpg,.jpeg,.png','lvFileBox')">📎 اضغط لرفع مستند طلب الإجازة</div>
       </fieldset>
       <button class="btn btn-primary" onclick="addLeave()">حفظ الطلب — بانتظار الموافقة</button>
     </div>
@@ -515,10 +513,10 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item active" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
     <div class="nav-label">خدماتي</div>
     <button class="nav-item" data-ep="alerts"><span class="ic">🔔</span> الإشعارات <span class="nav-badge" id="epAlertCount">0</span></button>
-    <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقودي</button>
-    <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> إجازاتي</button>
-    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> حضوري وغيابي</button>
-    <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> استئذاناتي</button>
+    <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
+    <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> الاجازات</button>
+    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> الحضور</button>
+    <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
     <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
@@ -537,7 +535,11 @@ tbody tr:hover{background:#FAFCFB}
   <div class="profile-hero">
     <div class="avatar" id="epHeroAvatar">م</div>
     <div style="flex:1"><h2 id="epHeroName"></h2><small id="epHeroMeta"></small></div>
-    <span class="tag ok" id="epHeroStatus" style="font-size:13px;padding:6px 16px"></span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="tag ok" id="epHeroStatus" style="font-size:13px;padding:6px 16px"></span>
+      <button class="btn btn-ghost btn-sm" onclick="openSelfEdit()">✎ تعديل بياناتي</button>
+      <button class="btn btn-ghost btn-sm" onclick="openDocsModal(currentEmp.id)">📎 إدارة مستنداتي</button>
+    </div>
   </div>
   <div class="card"><h3>👤 بيانات الموظف</h3><div class="info-grid" id="epPersonal"></div></div>
   <div class="card"><h3>💼 بيانات الوظيفة</h3><div class="info-grid" id="epJobInfo"></div></div>
@@ -550,7 +552,7 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 
 <section class="page" id="ep-contracts">
-  <div class="page-head"><div><h1>عقودي</h1><p>عقود العمل الخاصة بك وحالتها</p></div></div>
+  <div class="page-head"><div><h1>عقود</h1><p>عقود العمل الخاصة بك وحالتها</p></div></div>
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>بداية العقد</th><th>نهاية العقد</th><th>المدة</th><th>الحالة</th><th>النسخ</th><th>الملف</th></tr></thead>
     <tbody id="epContractTbody"></tbody></table></div></div>
@@ -558,7 +560,7 @@ tbody tr:hover{background:#FAFCFB}
 
 <section class="page" id="ep-leaves">
   <div class="page-head">
-    <div><h1>إجازاتي</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
+    <div><h1>الاجازات</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
     <button class="btn btn-primary" onclick="openModal('epLeaveModal')">+ طلب إجازة جديد</button>
   </div>
   <div class="stats" id="epLeaveStats"></div>
@@ -568,7 +570,7 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 
 <section class="page" id="ep-attendance">
-  <div class="page-head"><div><h1>حضوري وغيابي</h1><p>سجلاتك في المقر والاجتماعات</p></div></div>
+  <div class="page-head"><div><h1>الحضور</h1><p>سجلاتك في المقر والاجتماعات</p></div></div>
   <div class="tabs">
     <button class="active" onclick="epAttTab('site',this)">المقر</button>
     <button onclick="epAttTab('meet',this)">الاجتماعات</button>
@@ -589,7 +591,7 @@ tbody tr:hover{background:#FAFCFB}
 
 <section class="page" id="ep-permits">
   <div class="page-head">
-    <div><h1>استئذاناتي</h1><p>طلبات الاستئذان الخاصة بك</p></div>
+    <div><h1>طلبات الاستئذان</h1><p>طلبات الاستئذان الخاصة بك</p></div>
     <button class="btn btn-primary" onclick="openModal('epPermitModal')">+ طلب استئذان جديد</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table>
@@ -617,7 +619,7 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>عدد الأيام (تلقائي مع إمكانية التعديل)</label><input id="eplDays" type="number" min="1"></div>
     <div><label>ملاحظات</label><input id="eplNotes"></div>
   </div>
-  <div class="upload-box" style="margin-top:12px" onclick="toast('تم إرفاق مستند الطلب PDF')">📎 إرفاق مستند طلب الإجازة (PDF)</div>
+  <div class="upload-box" style="margin-top:12px" id="eplFileBox" onclick="stageFile('leaveEmp','.pdf,.doc,.docx,.jpg,.jpeg,.png','eplFileBox')">📎 إرفاق مستند طلب الإجازة</div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="epAddLeave()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epLeaveModal')">إلغاء</button></div>
 </div></div>
 
@@ -639,14 +641,15 @@ tbody tr:hover{background:#FAFCFB}
 <div class="modal-back" id="empModal"><div class="modal lg">
   <div class="modal-head"><h3 id="empModalTitle">إضافة موظف جديد</h3><button class="x-btn" onclick="closeModal('empModal')">✕</button></div>
   <fieldset><legend>بيانات الموظف</legend>
+    <div class="section-note">الحقول المعلّمة بـ <b style="color:var(--danger)">*</b> إلزامية، والبقية اختيارية.</div>
     <div class="grid-3">
-      <div><label>رقم الموظف</label><input id="eNum" placeholder="EMP-001"></div>
-      <div><label>الاسم الرباعي</label><input id="eName"></div>
+      <div><label>رقم الموظف <b style="color:var(--danger)">*</b></label><input id="eNum" placeholder="EMP-001"></div>
+      <div><label>الاسم الرباعي <b style="color:var(--danger)">*</b></label><input id="eName"></div>
       <div><label>الجنسية</label><input id="eNat"></div>
       <div><label>رقم هوية الموظف</label><input id="eId"></div>
       <div><label>تاريخ الميلاد</label><input id="eBirth" type="date"></div>
       <div><label>الدولة / المدينة</label><input id="eCity"></div>
-      <div><label>إيميل الموظف</label><input id="eEmail" type="email"></div>
+      <div><label>إيميل الموظف <b style="color:var(--danger)">*</b></label><input id="eEmail" type="email"></div>
       <div><label>رقم الجوال</label><input id="ePhone"></div>
       <div><label>الجنس</label><select id="eGender"><option>ذكر</option><option>أنثى</option></select></div>
     </div>
@@ -669,7 +672,7 @@ tbody tr:hover{background:#FAFCFB}
   <fieldset><legend>المستندات المطلوبة</legend>
     <div class="section-note">احفظ بيانات الموظف أولاً، ثم ارفع مستنداته من زر <b>📎 المستندات</b> بجانب اسمه في الجدول.</div>
   </fieldset>
-  <div class="modal-foot"><button class="btn btn-primary" onclick="saveEmployee()">حفظ الموظف</button><button class="btn btn-ghost" onclick="closeModal('empModal')">إلغاء</button></div>
+  <div class="modal-foot"><button class="btn btn-primary" id="empSaveBtn" onclick="saveEmployee()">حفظ الموظف</button><button class="btn btn-ghost" onclick="closeModal('empModal')">إلغاء</button></div>
 </div></div>
 
 <!-- إضافة عقد -->
@@ -680,18 +683,17 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>مدة العقد</label><input id="cDur" placeholder="مثال: سنة"></div>
     <div><label>تاريخ البداية</label><input id="cStart" type="date"></div>
     <div><label>تاريخ النهاية</label><input id="cEnd" type="date"></div>
-    <div class="upload-box" onclick="toast('تم إرفاق نسخة PDF')">📎 نسخة PDF</div>
-    <div class="upload-box" onclick="toast('تم إرفاق نسخة DOC')">📎 نسخة DOC</div>
+    <div class="upload-box" id="cFileBox" onclick="stageFile('contract','.pdf,.doc,.docx','cFileBox')">📎 إرفاق نسخة العقد (PDF / DOC)</div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="addContract()">حفظ العقد</button><button class="btn btn-ghost" onclick="closeModal('contractModal')">إلغاء</button></div>
 </div></div>
 
 <!-- سياسة جديدة -->
 <div class="modal-back" id="policyModal"><div class="modal sm">
-  <div class="modal-head"><h3>رفع إصدار جديد لسياسة</h3><button class="x-btn" onclick="closeModal('policyModal')">✕</button></div>
-  <div class="field"><label>السياسة</label><select id="pName"></select></div>
-  <div class="upload-box" style="margin-bottom:14px" onclick="toast('تم اختيار الملف')">📎 اختر ملف PDF / DOC</div>
-  <div class="modal-foot"><button class="btn btn-primary" onclick="uploadPolicy()">رفع الإصدار</button><button class="btn btn-ghost" onclick="closeModal('policyModal')">إلغاء</button></div>
+  <div class="modal-head"><h3>إضافة سياسة جديدة</h3><button class="x-btn" onclick="closeModal('policyModal')">✕</button></div>
+  <div class="field"><label>اسم السياسة <b style="color:var(--danger)">*</b></label><input id="pNewName" placeholder="مثال: سياسة السلامة المهنية"></div>
+  <div class="upload-box" style="margin-bottom:14px" id="pNewFileBox" onclick="stageFile('policyNew','.pdf,.doc,.docx','pNewFileBox')">📎 اختر ملف السياسة (PDF / DOC)</div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="addNewPolicy()">إضافة السياسة</button><button class="btn btn-ghost" onclick="closeModal('policyModal')">إلغاء</button></div>
 </div></div>
 
 <!-- حضور/غياب اجتماع + مقر -->
@@ -745,7 +747,7 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>اسم الموظف</label><select id="sbEmp"></select></div>
     <div><label>القسم</label><select id="sbDept"><option>التسويق</option><option>التقنية</option><option>المالية</option><option>العمليات</option><option>B2B</option></select></div>
     <div><label>سبب الغياب</label><input id="sbReason"></div>
-    <div><label>تقرير مرضي (إن وجد)</label><div class="upload-box" onclick="toast('تم إرفاق التقرير المرضي')">📎 إرفاق</div></div>
+    <div><label>تقرير مرضي (إن وجد)</label><div class="upload-box" id="sbFileBox" onclick="stageFile('sickReport','.pdf,.jpg,.jpeg,.png,.doc,.docx','sbFileBox')">📎 إرفاق التقرير</div></div>
     <div><label>ملاحظات</label><input id="sbNotes"></div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="addSiteAbs()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('siteAbsModal')">إلغاء</button></div>
@@ -771,8 +773,8 @@ tbody tr:hover{background:#FAFCFB}
   <div class="field"><label>اسم النموذج</label><input id="fmName"></div>
   <div class="field"><label>الهدف من النموذج</label><input id="fmGoal"></div>
   <div class="grid-2" style="margin-bottom:14px">
-    <div class="upload-box" onclick="toast('تم إرفاق صيغة DOC')">📎 صيغة DOC</div>
-    <div class="upload-box" onclick="toast('تم إرفاق صيغة PDF')">📎 صيغة PDF</div>
+    <div class="upload-box" id="fmDocBox" onclick="stageFile('formDoc','.doc,.docx','fmDocBox')">📎 صيغة DOC</div>
+    <div class="upload-box" id="fmPdfBox" onclick="stageFile('formPdf','.pdf','fmPdfBox')">📎 صيغة PDF</div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="addForm()">حفظ النموذج</button><button class="btn btn-ghost" onclick="closeModal('formModal')">إلغاء</button></div>
 </div></div>
@@ -785,6 +787,23 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- تفاصيل إجازات موظف -->
 <div class="modal-back" id="leaveDetailModal"><div class="modal lg" id="leaveDetailBody"></div></div>
+
+<!-- تعيين كلمة مرور جديدة (بعد رابط الاستعادة) -->
+<div class="modal-back" id="newPassModal"><div class="modal sm">
+  <div class="modal-head"><h3>تعيين كلمة مرور جديدة</h3><button class="x-btn" onclick="closeModal('newPassModal')">✕</button></div>
+  <div class="field"><label>كلمة المرور الجديدة</label><input id="npPass" type="password" placeholder="6 أحرف على الأقل"></div>
+  <div class="field"><label>تأكيد كلمة المرور</label><input id="npPass2" type="password"></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="saveNewPassword()">حفظ والدخول</button></div>
+</div></div>
+
+<!-- تعديل بياناتي (بوابة الموظف) -->
+<div class="modal-back" id="selfEditModal"><div class="modal sm">
+  <div class="modal-head"><h3>تعديل بياناتي</h3><button class="x-btn" onclick="closeModal('selfEditModal')">✕</button></div>
+  <div class="section-note">يمكنك تعديل رقم الجوال والمدينة فقط — بقية البيانات تُعدَّل عبر الموارد البشرية.</div>
+  <div class="field"><label>رقم الجوال</label><input id="sePhone"></div>
+  <div class="field"><label>الدولة / المدينة</label><input id="seCity"></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="saveSelfEdit()">حفظ التعديلات</button><button class="btn btn-ghost" onclick="closeModal('selfEditModal')">إلغاء</button></div>
+</div></div>
 
 <div class="toast" id="toast"></div>
 <script>
@@ -808,7 +827,7 @@ function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clear
 function openModal(id){$(id).classList.add('on')}
 function closeModal(id){$(id).classList.remove('on')}
 document.querySelectorAll('.modal-back').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')}));
-const err=e=>{console.error(e);toast('خطأ: '+(e.message||e));};
+const err=e=>{console.error(e);toast('خطأ: '+friendly(e.message||e));};
 
 /* ================= المصادقة ================= */
 let authMode='login';
@@ -853,8 +872,26 @@ async function enterApp(){
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
 }
 async function logout(){await sb.auth.signOut();location.reload()}
-// جلسة محفوظة؟ دخول تلقائي
-sb.auth.getSession().then(({data:{session}})=>{if(session)enterApp()});
+/* استعادة كلمة المرور */
+let recovering=location.hash.includes('type=recovery');
+async function forgotPassword(){
+ const email=$('loginEmail').value.trim();
+ if(!email){toast('اكتب بريدك الإلكتروني في الخانة أولاً ثم اضغط «نسيت كلمة المرور»');return}
+ const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+ if(error){err(error);return}
+ toast('تم إرسال رابط الاستعادة إلى '+email+' — افتح بريدك واضغط الرابط');
+}
+sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;openModal('newPassModal')}});
+async function saveNewPassword(){
+ const p1=$('npPass').value,p2=$('npPass2').value;
+ if(p1.length<6){toast('كلمة المرور 6 أحرف على الأقل');return}
+ if(p1!==p2){toast('كلمتا المرور غير متطابقتين');return}
+ const {error}=await sb.auth.updateUser({password:p1});
+ if(error){err(error);return}
+ closeModal('newPassModal');recovering=false;toast('تم تغيير كلمة المرور بنجاح');await enterApp();
+}
+// جلسة محفوظة؟ دخول تلقائي (ما لم نكن في وضع الاستعادة)
+sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
 function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id}}
@@ -862,6 +899,7 @@ const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
 async function loadAll(){
+ await loadReads();
  const [E,C,L,M,S,P,PL,FL,FM]=await Promise.all([
   sb.from('employees').select('*').order('created_at'),
   sb.from('contracts').select('*').order('version'),
@@ -880,12 +918,12 @@ async function loadAll(){
  const byEmp={};
  (C.data||[]).forEach(r=>{(byEmp[r.employee_id]=byEmp[r.employee_id]||[]).push(r)});
  contracts=Object.entries(byEmp).map(([eid,rows])=>{rows.sort((a,b)=>a.version-b.version);const cur=rows[rows.length-1];
-  return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,history:rows}});
- leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,notes:r.notes}));
+  return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,file:cur.pdf_url,history:rows}});
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,notes:r.notes}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
- (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
+ (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
@@ -895,7 +933,9 @@ async function refresh(){await loadAll();if(me.role==='admin')renderAll();else e
 
 /* ================= رفع الملفات الفعلي ================= */
 async function uploadToStorage(file,folder){
- const path=folder+'/'+Date.now()+'_'+file.name.replace(/[^\w.\-\u0600-\u06FF]/g,'_');
+ const ext=(file.name.split('.').pop()||'bin').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+ const base=file.name.replace(/\.[^.]*$/,'').replace(/[^a-zA-Z0-9._-]/g,'_').replace(/_+/g,'_').slice(0,40)||'file';
+ const path=folder+'/'+Date.now()+'_'+base+'.'+ext;
  const {error}=await sb.storage.from('hrms-files').upload(path,file);
  if(error)throw error;
  return path;
@@ -904,6 +944,20 @@ async function registerFile(file,category,source,path){
  await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
 }
 function pickFile(accept){return new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept=accept||'';i.onchange=()=>res(i.files[0]||null);i.click()})}
+const staged={};
+async function stageFile(key,accept,boxId){
+ const f=await pickFile(accept);if(!f)return;
+ staged[key]=f;
+ if(boxId&&$(boxId))$(boxId).innerHTML='✅ '+f.name+' <small style="color:var(--muted)">(اضغط للتغيير)</small>';
+}
+function takeStaged(key,boxId,resetText){const f=staged[key]||null;delete staged[key];if(boxId&&$(boxId)&&resetText)$(boxId).innerHTML=resetText;return f}
+function friendly(m){m=String(m||'');
+ if(m.includes('duplicate key'))return 'رقم الموظف أو البريد الإلكتروني مستخدم مسبقاً';
+ if(m.includes('violates check'))return 'قيمة غير مقبولة في أحد الحقول — راجع البيانات';
+ if(m.includes('Invalid key'))return 'اسم الملف غير مقبول — أعد المحاولة';
+ if(m.includes('violates row-level security'))return 'لا تملك صلاحية هذا الإجراء';
+ if(m.includes('Failed to fetch'))return 'تعذر الاتصال — تحقق من الإنترنت';
+ return m}
 async function openStoredFile(path){
  if(!path){toast('لا يوجد ملف مرفوع');return}
  const {data,error}=await sb.storage.from('hrms-files').createSignedUrl(path,3600);
@@ -917,6 +971,31 @@ document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
  $('topTitle').textContent=PAGE_TITLES[p]||'';window.scrollTo({top:0})}
+
+/* ================= المقروء وغير المقروء ================= */
+let readKeys=new Set();
+function alertKey(a){let h=5381,str=a.t+'|'+a.d;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return 'k'+h.toString(16)}
+async function loadReads(){
+ const {data,error}=await sb.from('alert_reads').select('alert_key');
+ readKeys=new Set(error?[]:(data||[]).map(r=>r.alert_key));
+}
+async function markRead(key){
+ readKeys.add(key);
+ await sb.from('alert_reads').upsert({employee_id:me.id,alert_key:key}).then(()=>{});
+ if(me.role==='admin'){renderAlerts()}else{epRenderAlerts()}
+}
+async function markAllRead(keys){
+ keys.forEach(k=>readKeys.add(k));
+ if(keys.length)await sb.from('alert_reads').upsert(keys.map(k=>({employee_id:me.id,alert_key:k}))).then(()=>{});
+ if(me.role==='admin'){renderAlerts()}else{epRenderAlerts()}
+}
+function alertItem(a){
+ const k=alertKey(a),unread=!readKeys.has(k);
+ return `<div class="alert-item" style="${unread?'border-inline-start:4px solid var(--sand);background:#FFFDF7':'opacity:.75'}">
+  <div class="aic ${a.k}">${a.ic}</div>
+  <div style="flex:1"><b>${unread?'● ':''}${a.t}</b><small>${a.d}</small></div>
+  ${unread?`<button class="btn btn-ghost btn-sm" onclick="markRead('${k}')">✓ مقروء</button>`:'<span class="tag gray">مقروء</span>'}
+ </div>`}
 
 /* ================= التنبيهات التلقائية ================= */
 function buildAlerts(){
@@ -940,9 +1019,13 @@ function buildAlerts(){
  return A;
 }
 function renderAlerts(){
- const A=buildAlerts();$('alertCount').textContent=A.length;
- $('alertsList').innerHTML=A.length?A.map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>';
- $('dashAlerts').innerHTML=A.slice(0,4).map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join('')||'<div class="empty">لا توجد تنبيهات</div>';
+ const A=buildAlerts();
+ const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
+ $('alertCount').textContent=unreadCount;
+ const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
+ $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
+  (A.length?A.map(alertItem).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>');
+ $('dashAlerts').innerHTML=A.slice(0,4).map(alertItem).join('')||'<div class="empty">لا توجد تنبيهات</div>';
 }
 
 /* ================= لوحة التحكم ================= */
@@ -974,7 +1057,7 @@ function renderPolicies(){
    <div class="actions">
      <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">عرض</button>
      <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">تحميل</button>
-     <button class="btn btn-sand btn-sm" onclick="togglePolicyStatus('${p.id}','${p.status}')">${p.status==='متاح للتنزيل'?'جعلها قيد العرض':'إتاحة للتنزيل'}</button>
+     <span class="subtabs" style="margin:0"><button class="${p.status!=='متاح للتنزيل'?'active':''}" onclick="setPolicyStatus('${p.id}','قيد العرض')">عرض فقط</button><button class="${p.status==='متاح للتنزيل'?'active':''}" onclick="setPolicyStatus('${p.id}','متاح للتنزيل')">عرض وتنزيل</button></span>
      <button class="btn btn-ok btn-sm" onclick="policyNewVer('${p.id}')">رفع إصدار جديد</button>
      <button class="btn btn-danger btn-sm" onclick="delPolicy('${p.id}')">حذف</button>
    </div></div>`).join(''):'<div class="empty">لا توجد سياسات — نفّذ سكربت قاعدة البيانات أولاً</div>';
@@ -991,21 +1074,31 @@ async function policyNewVer(id){
   await refresh();toast('تم رفع الإصدار الجديد');
  }catch(e){err(e)}
 }
-async function togglePolicyStatus(id,cur){
- const {error}=await sb.from('policies').update({status:cur==='متاح للتنزيل'?'قيد العرض':'متاح للتنزيل'}).eq('id',id);
- if(error){err(error);return} await refresh();toast('تم تحديث حالة السياسة');
+async function setPolicyStatus(id,status){
+ const {error}=await sb.from('policies').update({status}).eq('id',id);
+ if(error){err(error);return} await refresh();toast(status==='متاح للتنزيل'?'السياسة الآن متاحة للعرض والتنزيل':'السياسة الآن للعرض فقط');
+}
+async function addNewPolicy(){
+ const name=$('pNewName').value.trim();if(!name){toast('أدخل اسم السياسة');return}
+ try{
+  let path=null;const f=takeStaged('policyNew','pNewFileBox','📎 اختر ملف السياسة (PDF / DOC)');
+  if(f){toast('جاري رفع الملف...');path=await uploadToStorage(f,'policies');await registerFile(f,'التقارير','الأنظمة والسياسات',path).catch(()=>{})}
+  const {error}=await sb.from('policies').insert({name,file_url:path,status:'قيد العرض'});
+  if(error)throw error;
+  closeModal('policyModal');$('pNewName').value='';await refresh();toast('تمت إضافة السياسة الجديدة');
+ }catch(e){err(e)}
 }
 async function delPolicy(id){if(!confirm('حذف هذه السياسة؟'))return;
  const {error}=await sb.from('policies').delete().eq('id',id);
  if(error){err(error);return} await refresh();toast('تم الحذف')}
-async function uploadPolicy(){await policyNewVer($('pName').value);closeModal('policyModal')}
+
 
 /* ================= الموظفون ================= */
 let editId=null;
 function fillDeptFilter(){const opts=DEPTS.map(d=>`<option>${d}</option>`).join('');$('fEmpDept').innerHTML='<option value="">القسم: الكل</option>'+opts;$('flvDept').innerHTML='<option value="">القسم: الكل</option>'+opts}
 function renderEmployees(){
  const q=$('fEmpNum').value.trim(),st=$('fEmpStatus').value,tp=$('fEmpType').value,dp=$('fEmpDept').value;
- const rows=employees.filter(e=>(!q||(e.num||'').includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
+ const rows=employees.filter(e=>(!q||(e.num||'').includes(q)||(e.name||'').includes(q))&&(!st||e.status===st)&&(!tp||e.type===tp)&&(!dp||e.dept===dp));
  $('empTbody').innerHTML=rows.length?rows.map(e=>`<tr>
   <td><b>${e.num}</b></td><td>${e.name}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td>${e.work||'—'}</td>
   <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span>${e.role==='admin'?' <span class="tag info">أدمن</span>':''}${e.auth_id?'':' <span class="tag gray">لم يفعّل حسابه</span>'}</td>
@@ -1016,13 +1109,21 @@ function fillEmpSelects(){const opts=employees.filter(e=>e.role!=='admin').map(e
  ['cEmp','lvEmp','maEmp','mbEmp','saEmp','sbEmp','prEmp'].forEach(id=>{if($(id))$(id).innerHTML=opts});syncLeaveEmp()}
 function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة موظف جديد';
  ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur'].forEach(id=>$(id).value='');
+ $('empSaveBtn').disabled=false;
  openModal('empModal')}
 function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textContent='تعديل بيانات الموظف';
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';
+ empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
+function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus'].map(id=>$(id).value).join('|')}
+let empSnapshot='';
+document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
+document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
 async function saveEmployee(){
- if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم والبريد حقول أساسية');return}
+ if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم الرباعي والبريد الإلكتروني حقول إلزامية');return}
+ if(!/^\S+@\S+\.\S+$/.test($('eEmail').value.trim())){toast('صيغة البريد الإلكتروني غير صحيحة');return}
+ if($('eProbStart').value&&$('eProbEnd').value&&$('eProbEnd').value<$('eProbStart').value){toast('نهاية فترة التجربة لا يمكن أن تسبق بدايتها');return}
  const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value};
  const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
  const {error}=await q;
@@ -1041,7 +1142,8 @@ function renderContracts(){
   <td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td>
   <td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد العقد</button>
-   <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عقود</td></tr>';
+   <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button>
+   <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">📎 المرفق</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عقود</td></tr>';
 }
 function showVersions(eid){const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
  alert('نسخ عقد '+c.emp+':\n'+c.history.map(h=>`النسخة ${h.version}: من ${h.start_date} إلى ${h.end_date}${h.is_current?' (الحالية)':''}`).join('\n'))}
@@ -1056,9 +1158,14 @@ async function renewContract(eid){
 }
 async function addContract(){
  if(!$('cStart').value||!$('cEnd').value){toast('حدد تاريخ البداية والنهاية');return}
- const {error}=await sb.from('contracts').insert({employee_id:$('cEmp').value,start_date:$('cStart').value,end_date:$('cEnd').value,duration:$('cDur').value});
- if(error){err(error);return}
- closeModal('contractModal');await refresh();toast('تمت إضافة العقد');
+ if($('cEnd').value<=$('cStart').value){toast('تاريخ نهاية العقد يجب أن يكون بعد تاريخ بدايته');return}
+ try{
+  let pdf=null;const f=takeStaged('contract','cFileBox','📎 إرفاق نسخة العقد (PDF / DOC)');
+  if(f){toast('جاري رفع المرفق...');pdf=await uploadToStorage(f,'contracts');await registerFile(f,'عقود الموظفين','عقد: '+(empById[$('cEmp').value]||{}).name,pdf).catch(()=>{})}
+  const {error}=await sb.from('contracts').insert({employee_id:$('cEmp').value,start_date:$('cStart').value,end_date:$('cEnd').value,duration:$('cDur').value,pdf_url:pdf});
+  if(error)throw error;
+  closeModal('contractModal');await refresh();toast('تمت إضافة العقد'+(pdf?' مع مرفقه':''));
+ }catch(e){err(e)}
 }
 
 /* ================= الحضور والغياب ================= */
@@ -1073,7 +1180,7 @@ function renderAttendance(){
  $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('siteAttTbody').innerHTML=f(siteAtt,'siteAtt').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
- $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason||'—'}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
+ $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason||'—'}</td><td>${r.sickPath?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${r.sickPath}')">عرض التقرير</button>`:'<span class="tag gray">لا</span>'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
 }
 async function addMeetRec(kind){
  const p=kind==='meetAtt'?'ma':'mb';
@@ -1087,9 +1194,13 @@ async function addSiteAtt(){
  closeModal('siteAttModal');await refresh();toast('تم تسجيل الحضور');
 }
 async function addSiteAbs(){
- const {error}=await sb.from('site_attendance').insert({employee_id:$('sbEmp').value,record_type:'غياب',record_date:$('sbDate').value||D(0),department:$('sbDept').value,absence_reason:$('sbReason').value,notes:$('sbNotes').value});
- if(error){err(error);return}
- closeModal('siteAbsModal');await refresh();toast('تم تسجيل الغياب');
+ try{
+  let sick=null;const f=takeStaged('sickReport','sbFileBox','📎 إرفاق التقرير');
+  if(f){toast('جاري رفع التقرير المرضي...');sick=await uploadToStorage(f,'sick-reports');await registerFile(f,'ملفات الموظفين','تقرير مرضي: '+(empById[$('sbEmp').value]||{}).name,sick).catch(()=>{})}
+  const {error}=await sb.from('site_attendance').insert({employee_id:$('sbEmp').value,record_type:'غياب',record_date:$('sbDate').value||D(0),department:$('sbDept').value,absence_reason:$('sbReason').value,sick_report_url:sick,notes:$('sbNotes').value});
+  if(error)throw error;
+  closeModal('siteAbsModal');await refresh();toast('تم تسجيل الغياب'+(sick?' مع التقرير المرضي':''));
+ }catch(e){err(e)}
 }
 function exportCSV(kind){
  let rows,headers,name;
@@ -1099,8 +1210,12 @@ function exportCSV(kind){
  if(kind==='siteAbs'){headers=['الموظف','القسم','التاريخ','سبب الغياب'];rows=siteAbs.map(r=>[r.emp,r.dept,r.date,r.reason]);name='تقرير_الغياب_في_المقر'}
  downloadCSV(name,headers,rows);
 }
+function csvCell(c){
+ const v=String(c??'');
+ if(/^\d{4}-\d{2}-\d{2}$/.test(v)){const [y,m,d]=v.split('-');return `"=""${d}/${m}/${y}"""`}
+ return `"${v.replace(/"/g,'""')}"`}
 function downloadCSV(name,headers,rows){
- const csv='\uFEFF'+[headers,...rows].map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+ const csv='\uFEFF'+[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name+'.csv';a.click();
  toast('تم تصدير التقرير بنجاح')}
 
@@ -1132,11 +1247,15 @@ function renderLeaveStats(){
 async function addLeave(){
  if(!$('lvEmp').value){toast('اختر الموظف');return}
  if(!$('lvStart').value||!$('lvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
- let attachment=null;
- const {error}=await sb.from('leaves').insert({employee_id:$('lvEmp').value,leave_type:$('lvType').value,start_date:$('lvStart').value,end_date:$('lvEnd').value,days:+$('lvDays').value||1,reason:$('lvReason').value,dept_head:$('lvHead').value,admin_manager:$('lvManager').value,notes:$('lvNotes').value,attachment_url:attachment});
- if(error){err(error);return}
- await refresh();toast('تم حفظ الطلب — بانتظار الموافقة');
- ['lvStart','lvEnd','lvDays','lvNotes','lvReason'].forEach(id=>$(id).value='');
+ if($('lvEnd').value<$('lvStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
+ try{
+  let attachment=null;const f=takeStaged('leaveAdmin','lvFileBox','📎 اضغط لرفع مستند طلب الإجازة');
+  if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'leaves');await registerFile(f,'طلبات الإجازة','إجازة: '+(empById[$('lvEmp').value]||{}).name,attachment).catch(()=>{})}
+  const {error}=await sb.from('leaves').insert({employee_id:$('lvEmp').value,leave_type:$('lvType').value,start_date:$('lvStart').value,end_date:$('lvEnd').value,days:+$('lvDays').value||1,reason:$('lvReason').value,dept_head:$('lvHead').value,admin_manager:$('lvManager').value,notes:$('lvNotes').value,attachment_url:attachment});
+  if(error)throw error;
+  await refresh();toast('تم حفظ الطلب — بانتظار الموافقة');
+  ['lvStart','lvEnd','lvDays','lvNotes','lvReason'].forEach(id=>$(id).value='');
+ }catch(e){err(e)}
 }
 async function setLeaveStatus(id,status){
  const {error}=await sb.from('leaves').update({status}).eq('id',id);
@@ -1172,7 +1291,7 @@ function openLeaveDetail(emp){
   </div>
   <div class="tbl-wrap"><table>
    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
-   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.notes||'—'}</td>
+   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}')">📎</button>`:'—'} ${l.notes||''}</td>
    <td style="white-space:nowrap">${l.status==='بانتظار الموافقة'?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
   </table></div>`;
  openModal('leaveDetailModal');
@@ -1247,20 +1366,35 @@ async function uploadGeneralFile(){
 }
 
 /* ================= التقارير ================= */
+function printReport(i){
+ const r=window.REPORTS[i];const d=r.data();
+ const w=window.open('','_blank');
+ w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${r.t}</title>
+ <style>body{font-family:Tahoma,Arial;padding:30px;color:#17251F}h1{color:#0F4C3F;font-size:22px;border-bottom:3px solid #0F4C3F;padding-bottom:10px}
+ .meta{color:#6B7A73;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}
+ th{background:#E7F0EC;color:#0F4C3F;padding:9px 12px;text-align:right;border:1px solid #ccd}td{padding:8px 12px;border:1px solid #dde;text-align:right}
+ @media print{@page{size:A4;margin:15mm}}</style></head><body>
+ <h1>نظام إدارة الموارد البشرية — ${r.t}</h1>
+ <div class="meta">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-SA-u-nu-latn')} — عدد السجلات: ${d.rows.length}</div>
+ <table><thead><tr>${d.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+ <tbody>${d.rows.map(row=>`<tr>${row.map(c=>`<td>${c??'—'}</td>`).join('')}</tr>`).join('')}</tbody></table>
+ <script>window.onload=()=>window.print()<\/script></body></html>`);
+ w.document.close();
+}
 function renderReports(){
  const reps=[
-  {t:'تقرير الموظفين',ic:'👥',fn:()=>downloadCSV('تقرير_الموظفين',['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status]))},
-  {t:'تقرير العقود',ic:'✍',fn:()=>downloadCSV('تقرير_العقود',['الموظف','البداية','النهاية','المدة'],contracts.map(c=>[c.emp,c.start,c.end,c.dur]))},
-  {t:'تقرير الحضور',ic:'🕐',fn:()=>exportCSV('siteAtt')},
-  {t:'تقرير الغياب',ic:'🚫',fn:()=>exportCSV('siteAbs')},
-  {t:'تقرير الإجازات',ic:'🌴',fn:()=>downloadCSV('تقرير_الإجازات',['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],leaves.map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status]))},
-  {t:'تقرير الاستئذانات',ic:'🚪',fn:()=>downloadCSV('تقرير_الاستئذانات',['الموظف','التاريخ','الموعد','النوع','الحالة'],permits.map(p=>[p.emp,p.date,p.time,p.type,p.status]))},
- ];
+  {t:'تقرير الموظفين',ic:'👥',data:()=>({headers:['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],rows:employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status])})},
+  {t:'تقرير العقود',ic:'✍',data:()=>({headers:['الموظف','البداية','النهاية','المدة'],rows:contracts.map(c=>[c.emp,c.start,c.end,c.dur])})},
+  {t:'تقرير الحضور',ic:'🕐',data:()=>({headers:['الموظف','القسم','التاريخ','وقت الدخول','وقت الخروج'],rows:siteAtt.map(r=>[r.emp,r.dept,r.date,r.in,r.out])})},
+  {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.map(r=>[r.emp,r.dept,r.date,r.reason])})},
+  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
+  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
+ ].map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
  $('reportCards').innerHTML=reps.map((r,i)=>`<div class="card" style="margin:0">
   <h3>${r.ic} ${r.t}</h3>
   <div style="display:flex;gap:8px">
    <button class="btn btn-primary btn-sm" onclick="REPORTS[${i}].fn()">⬇ Excel</button>
-   <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 PDF</button>
+   <button class="btn btn-ghost btn-sm" onclick="printReport(${i})">🖨 PDF</button>
   </div></div>`).join('');
  window.REPORTS=reps;
 }
@@ -1277,9 +1411,15 @@ function renderForms(){
 }
 async function addForm(){
  if(!$('fmName').value.trim()){toast('أدخل اسم النموذج');return}
- const {error}=await sb.from('forms').insert({name:$('fmName').value,goal:$('fmGoal').value});
- if(error){err(error);return}
- closeModal('formModal');await refresh();toast('تمت إضافة النموذج');$('fmName').value='';$('fmGoal').value='';
+ try{
+  let doc=null,pdf=null;
+  const fd=takeStaged('formDoc','fmDocBox','📎 صيغة DOC'),fp=takeStaged('formPdf','fmPdfBox','📎 صيغة PDF');
+  if(fd){toast('جاري رفع صيغة DOC...');doc=await uploadToStorage(fd,'forms')}
+  if(fp){toast('جاري رفع صيغة PDF...');pdf=await uploadToStorage(fp,'forms')}
+  const {error}=await sb.from('forms').insert({name:$('fmName').value,goal:$('fmGoal').value,doc_url:doc,pdf_url:pdf});
+  if(error)throw error;
+  closeModal('formModal');await refresh();toast('تمت إضافة النموذج بمرفقاته');$('fmName').value='';$('fmGoal').value='';
+ }catch(e){err(e)}
 }
 
 /* ================= تهيئة لوحة الإدارة ================= */
@@ -1319,7 +1459,7 @@ async function uploadEmpDoc(docType){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقودي',leaves:'إجازاتي',attendance:'حضوري وغيابي',permits:'استئذاناتي',policies:'الأنظمة والسياسات'};
+const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
@@ -1348,12 +1488,15 @@ function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epR
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>a.d.includes(currentEmp.name)||a.t.includes('سياسة'));
  leaves.filter(l=>l.emp===currentEmp.name&&l.status!=='بانتظار الموافقة').forEach(l=>A.push({t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴'}));
- $('epAlertCount').textContent=A.length;
- $('epAlertsList').innerHTML=A.length?A.map(a=>`<div class="alert-item"><div class="aic ${a.k}">${a.ic}</div><div><b>${a.t}</b><small>${a.d}</small></div></div>`).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>';
+ const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
+ $('epAlertCount').textContent=unreadCount;
+ const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
+ $('epAlertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
+  (A.length?A.map(alertItem).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>');
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
- $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="toast('اطلب نسخة العقد من الإدارة')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
 }
 function epRenderLeaves(){
  const b=balance(currentEmp.name);
@@ -1372,10 +1515,16 @@ function epRenderLeaves(){
 function epCalcDays(){const s=$('eplStart').value,en=$('eplEnd').value;if(s&&en){const n=Math.round((new Date(en)-new Date(s))/864e5)+1;if(n>0)$('eplDays').value=n}}
 async function epAddLeave(){
  if(!$('eplStart').value||!$('eplEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
- const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value});
- if(error){err(error);return}
- closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
- ['eplStart','eplEnd','eplDays','eplNotes','eplReason'].forEach(id=>$(id).value='');
+ if($('eplEnd').value<$('eplStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
+ try{
+  let attachment=null;const f=takeStaged('leaveEmp','eplFileBox','📎 إرفاق مستند طلب الإجازة');
+  if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+currentEmp.id);
+   await sb.from('files_registry').insert({file_name:f.name,file_type:(f.name.split('.').pop()||'').toUpperCase(),file_size:(f.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',source:'إجازة: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:attachment,employee_id:currentEmp.id}).catch(()=>{})}
+  const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,attachment_url:attachment});
+  if(error)throw error;
+  closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
+  ['eplStart','eplEnd','eplDays','eplNotes','eplReason'].forEach(id=>$(id).value='');
+ }catch(e){err(e)}
 }
 function epRenderAttendance(){
  const eid=currentEmp.id;
@@ -1393,6 +1542,12 @@ async function epAddPermit(){
  const {error}=await sb.from('permits').insert({employee_id:currentEmp.id,permit_date:$('eppDate').value||D(0),permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value});
  if(error){err(error);return}
  closeModal('epPermitModal');await refresh();toast('تم إرسال طلب الاستئذان — بانتظار موافقة الإدارة');
+}
+function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';openModal('selfEditModal')}
+async function saveSelfEdit(){
+ const {error}=await sb.rpc('update_my_profile',{p_phone:$('sePhone').value,p_city:$('seCity').value});
+ if(error){err(error);return}
+ closeModal('selfEditModal');await loadAll();currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();toast('تم تحديث بياناتك بنجاح');
 }
 function epRenderPolicies(){
  $('epPoliciesList').innerHTML=policies.map(p=>`
