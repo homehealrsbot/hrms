@@ -436,7 +436,7 @@ tbody tr:hover{background:#FAFCFB}
         <input id="flvMonth" type="month" onchange="renderLeaveLog()" title="بحث بفترة زمنية">
       </div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>اسم الموظف</th><th>القسم</th><th>الوظيفة</th><th>سنوية</th><th>مرضية</th><th>خاصة</th><th>تاريخ آخر إجازة</th></tr></thead>
+        <thead><tr><th>اسم الموظف</th><th>القسم</th><th>الوظيفة</th><th>سنوية</th><th>مرضية</th><th>خاصة</th><th>تاريخ آخر إجازة</th><th>حالة آخر طلب</th></tr></thead>
         <tbody id="leaveLogTbody"></tbody>
       </table></div>
     </div>
@@ -1491,13 +1491,13 @@ function renderLeaveLog(){
  if(leaveExtra==='pending')base=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const byEmp={};
  base.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||String(l.start).startsWith(mo)))
-  .forEach(l=>{if(!byEmp[l.emp])byEmp[l.emp]={dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start};
+  .forEach(l=>{if(!byEmp[l.emp])byEmp[l.emp]={dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start,lastStatus:l.status};
    const g=byEmp[l.emp];if(l.type==='سنوية')g.annual+=l.days;if(l.type==='مرضية')g.sick+=l.days;if(l.type==='خاصة')g.special+=l.days;
-   if(l.start>g.last)g.last=l.start});
+   if(l.start>=g.last){g.last=l.start;g.lastStatus=l.status}});
  let keys=Object.keys(byEmp);
  if(leaveExtra==='lowbal')keys=keys.filter(emp=>{const b=balance(emp);return b.annualUsed>0&&b.annualLeft<=5});
  $('leaveLogTbody').innerHTML=keys.length?keys.map(emp=>{const g=byEmp[emp];
-  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp.replace(/'/g,"\\'")}')">${emp}</span></td><td>${g.dept}</td><td>${g.job}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد نتائج</td></tr>';
+  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp.replace(/'/g,"\\'")}')">${emp}</span></td><td>${g.dept}</td><td>${g.job}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td><td><span class="tag ${lvTag(g.lastStatus)}">${g.lastStatus}</span></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد نتائج</td></tr>';
 }
 function openLeaveDetail(emp){
  const list=leaves.filter(l=>l.emp===emp);const b=balance(emp);
