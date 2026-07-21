@@ -1775,3 +1775,58 @@ function epRenderPolicies(){
 
 </body>
 </html>
+<script>
+(function(){
+var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;background:#E7F0EC;color:#0F4C3F;font-size:19px;flex-shrink:0;border:none;cursor:pointer}'
++'#sideOverlay2{position:fixed;inset:0;background:rgba(12,26,21,.5);z-index:49;display:none}'
++'#sideOverlay2.on{display:block}'
++'html,body{overflow-x:hidden}'
++'@media(max-width:1024px){'
++'.menu-btn{display:flex;align-items:center;justify-content:center}'
++'aside{box-shadow:-8px 0 30px rgba(0,0,0,.25);z-index:60}'
++'.topbar{padding:10px 12px;gap:10px;flex-wrap:wrap}'
++'.topbar h2{font-size:15px}'
++'.top-search{order:5;flex-basis:100%;max-width:none;margin-top:4px}'
++'.top-user div{display:none}'
++'.page{padding:16px 12px 70px}'
++'.page-head h1{font-size:19px}'
++'.card{padding:14px}'
++'.modal{padding:18px 16px}'
++'.modal-back{padding:16px 8px}'
++'.stats{grid-template-columns:repeat(2,1fr);gap:10px}'
++'.stat .num{font-size:22px}.stat .lbl{font-size:11.5px}'
++'table{font-size:12px}th,td{padding:8px 9px}'
++'.btn{padding:9px 14px;font-size:13px}.btn-sm{padding:6px 10px;font-size:11.5px}'
++'.filters>*{max-width:none;min-width:calc(50% - 5px)}'
++'.profile-hero{padding:18px}.profile-hero h2{font-size:18px}'
++'}';
+var st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+var ov=document.createElement('div');ov.id='sideOverlay2';document.body.appendChild(ov);
+window.toggleSidebar=function(force){
+ var anyOpen=document.querySelector('aside.open');
+ var open=(force!==undefined)?force:!anyOpen;
+ document.querySelectorAll('aside').forEach(function(a){a.classList.toggle('open',open)});
+ ov.classList.toggle('on',open);
+};
+ov.onclick=function(){toggleSidebar(false)};
+document.querySelectorAll('.topbar').forEach(function(tb){
+ var b=document.createElement('button');b.className='menu-btn';b.textContent='☰';
+ b.onclick=function(){toggleSidebar()};tb.insertBefore(b,tb.firstChild);
+});
+document.querySelectorAll('.nav-item').forEach(function(n){
+ n.addEventListener('click',function(){toggleSidebar(false)});
+});
+try{
+ var lv=document.querySelector('#app .nav-item[data-page="leaves"]');
+ var pr=document.querySelector('#app .nav-item[data-page="permits"]');
+ if(lv){var s1=document.createElement('span');s1.className='nav-badge';s1.id='lvNavBadge';s1.style.display='none';lv.appendChild(s1)}
+ if(pr){var s2=document.createElement('span');s2.className='nav-badge';s2.id='prNavBadge';s2.style.display='none';pr.appendChild(s2)}
+ setInterval(function(){try{
+  var l=(typeof leaves!=='undefined'?leaves:[]).filter(function(x){return typeof LV_P2!=='undefined'&&x.status===LV_P2}).length;
+  var p=(typeof permits!=='undefined'?permits:[]).filter(function(x){return x.status==='بانتظار الموافقة'}).length;
+  var a=document.getElementById('lvNavBadge');if(a){a.textContent=l;a.style.display=l?'inline-block':'none'}
+  var b=document.getElementById('prNavBadge');if(b){b.textContent=p;b.style.display=p?'inline-block':'none'}
+ }catch(e){}},3000);
+}catch(e){}
+})();
+</script>
