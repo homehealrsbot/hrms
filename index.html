@@ -940,8 +940,13 @@ function initRealtime(){
      }catch(e){}
    });
   });
-  ch.subscribe();
+  ch.subscribe(status=>{
+   console.log('البث اللحظي:',status);
+   if(status==='SUBSCRIBED'){window._rtOk=true}
+  });
  }catch(e){console.log('realtime',e)}
+ // فحص احتياطي تلقائي كل 15 ثانية (يضمن الوصول السريع حتى لو تعطل البث)
+ setInterval(()=>{if(document.visibilityState==='visible')refresh().catch(()=>{})},15000);
 }
 /* استعادة كلمة المرور */
 let recovering=location.hash.includes('type=recovery');
@@ -972,12 +977,12 @@ const empDept=id=>empById[id]?empById[id].dept:'—';
 async function loadAll(){
  await loadReads();
  const [E,C,L,M,S,P,PL,FL,FM]=await Promise.all([
-  sb.from('employees').select('*').order('created_at'),
+  sb.from('employees').select('*').order('emp_num'),
   sb.from('contracts').select('*').order('version'),
   sb.from('leaves').select('*').order('created_at',{ascending:false}),
   sb.from('meeting_records').select('*').order('meeting_date',{ascending:false}),
   sb.from('site_attendance').select('*').order('record_date',{ascending:false}),
-  sb.from('permits').select('*').order('permit_date',{ascending:false}),
+  sb.from('permits').select('*').order('created_at',{ascending:false}),
   sb.from('policies').select('*').order('name'),
   sb.from('files_registry').select('*').order('uploaded_at',{ascending:false}),
   sb.from('forms').select('*').order('created_at',{ascending:false}),
@@ -990,6 +995,7 @@ async function loadAll(){
  (C.data||[]).forEach(r=>{(byEmp[r.employee_id]=byEmp[r.employee_id]||[]).push(r)});
  contracts=Object.entries(byEmp).map(([eid,rows])=>{rows.sort((a,b)=>a.version-b.version);const cur=rows[rows.length-1];
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,file:cur.pdf_url,history:rows}});
+ contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
  leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,notes:r.notes}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
@@ -1090,8 +1096,16 @@ function buildAlerts(){
  policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
  return A;
 }
+const SEV={danger:0,sand:1,info:2,ok:3};
+function sortAlerts(A){
+ return A.sort((a,b)=>{
+  const ra=readKeys.has(alertKey(a))?1:0, rb=readKeys.has(alertKey(b))?1:0;
+  if(ra!==rb)return ra-rb;                       // غير المقروء أولاً
+  return (SEV[a.k]??9)-(SEV[b.k]??9);            // ثم الأشد أهمية
+ });
+}
 function renderAlerts(){
- const A=buildAlerts();
+ const A=sortAlerts(buildAlerts());
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('alertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
