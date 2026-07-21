@@ -1661,16 +1661,28 @@ let docsEmpId=null;
 function openDocsModal(eid){docsEmpId=eid;renderDocsModal();openModal('docsModal')}
 function renderDocsModal(){
  const e=empById[docsEmpId];if(!e)return;
+ const isAdmin=me.role==='admin';
  $('docsModalTitle').textContent='مستندات الموظف: '+e.name;
  const myFiles=filesData.filter(f=>f.employee_id===docsEmpId);
- $('docsModalBody').innerHTML=DOC_TYPES.map(t=>{
+ $('docsModalBody').innerHTML=(isAdmin?'':'<div class="section-note">ترفع كل مستند مرة واحدة — لتعديل مستند مرفوع تواصل مع الموارد البشرية.</div>')+DOC_TYPES.map(t=>{
   const f=myFiles.find(x=>x.sub===t);
   return `<div class="policy" style="padding:12px 14px"><div class="pic">📎</div>
    <div class="pinfo"><b>${t}</b><small>${f?f.name+' — رُفع '+fmt(f.up):'لم يُرفع بعد'}</small></div>
    <div class="actions">
-    ${f?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path}')">عرض / تحميل</button>`:''}
-    <button class="btn btn-primary btn-sm" onclick="uploadEmpDoc('${t}')">${f?'استبدال':'رفع'}</button>
+    ${f?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${t}')">عرض</button>`:''}
+    ${!f?`<button class="btn btn-primary btn-sm" onclick="uploadEmpDoc('${t}')">رفع</button>`:''}
+    ${f&&isAdmin?`<button class="btn btn-sand btn-sm" onclick="uploadEmpDoc('${t}')">استبدال</button>
+    <button class="btn btn-danger btn-sm" onclick="delEmpDoc('${f.id}','${f.path}','${t}')">حذف</button>`:''}
+    ${f&&!isAdmin?'<span class="tag ok">مرفوع ✓</span>':''}
    </div></div>`}).join('');
+}
+async function delEmpDoc(fileId,path,docType){
+ if(!confirm('حذف مستند «'+docType+'» نهائياً؟'))return;
+ try{await sb.storage.from('hrms-files').remove([path])}catch(e){}
+ const {error}=await sb.from('files_registry').delete().eq('id',fileId);
+ if(error){err(error);return}
+ await loadAll();renderDocsModal();if(me.role==='admin')renderFiles();
+ toast('تم حذف المستند');
 }
 async function uploadEmpDoc(docType){
  try{
