@@ -1733,6 +1733,7 @@ function epRenderAlerts(){
  const A=buildAlerts().filter(a=>a.d.includes(currentEmp.name)||a.t.includes('سياسة'));
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
  leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
+ sortAlerts(A);
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('epAlertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
