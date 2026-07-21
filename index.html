@@ -1232,7 +1232,7 @@ async function addContract(){
  if($('cEnd').value<=$('cStart').value){toast('تاريخ نهاية العقد يجب أن يكون بعد تاريخ بدايته');return}
  try{
   let pdf=null;const f=takeStaged('contract','cFileBox','📎 إرفاق نسخة العقد (PDF / DOC)');
-  if(f){toast('جاري رفع المرفق...');pdf=await uploadToStorage(f,'contracts');await registerFile(f,'عقود الموظفين','عقد: '+(empById[$('cEmp').value]||{}).name,pdf).catch(()=>{})}
+  if(f){toast('جاري رفع المرفق...');pdf=await uploadToStorage(f,'employees/'+$('cEmp').value+'/contracts');await registerFile(f,'عقود الموظفين','عقد: '+(empById[$('cEmp').value]||{}).name,pdf).catch(()=>{})}
   const {error}=await sb.from('contracts').insert({employee_id:$('cEmp').value,start_date:$('cStart').value,end_date:$('cEnd').value,duration:$('cDur').value,pdf_url:pdf});
   if(error)throw error;
   closeModal('contractModal');await refresh();toast('تمت إضافة العقد'+(pdf?' مع مرفقه':''));
@@ -1267,7 +1267,7 @@ async function addSiteAtt(){
 async function addSiteAbs(){
  try{
   let sick=null;const f=takeStaged('sickReport','sbFileBox','📎 إرفاق التقرير');
-  if(f){toast('جاري رفع التقرير المرضي...');sick=await uploadToStorage(f,'sick-reports');await registerFile(f,'ملفات الموظفين','تقرير مرضي: '+(empById[$('sbEmp').value]||{}).name,sick).catch(()=>{})}
+  if(f){toast('جاري رفع التقرير المرضي...');sick=await uploadToStorage(f,'employees/'+$('sbEmp').value+'/sick');await registerFile(f,'ملفات الموظفين','تقرير مرضي: '+(empById[$('sbEmp').value]||{}).name,sick).catch(()=>{})}
   const {error}=await sb.from('site_attendance').insert({employee_id:$('sbEmp').value,record_type:'غياب',record_date:$('sbDate').value||D(0),department:$('sbDept').value,absence_reason:$('sbReason').value,sick_report_url:sick,notes:$('sbNotes').value});
   if(error)throw error;
   closeModal('siteAbsModal');await refresh();toast('تم تسجيل الغياب'+(sick?' مع التقرير المرضي':''));
@@ -1323,7 +1323,7 @@ async function addLeave(){
  if($('lvEnd').value<$('lvStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
  try{
   let attachment=null;const f=takeStaged('leaveAdmin','lvFileBox','📎 اضغط لرفع مستند طلب الإجازة');
-  if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'leaves');await registerFile(f,'طلبات الإجازة','إجازة: '+(empById[$('lvEmp').value]||{}).name,attachment).catch(()=>{})}
+  if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+$('lvEmp').value+'/leaves');await registerFile(f,'طلبات الإجازة','إجازة: '+(empById[$('lvEmp').value]||{}).name,attachment).catch(()=>{})}
   const {error}=await sb.from('leaves').insert({employee_id:$('lvEmp').value,leave_type:$('lvType').value,start_date:$('lvStart').value,end_date:$('lvEnd').value,days:+$('lvDays').value||1,reason:$('lvReason').value,dept_head:$('lvHead').value,admin_manager:$('lvManager').value,notes:$('lvNotes').value,attachment_url:attachment,status:LV_P1});
   if(error)throw error;
   await refresh();toast('تم حفظ الطلب — سيمر على رئيس القسم ثم الاعتماد النهائي');
