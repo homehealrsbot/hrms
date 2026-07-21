@@ -1352,8 +1352,9 @@ async function generateAbsence(mid){
  const m=meetingsList.find(x=>x.id===mid);if(!m)return;
  if(!confirm('سيتم تسجيل غياب لكل موظفي قسم '+m.department+' الذين لم يسجلوا حضورهم. متابعة؟'))return;
  const attended=new Set(meetAtt.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
- const absentees=employees.filter(e=>e.dept===m.department&&e.status==='نشط'&&e.role!=='admin'&&!attended.has(e.id));
- if(!absentees.length){toast('الجميع سجلوا حضورهم 🎉');return}
+ const alreadyAbsent=new Set(meetAbs.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
+ const absentees=employees.filter(e=>e.dept===m.department&&e.status==='نشط'&&e.role!=='admin'&&!attended.has(e.id)&&!alreadyAbsent.has(e.id));
+ if(!absentees.length){toast('لا يوجد غائبون جدد — الجميع بين حاضر أو مسجَّل غيابه مسبقاً');return}
  const rows=absentees.map(e=>({employee_id:e.id,record_type:'غياب',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:m.meeting_time,meeting_id:mid,notes:'غياب مولد تلقائياً'}));
  const {error}=await sb.from('meeting_records').insert(rows);
  if(error){err(error);return}
