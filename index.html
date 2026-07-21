@@ -1872,3 +1872,57 @@ try{
  }
 })();
 </script>
+<script>
+(function(){
+ // نافذة تغيير كلمة المرور
+ var m=document.createElement('div');
+ m.className='modal-back';m.id='changePassModal';
+ m.innerHTML='<div class="modal sm">'
+  +'<div class="modal-head"><h3>تغيير كلمة المرور</h3><button class="x-btn" onclick="closeModal(\'changePassModal\')">✕</button></div>'
+  +'<div class="field"><label>كلمة المرور الحالية</label><input id="cpCur" type="password" placeholder="••••••••"></div>'
+  +'<div class="field"><label>كلمة المرور الجديدة</label><input id="cpNew" type="password" placeholder="6 أحرف على الأقل"></div>'
+  +'<div class="field"><label>تأكيد كلمة المرور الجديدة</label><input id="cpNew2" type="password"></div>'
+  +'<div class="modal-foot"><button class="btn btn-primary" id="cpBtn" onclick="saveChangePass()">تغيير كلمة المرور</button>'
+  +'<button class="btn btn-ghost" onclick="closeModal(\'changePassModal\')">إلغاء</button></div>'
+  +'</div>';
+ document.body.appendChild(m);
+ m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')});
+
+ window.openChangePass=function(){
+  ['cpCur','cpNew','cpNew2'].forEach(function(id){document.getElementById(id).value=''});
+  openModal('changePassModal');
+ };
+
+ window.saveChangePass=async function(){
+  var cur=document.getElementById('cpCur').value;
+  var p1=document.getElementById('cpNew').value;
+  var p2=document.getElementById('cpNew2').value;
+  if(!cur){toast('أدخل كلمة المرور الحالية');return}
+  if(p1.length<6){toast('كلمة المرور الجديدة 6 أحرف على الأقل');return}
+  if(p1!==p2){toast('كلمتا المرور الجديدتان غير متطابقتين');return}
+  if(p1===cur){toast('الكلمة الجديدة مطابقة للحالية — اختر كلمة مختلفة');return}
+  var btn=document.getElementById('cpBtn');btn.disabled=true;btn.textContent='لحظات...';
+  try{
+   var u=await sb.auth.getUser();
+   var email=u.data&&u.data.user?u.data.user.email:null;
+   if(!email)throw new Error('تعذر تحديد حسابك — أعد تسجيل الدخول');
+   // التحقق من الكلمة الحالية فعلياً
+   var check=await sb.auth.signInWithPassword({email:email,password:cur});
+   if(check.error){toast('كلمة المرور الحالية غير صحيحة');btn.disabled=false;btn.textContent='تغيير كلمة المرور';return}
+   var r=await sb.auth.updateUser({password:p1});
+   if(r.error)throw r.error;
+   closeModal('changePassModal');
+   toast('✅ تم تغيير كلمة المرور بنجاح — استخدم الجديدة من الآن');
+  }catch(e){toast('خطأ: '+(e.message||e))}
+  btn.disabled=false;btn.textContent='تغيير كلمة المرور';
+ };
+
+ // زر 🔑 بجانب الجرس في الشريط العلوي (الإدارة والموظف)
+ document.querySelectorAll('.top-user').forEach(function(tu){
+  var b=document.createElement('button');
+  b.className='bell';b.textContent='🔑';b.title='تغيير كلمة المرور';
+  b.onclick=window.openChangePass;
+  tu.insertBefore(b,tu.firstChild);
+ });
+})();
+</script>
