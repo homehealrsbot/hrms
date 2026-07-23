@@ -30,11 +30,11 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 
 /* ---------- شاشة الدخول ---------- */
 #loginScreen{position:fixed;inset:0;display:flex;z-index:100;background:var(--bg)}
-.login-side{flex:1;background:linear-gradient(160deg,var(--pine-deep),var(--pine) 70%,#146552);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
+.login-side{flex:1;background:linear-gradient(160deg,#0D2154,var(--pine) 60%,#146552);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
 .login-side::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 20% 110%,rgba(216,156,62,.22),transparent 60%)}
 .login-side h1{font-size:34px;font-weight:900;margin:18px 0 10px;position:relative}
 .login-side p{opacity:.85;max-width:420px;position:relative}
-.logo-mark{width:58px;height:58px;border-radius:16px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:900;font-size:22px;position:relative}
+.logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .login-form-wrap{width:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff}
 .login-form{width:100%;max-width:340px}
 .login-form h2{font-size:24px;font-weight:800;margin-bottom:6px}
@@ -168,9 +168,10 @@ tbody tr:hover{background:#FAFCFB}
 .info-item .v{font-weight:700;font-size:14px}
 
 /* ---------- النوافذ المنبثقة ---------- */
-.modal-back{position:fixed;inset:0;background:rgba(12,26,21,.55);z-index:90;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-back{position:fixed;inset:0;background:rgba(12,26,21,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:40px 16px;isolation:isolate}
 .modal-back.on{display:flex}
-.modal{background:#fff;border-radius:18px;width:100%;max-width:720px;padding:26px 28px;animation:pop .18s ease}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:720px;padding:26px 28px;animation:pop .18s ease;max-height:86vh;overflow-y:auto;overscroll-behavior:contain}
+.grid-2>*{min-width:0}
 .modal.sm{max-width:520px}
 .modal.lg{max-width:860px}
 @keyframes pop{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
@@ -204,7 +205,7 @@ tbody tr:hover{background:#FAFCFB}
 <!-- ================= شاشة تسجيل الدخول ================= -->
 <div id="loginScreen">
   <div class="login-side">
-    <div class="logo-mark">HR</div>
+    <div class="logo-mark"><img src="https://raw.githubusercontent.com/homehealrsbot/hrms/main/assets/logo-icon.png" alt="Home Healers" style="width:100%;height:100%;object-fit:contain;padding:6px"></div>
     <h1>نظام إدارة الموارد البشرية</h1>
     <p>منصة موحّدة لإدارة الموظفين والعقود والإجازات والحضور والسياسات — المرحلة الأولى: لوحة تحكم الإدارة.</p>
   </div>
@@ -235,8 +236,8 @@ tbody tr:hover{background:#FAFCFB}
 <div id="app">
 <aside id="sidebar">
   <div class="side-head">
-    <div class="logo-mark">HR</div>
-    <div><b>الموارد البشرية</b><small>لوحة تحكم الإدارة</small></div>
+    <div class="logo-mark"><img src="https://raw.githubusercontent.com/homehealrsbot/hrms/main/assets/logo-icon.png" alt="" style="width:100%;height:100%;object-fit:contain;padding:4px"></div>
+    <div><b>هوم هيلرز</b><small>لوحة تحكم الإدارة</small></div>
   </div>
   <nav>
     <button class="nav-item active" data-page="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
@@ -522,8 +523,8 @@ tbody tr:hover{background:#FAFCFB}
 <div id="empApp" class="empapp">
 <aside>
   <div class="side-head">
-    <div class="logo-mark">HR</div>
-    <div><b>الموارد البشرية</b><small>بوابة الموظف</small></div>
+    <div class="logo-mark"><img src="https://raw.githubusercontent.com/homehealrsbot/hrms/main/assets/logo-icon.png" alt="" style="width:100%;height:100%;object-fit:contain;padding:4px"></div>
+    <div><b>هوم هيلرز</b><small>بوابة الموظف</small></div>
   </div>
   <nav>
     <button class="nav-item active" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
@@ -1473,19 +1474,27 @@ async function runCheckin(){
  const {data:m,error}=await sb.from('meetings').select('*').eq('code',code).maybeSingle();
  if(error||!m){toast('رابط الحضور غير صالح');return}
  const {data:existing}=await sb.from('meeting_records').select('id').eq('meeting_id',m.id).eq('employee_id',me.id);
+ openModal('checkinModal');
+ if(existing&&existing.length){
+  $('checkinBody').innerHTML=`
+   <div class="section-note">📅 <b>${m.meeting_name}</b> — ${m.title||''}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
+   <p style="text-align:center;font-weight:700;color:var(--ok);padding:10px">✅ حضورك مسجّل مسبقاً لهذا الاجتماع</p>
+   ${m.meet_link?`<button class="btn btn-primary btn-block" onclick="window.location.href='${m.meet_link}'">↗ الانتقال للاجتماع الآن</button>`:''}`;
+  return;
+ }
  $('checkinBody').innerHTML=`
   <div class="section-note">📅 <b>${m.meeting_name}</b> — ${m.title||''}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
-  ${existing&&existing.length?'<p style="text-align:center;font-weight:700;color:var(--ok);padding:10px">✅ حضورك مسجّل مسبقاً لهذا الاجتماع</p>':
-  `<button class="btn btn-primary btn-block" onclick="confirmCheckin('${m.id}')">✋ تسجيل حضوري الآن — ${me.name}</button>`}`;
- openModal('checkinModal');
+  <p style="text-align:center;font-weight:700;color:var(--pine);padding:16px">⏳ جاري تسجيل حضورك تلقائياً...</p>`;
+ await confirmCheckin(m.id,m);
 }
-async function confirmCheckin(mid){
- const m=meetingsList.find(x=>x.id===mid)||await sb.from('meetings').select('*').eq('id',mid).maybeSingle().then(r=>r.data);
+async function confirmCheckin(mid,mObj){
+ const m=mObj||meetingsList.find(x=>x.id===mid)||await sb.from('meetings').select('*').eq('id',mid).maybeSingle().then(r=>r.data);
  const now=new Date();
- const {error}=await sb.from('meeting_records').insert({employee_id:me.id,record_type:'حضور',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:(now.getHours()+'').padStart(2,'0')+':'+(now.getMinutes()+'').padStart(2,'0'),meeting_id:m.id,notes:'حضور ذاتي عبر الرابط'});
+ const {error}=await sb.from('meeting_records').insert({employee_id:me.id,record_type:'حضور',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:(now.getHours()+'').padStart(2,'0')+':'+(now.getMinutes()+'').padStart(2,'0'),meeting_id:m.id,notes:'حضور تلقائي عبر الرابط'});
  if(error){err(error);return}
- $('checkinBody').innerHTML='<p style="text-align:center;font-weight:800;color:var(--ok);font-size:17px;padding:16px">✅ تم تسجيل حضورك بنجاح</p>';
+ $('checkinBody').innerHTML=`<p style="text-align:center;font-weight:800;color:var(--ok);font-size:17px;padding:16px">✅ تم تسجيل حضورك بنجاح${m.meet_link?'<br><small style=\"font-weight:600;color:var(--muted)\">جاري تحويلك للاجتماع...</small>':''}</p>`;
  await refresh();
+ if(m.meet_link){setTimeout(()=>{window.location.href=m.meet_link},1200)}
 }
 
 /* ================= الإجازات ================= */
