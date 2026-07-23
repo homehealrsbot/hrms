@@ -1668,7 +1668,14 @@ function renderFiles(){
  $('filesTbody').innerHTML=rows.length?rows.map(f=>`<tr>
   <td><b>${f.name}</b></td><td><span class="tag ${f.type==='PDF'?'danger':'ok'}">${f.type||'—'}</span></td><td>${f.size||'—'}</td>
   <td>${fmt(f.up)}</td><td>${f.by||'—'}</td><td>${fmt(f.last)}</td><td>${f.src||'—'}</td>
-  <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}','${f.name}')">عرض / تحميل</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
+  <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}','${f.name}')">عرض / تحميل</button> <button class="btn btn-danger btn-sm" onclick="delGeneralFile('${f.id}','${f.path||''}')">حذف</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
+}
+async function delGeneralFile(fileId,path){
+ if(!confirm('حذف هذا الملف نهائياً؟ لا يمكن التراجع بعد الحذف.'))return;
+ try{if(path)await sb.storage.from('hrms-files').remove([path])}catch(e){}
+ const {error}=await sb.from('files_registry').delete().eq('id',fileId);
+ if(error){err(error);return}
+ await refresh();toast('تم حذف الملف');
 }
 async function uploadGeneralFile(){
  try{const f=await pickFile('');if(!f)return;
