@@ -737,7 +737,7 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-head"><h3>تسجيل حضور اجتماع</h3><button class="x-btn" onclick="closeModal('meetAttModal')">✕</button></div>
   <div class="grid-2">
     <div><label>الاجتماع</label><select id="maMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="maDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="maDept" onchange="filterEmpByDept('maDept')"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
     <div><label>عنوان الاجتماع</label><input id="maTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="maGoal"></div>
     <div><label>التاريخ</label><input id="maDate" type="date"></div>
@@ -752,7 +752,7 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-head"><h3>تسجيل غياب اجتماع</h3><button class="x-btn" onclick="closeModal('meetAbsModal')">✕</button></div>
   <div class="grid-2">
     <div><label>الاجتماع</label><select id="mbMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="mbDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="mbDept" onchange="filterEmpByDept('mbDept')"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
     <div><label>عنوان الاجتماع</label><input id="mbTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="mbGoal"></div>
     <div><label>التاريخ</label><input id="mbDate" type="date"></div>
@@ -770,7 +770,7 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>اسم الموظف</label><select id="saEmp"></select></div>
     <div><label>وقت الدخول</label><input id="saIn" type="time"></div>
     <div><label>وقت الخروج</label><input id="saOut" type="time"></div>
-    <div><label>القسم</label><select id="saDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="saDept" onchange="filterEmpByDept('saDept')"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
     <div><label>ملاحظات</label><input id="saNotes"></div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="addSiteAtt()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('siteAttModal')">إلغاء</button></div>
@@ -781,7 +781,7 @@ tbody tr:hover{background:#FAFCFB}
   <div class="grid-2">
     <div><label>التاريخ</label><input id="sbDate" type="date"></div>
     <div><label>اسم الموظف</label><select id="sbEmp"></select></div>
-    <div><label>القسم</label><select id="sbDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="sbDept" onchange="filterEmpByDept('sbDept')"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
     <div><label>سبب الغياب</label><input id="sbReason"></div>
     <div><label>تقرير مرضي (إن وجد)</label><div class="upload-box" id="sbFileBox" onclick="stageFile('sickReport','.pdf,.jpg,.jpeg,.png,.doc,.docx','sbFileBox')">📎 إرفاق التقرير</div></div>
     <div><label>ملاحظات</label><input id="sbNotes"></div>
@@ -1073,11 +1073,20 @@ function friendly(m){m=String(m||'');
  if(m.includes('violates row-level security'))return 'لا تملك صلاحية هذا الإجراء';
  if(m.includes('Failed to fetch'))return 'تعذر الاتصال — تحقق من الإنترنت';
  return m}
-async function openStoredFile(path){
+async function openStoredFile(path,friendlyName){
  if(!path){toast('لا يوجد ملف مرفوع');return}
  const {data,error}=await sb.storage.from('hrms-files').createSignedUrl(path,3600);
  if(error){err(error);return}
- window.open(data.signedUrl,'_blank');
+ const ext=(path.split('.').pop()||'').toLowerCase();
+ let name=friendlyName||path.split('/').pop().replace(/^\d+_/,'');
+ if(!/\.[a-z0-9]{2,5}$/i.test(name))name+='.'+ext;
+ try{
+  toast('جاري تجهيز التنزيل...');
+  const resp=await fetch(data.signedUrl);const blob=await resp.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+ }catch(e){window.open(data.signedUrl,'_blank')}
 }
 
 /* ================= التنقل ================= */
@@ -1182,7 +1191,7 @@ function renderPolicies(){
    <div class="pinfo"><b>${p.name}</b><small>آخر تحديث: ${fmt(p.updated)} — الإصدار ${p.ver} — <span class="tag ${p.status==='متاح للتنزيل'?'ok':'sand'}">${p.status}</span></small></div>
    <div class="actions">
      <button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file||''}','${p.name}')">عرض</button>
-     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}')">تحميل</button>
+     <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${p.file||''}','${p.name}')">تحميل</button>
      <span class="subtabs" style="margin:0"><button class="${p.status!=='متاح للتنزيل'?'active':''}" onclick="setPolicyStatus('${p.id}','قيد العرض')">عرض فقط</button><button class="${p.status==='متاح للتنزيل'?'active':''}" onclick="setPolicyStatus('${p.id}','متاح للتنزيل')">عرض وتنزيل</button></span>
      <button class="btn btn-ok btn-sm" onclick="policyNewVer('${p.id}')">رفع إصدار جديد</button>
      ${p.file?`<button class="btn btn-sand btn-sm" onclick="delPolicyFile('${p.id}')">حذف المستند المرفق</button>`:''}
@@ -1285,8 +1294,20 @@ function renderEmployees(){
   <td style="white-space:nowrap"><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button> <button class="btn btn-ghost btn-sm" onclick="openDocsModal('${e.id}')">📎 المستندات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
  fillEmpSelects();
 }
-function fillEmpSelects(){const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
- ['cEmp','lvEmp','maEmp','mbEmp','saEmp','sbEmp','prEmp'].forEach(id=>{if($(id))$(id).innerHTML=opts});syncLeaveEmp()}
+const DEPT_EMP_MAP={maDept:'maEmp',mbDept:'mbEmp',saDept:'saEmp',sbDept:'sbEmp'};
+function filterEmpByDept(deptId){
+ const empId=DEPT_EMP_MAP[deptId];const el=$(empId);if(!el)return;
+ const dept=$(deptId).value,prev=el.value;
+ const list=employees.filter(e=>e.role!=='admin'&&(!dept||e.dept===dept));
+ el.innerHTML=list.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+ if(prev&&list.some(e=>e.id===prev))el.value=prev;
+}
+function fillEmpSelects(){
+ const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+ ['cEmp','lvEmp','prEmp'].forEach(id=>{const el=$(id);if(!el)return;const prev=el.value;el.innerHTML=opts;if(prev&&[...el.options].some(o=>o.value===prev))el.value=prev});
+ Object.keys(DEPT_EMP_MAP).forEach(filterEmpByDept);
+ syncLeaveEmp();
+}
 function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة موظف جديد';
  ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur'].forEach(id=>$(id).value='');
  $('empSaveBtn').disabled=false;
@@ -1326,7 +1347,7 @@ function renderContracts(){
   <td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد العقد</button>
    <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button>
-   <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">📎 المرفق</button></td></tr>`).join(''):`<tr><td colspan="7" class="empty">${contractsFilter?'لا توجد عقود مطابقة للفلتر':'لا توجد عقود'}</td></tr>`;
+   <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقد ${c.emp}')">📎 المرفق</button></td></tr>`).join(''):`<tr><td colspan="7" class="empty">${contractsFilter?'لا توجد عقود مطابقة للفلتر':'لا توجد عقود'}</td></tr>`;
 }
 function showVersions(eid){const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
  alert('نسخ عقد '+c.emp+':\n'+c.history.map(h=>`النسخة ${h.version}: من ${h.start_date} إلى ${h.end_date}${h.is_current?' (الحالية)':''}`).join('\n'))}
@@ -1363,7 +1384,7 @@ function renderAttendance(){
  $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.dept}</td><td>${r.title||'—'}</td><td>${r.goal||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${r.emp}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('siteAttTbody').innerHTML=f(siteAtt,'siteAtt').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
- $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason||'—'}</td><td>${r.sickPath?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${r.sickPath}')">عرض التقرير</button>`:'<span class="tag gray">لا</span>'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
+ $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.emp}</td><td>${r.dept}</td><td>${r.reason||'—'}</td><td>${r.sickPath?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${r.sickPath}','تقرير طبي - ${r.emp}')">عرض التقرير</button>`:'<span class="tag gray">لا</span>'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
 }
 async function addMeetRec(kind){
  const p=kind==='meetAtt'?'ma':'mb';
@@ -1576,7 +1597,7 @@ function openLeaveDetail(emp){
   </div>
   <div class="tbl-wrap"><table>
    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
-   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}')">📎</button>`:'—'} ${l.notes||''}</td>
+   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة - ${l.emp}')">📎</button>`:'—'} ${l.notes||''}</td>
    <td style="white-space:nowrap">${l.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:l.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
   </table></div>`;
  openModal('leaveDetailModal');
@@ -1638,7 +1659,7 @@ function renderFiles(){
  $('filesTbody').innerHTML=rows.length?rows.map(f=>`<tr>
   <td><b>${f.name}</b></td><td><span class="tag ${f.type==='PDF'?'danger':'ok'}">${f.type||'—'}</span></td><td>${f.size||'—'}</td>
   <td>${fmt(f.up)}</td><td>${f.by||'—'}</td><td>${fmt(f.last)}</td><td>${f.src||'—'}</td>
-  <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}')">عرض / تحميل</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
+  <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}','${f.name}')">عرض / تحميل</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
 }
 async function uploadGeneralFile(){
  try{const f=await pickFile('');if(!f)return;
@@ -1691,8 +1712,8 @@ function renderForms(){
   return `<div class="policy"><div class="pic">📄</div>
    <div class="pinfo"><b>${f.name}</b> ${f.fillable?'<span class="tag info">قابل للتعبئة</span>':''}<small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}</small></div>
    <div class="actions">
-     ${f.doc?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.doc}')">DOC</button>`:''}
-     ${f.pdf?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.pdf}')">PDF</button>`:''}
+     ${f.doc?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.doc}','${f.name}')">DOC</button>`:''}
+     ${f.pdf?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.pdf}','${f.name}')">PDF</button>`:''}
      ${f.fillable?`<button class="btn btn-primary btn-sm" onclick="showFormSubs('${f.id}')">التقديمات (${subs.length})</button>`:''}
      <button class="btn btn-danger btn-sm" onclick="delForm('${f.id}')">حذف</button>
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مضافة — ابدأ بإضافة نموذج جديد</div>';
@@ -1864,7 +1885,7 @@ function initEmpPortal(){
  $('epJobInfo').innerHTML=item('تاريخ التعيين',fmt(e.hire))+item('نهاية فترة التجربة',fmt(e.probEnd))+item('المسمى الوظيفي',e.job)+item('القسم',e.dept)+item('نوع التوظيف',e.type)+item('نوع العمل',e.work)+item('الراتب الشهري',e.salary?e.salary+' '+(e.currency||''):'—')+item('مدة العقد',e.contractDur);
  const myDocs=filesData.filter(f=>f.employee_id===e.id);
  $('epDocs').innerHTML=DOC_TYPES.map(d=>{const f=myDocs.find(x=>x.sub===d);
-  return `<div class="info-item" ${f?`style="cursor:pointer" onclick="openStoredFile('${f.path}')"`:''}><div class="k">${f?'متوفر — اضغط للعرض':'لم يُرفع بعد'}</div><div class="v">📎 ${d}</div></div>`}).join('');
+  return `<div class="info-item" ${f?`style="cursor:pointer" onclick="openStoredFile('${f.path}','${d}')"`:''}><div class="k">${f?'متوفر — اضغط للعرض':'لم يُرفع بعد'}</div><div class="v">📎 ${d}</div></div>`}).join('');
  epRenderAll();
 }
 function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();if(currentEmp.role==='manager')mgrRenderApprovals()}
@@ -1874,7 +1895,7 @@ function mgrRenderApprovals(){
  $('mgrBadge').textContent=pending.length;
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
   <td><b>${l.emp}</b></td><td>${l.type}${l.reason?' — '+l.reason:''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td>
-  <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}')">📎</button>`:'—'}</td>
+  <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
  $('mgrHistoryTbody').innerHTML=hist.length?hist.map(l=>`<tr><td>${l.emp}</td><td>${l.type}</td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد سجل بعد</td></tr>';
@@ -1904,7 +1925,7 @@ function epRenderAlerts(){
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
- $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
 }
 function epRenderLeaves(){
  const b=balance(currentEmp.name);
@@ -1980,8 +2001,8 @@ function epRenderForms(){
    <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}${sub?' · ✅ أرسلته بتاريخ '+fmt(sub.created_at):''}</small></div>
    <div class="actions">
      ${f.pdf?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.pdf}','${f.name}')">عرض</button>`:''}
-     ${f.doc?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.doc}')">تنزيل DOC</button>`:''}
-     ${f.pdf?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.pdf}')">تنزيل PDF</button>`:''}
+     ${f.doc?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.doc}','${f.name}')">تنزيل DOC</button>`:''}
+     ${f.pdf?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.pdf}','${f.name}')">تنزيل PDF</button>`:''}
      ${f.fillable?(sub?`<span class="tag ok">تم الإرسال ✓</span>`:`<button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">تعبئة وإرسال</button>`):''}
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مرفوعة بعد</div>';
 }
@@ -2014,7 +2035,7 @@ function epRenderPolicies(){
    <div class="pinfo"><b>${p.name}</b><small>آخر تحديث: ${fmt(p.updated)} — الإصدار ${p.ver} — <span class="tag ${p.status==='متاح للتنزيل'?'ok':'sand'}">${p.status}</span></small></div>
    <div class="actions">
      <button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file||''}','${p.name}')">عرض داخل النظام</button>
-     ${p.status==='متاح للتنزيل'?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${p.file||''}')">تحميل</button>`:''}
+     ${p.status==='متاح للتنزيل'?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${p.file||''}','${p.name}')">تحميل</button>`:''}
    </div></div>`).join('');
 }
 </script>
