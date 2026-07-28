@@ -2041,6 +2041,7 @@ function openEmpProfile(eid){
  const b=balance(e.name);
  const myLv=leaves.filter(l=>l.employee_id===eid);
  const myPr=permits.filter(p=>p.employee_id===eid);
+ const myFm=formSubs.filter(s=>s.employee_id===eid);
  const mySA=siteAtt.filter(r=>r.employee_id===eid);
  const mySB=siteAbs.filter(r=>r.employee_id===eid);
  const myMA=meetAtt.filter(r=>r.employee_id===eid);
@@ -2065,6 +2066,9 @@ function openEmpProfile(eid){
   <h3 style="font-size:15px;margin:14px 0 8px">🚪 الاستئذانات (${myPr.length})</h3>
   <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>الحالة</th></tr></thead>
   <tbody>${myPr.length?myPr.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${prTag(p.status)}">${p.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا توجد استئذانات</td></tr>'}</tbody></table></div>
+  <h3 style="font-size:15px;margin:14px 0 8px">📄 النماذج المقدَّمة (${myFm.length})</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>النموذج</th><th>تاريخ التقديم</th><th>الحالة</th><th>إجراء</th></tr></thead>
+  <tbody>${myFm.length?myFm.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr><td><b>${fm.name||'—'}</b></td><td>${fmt(s.created_at)}</td><td><span class="tag ${stTag(s.status)}">${s.status}</span></td><td>${(fm.template==='clearance'||fm.template==='handover')?`<button class="btn btn-ghost btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج مقدَّمة</td></tr>'}</tbody></table></div>
   <div class="grid-2">
    <div><h3 style="font-size:15px;margin:14px 0 8px">✅ حضور المقر (${mySA.length})</h3>
     <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th></tr></thead>
