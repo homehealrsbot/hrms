@@ -295,10 +295,10 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- ===== الموظفين ===== -->
 <section class="page" id="page-approvals">
-  <div class="page-head"><div><h1>الاعتمادات</h1><p>كل ما ينتظر قرارك النهائي في مكان واحد — إجازات، استئذانات، ونماذج</p></div></div>
+  <div class="page-head"><div><h1>الاعتمادات</h1><p>كل الطلبات المعلّقة بجميع مراحلها — إجازات، استئذانات، ونماذج، بصرف النظر عن مرحلتها الحالية</p></div></div>
   <div class="card">
     <h3>🌴 إجازات بانتظار الاعتماد النهائي</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>القسم</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>رئيس القسم</th><th>إجراء</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>القسم</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>إجراء</th></tr></thead>
     <tbody id="apvLeavesTbody"></tbody></table></div>
   </div>
   <div class="card">
@@ -308,7 +308,7 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="card">
     <h3>📄 نماذج بانتظار الاعتماد النهائي</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>النموذج</th><th>رئيس القسم</th><th>إجراء</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>النموذج</th><th>الحالة</th><th>إجراء</th></tr></thead>
     <tbody id="apvFormsTbody"></tbody></table></div>
   </div>
 </section>
@@ -1912,19 +1912,27 @@ async function addForm(){
 
 /* ================= تهيئة لوحة الإدارة ================= */
 function renderApprovalsPage(){
- const pendingLv=leaves.filter(l=>l.status===LV_P2);
+ const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const pendingPr=permits.filter(p=>p.status==='بانتظار الموافقة');
- const pendingFm=formSubs.filter(s=>s.status===LV_P2);
+ const pendingFm=formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2);
  $('approvalsCount').textContent=pendingLv.length+pendingPr.length+pendingFm.length;
+ const lvBtn=l=>l.status===LV_P2
+   ?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`
+   :`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`;
  $('apvLeavesTbody').innerHTML=pendingLv.length?pendingLv.map(l=>`<tr>
-  <td><b>${l.emp}</b></td><td>${l.dept||'—'}</td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.head||'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد إجازات بانتظار اعتمادك 🎉</td></tr>';
+  <td><b>${l.emp}</b></td><td>${l.dept||'—'}</td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td>
+  <td><span class="tag ${lvTag(l.status)}">${l.status}</span>${l.head?' — '+l.head:''}</td>
+  <td style="white-space:nowrap">${lvBtn(l)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد إجازات بانتظار اعتماد 🎉</td></tr>';
  $('apvPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات بانتظار اعتمادك 🎉</td></tr>';
+ const fmBtn=s=>s.status===LV_P2
+   ?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`
+   :`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`;
  $('apvFormsTbody').innerHTML=pendingFm.length?pendingFm.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr>
-  <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td>${s.dept_head||'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
+  <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td>
+  <td><span class="tag ${lvTag(s.status)}">${s.status}</span>${s.dept_head?' — '+s.dept_head:''}</td>
+  <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> ${fmBtn(s)}</td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتماد 🎉</td></tr>';
 }
 function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts();renderApprovalsPage()}
 function initAll(){fillDeptFilter();renderAll()}
