@@ -651,6 +651,9 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><h3>سجل ما سبق اعتماده أو رفضه في قسمك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النوع</th><th>الفترة</th><th>الحالة</th></tr></thead>
     <tbody id="mgrHistoryTbody"></tbody></table></div></div>
+  <div class="card"><h3>📄 نماذج بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>النموذج</th><th>تاريخ التقديم</th><th>إجراء</th></tr></thead>
+    <tbody id="mgrFormsTbody"></tbody></table></div></div>
 </section>
 
 <section class="page" id="ep-policies">
@@ -1070,7 +1073,7 @@ async function loadAll(){
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
  const FS2=await sb.from('form_submissions').select('*').order('created_at',{ascending:false});
- formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,created_at:r.created_at}));
+ formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,status:r.status||LV_P1,dept_head:r.dept_head,created_at:r.created_at}));
 }
 async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
@@ -1172,6 +1175,11 @@ function buildAlerts(){
  siteAbs.filter(a=>String(a.date).startsWith(mNow)).forEach(a=>monthAbs[a.emp]=(monthAbs[a.emp]||0)+1);
  Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({sid:'abs-'+emp+'-'+mNow,t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'}})});
  policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
+ formSubs.forEach(s=>{
+  const fm=formsData.find(x=>x.id===s.form_id)||{};
+  if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'}});
+  if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'}});
+ });
  return A;
 }
 const SEV={danger:0,sand:1,info:2,ok:3};
@@ -1777,15 +1785,32 @@ function showFormSubs(formId){
  const subs=formSubs.filter(x=>x.form_id===formId);
  $('empProfileBody').innerHTML=`<div class="modal-head"><h3>تقديمات نموذج: ${f.name}</h3><button class="x-btn" onclick="closeModal('empProfileModal')">✕</button></div>
   ${subs.length?subs.map(s=>`<div class="card" style="margin-bottom:10px">
-   <div style="display:flex;justify-content:space-between;align-items:center">
-    <div><b>${s.emp}</b> <small style="color:var(--muted)">— ${fmt(s.created_at)}</small></div>
-    ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div><b>${s.emp}</b> <small style="color:var(--muted)">— ${fmt(s.created_at)}</small> <span class="tag ${lvTag(s.status)}">${s.status}</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+     ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
+     ${s.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
+     ${s.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
+    </div>
    </div>
    <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>renderAnswerValue(k,v)).join('')}</div>
    ${s.sig1?`<div style="margin-top:10px"><small style="color:var(--muted)">التوقيع:</small><br><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${s.sig1}','التوقيع')">✍ عرض التوقيع</button>${s.sig2?` <button class="btn btn-ghost btn-sm" onclick="viewFileInline('${s.sig2}','توقيع المستلم')">✍ توقيع المستلم</button>`:''}</div>`:''}
    ${s.file?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="viewFileInline('${s.file}','مرفق')">📎 عرض المرفق</button>`:''}
   </div>`).join(''):'<div class="empty">لا توجد تقديمات بعد</div>'}`;
  openModal('empProfileModal');
+}
+async function decideFormSub(subId,approve){
+ const s=formSubs.find(x=>x.id===subId);if(!s)return;
+ const f=formsData.find(x=>x.id===s.form_id);
+ const {error}=await sb.from('form_submissions').update({status:approve?'تمت الموافقة':'تم الرفض'}).eq('id',subId);
+ if(error){err(error);return}
+ if(approve&&f&&f.template==='clearance'){
+  const {error:e2}=await sb.from('employees').update({status:'غير نشط'}).eq('id',s.employee_id);
+  if(e2){err(e2)}else{toast('تم الاعتماد النهائي — وتحديث حالة الموظف تلقائياً إلى «غير نشط»')}
+ }else{
+  toast(approve?'تم الاعتماد النهائي':'تم رفض النموذج');
+ }
+ await refresh();showFormSubs(s.form_id);
 }
 async function printOfficialForm(subId){
  const s=formSubs.find(x=>x.id===subId);if(!s)return;
@@ -2034,7 +2059,11 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
 function mgrRenderApprovals(){
  $('mgrNavBtn').style.display='flex';
  const pending=leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id);
- $('mgrBadge').textContent=pending.length;
+ const pendingForms=formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id);
+ $('mgrBadge').textContent=pending.length+pendingForms.length;
+ $('mgrFormsTbody').innerHTML=pendingForms.length?pendingForms.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr>
+  <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td>${fmt(s.created_at)}</td>
+  <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
   <td><b>${l.emp}</b></td><td>${l.type}${l.reason?' — '+l.reason:''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
@@ -2047,15 +2076,22 @@ async function mgrDecide(id,approve){
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
+async function mgrDecideForm(id,approve){
+ const {error}=await sb.from('form_submissions').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(approve?'تم اعتماد النموذج ورُفع للإدارة للاعتماد النهائي':'تم رفض النموذج');
+}
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>{
-  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr-')))return false;
+  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
+ if(currentEmp.role==='manager')formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'mgrfm-'+s.id,t:'نموذج بانتظار اعتمادك',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'📄',nav:{p:'approvals'}})});
  leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
  permits.filter(p=>p.employee_id===currentEmp.id&&(p.status==='معتمد'||p.status==='مرفوض')).forEach(p=>A.push({sid:'prst-'+p.id+'-'+(p.status==='معتمد'?'a':'r'),t:'تحديث حالة طلب استئذان',d:`طلبك للاستئذان (${p.type}) بتاريخ ${fmt(p.date)}: ${p.status}`,k:p.status==='معتمد'?'ok':'danger',ic:'🚪',nav:{p:'permits'}}));
+ formSubs.filter(s=>s.employee_id===currentEmp.id&&(s.status==='تمت الموافقة'||s.status==='تم الرفض')).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'fmst-'+s.id,t:'تحديث حالة نموذج',d:`نموذجك «${fm.name||''}»: ${s.status}`,k:s.status==='تمت الموافقة'?'ok':'danger',ic:'📄',nav:{p:'forms'}})});
  sortAlerts(A);
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('epAlertCount').textContent=unreadCount;
@@ -2140,12 +2176,12 @@ function epRenderForms(){
  $('epFormsList').innerHTML=formsData.length?formsData.map(f=>{
   const sub=mySubs.find(x=>x.form_id===f.id);
   return `<div class="policy"><div class="pic">📄</div>
-   <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}${sub?' · ✅ أرسلته بتاريخ '+fmt(sub.created_at):''}</small></div>
+   <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}${sub?' · قُدّم بتاريخ '+fmt(sub.created_at):''}</small></div>
    <div class="actions">
      ${f.pdf?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.pdf}','${f.name}')">عرض</button>`:''}
      ${f.doc?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.doc}','${f.name}')">تنزيل DOC</button>`:''}
      ${f.pdf?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.pdf}','${f.name}')">تنزيل PDF</button>`:''}
-     ${f.fillable?(sub?`<span class="tag ok">تم الإرسال ✓</span>`:`<button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">تعبئة وإرسال</button>`):''}
+     ${f.fillable?(sub?`<span class="tag ${lvTag(sub.status)}">${sub.status}</span>`:`<button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">تعبئة وإرسال</button>`):''}
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مرفوعة بعد</div>';
 }
 /* ================= لوحة التوقيع الإلكتروني ================= */
@@ -2252,7 +2288,7 @@ async function submitGenericForm(){
  try{
   let path=null;const file=takeStaged('formSubmit','fsFileBox','📎 إرفاق ملف داعم (اختياري)');
   if(file){toast('جاري رفع المرفق...');path=await uploadToStorage(file,'employees/'+currentEmp.id+'/forms')}
-  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),file_url:path});
+  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),file_url:path,status:LV_P1});
   if(error)throw error;
   closeModal('formSubmitModal');await loadAll();epRenderForms();
   toast('✅ تم إرسال النموذج المعبّى للإدارة');
@@ -2268,7 +2304,7 @@ async function submitClearanceForm(){
   toast('جاري رفع التوقيع...');
   const blob=await sigToBlob('clSig');
   const sigPath=await uploadToStorage(new File([blob],'signature.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
-  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:sigPath});
+  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:sigPath,status:LV_P1});
   if(error)throw error;
   closeModal('formSubmitModal');await loadAll();epRenderForms();
   toast('✅ تم إرسال نموذج إخلاء الطرف موقّعاً للإدارة');
@@ -2285,7 +2321,7 @@ async function submitHandoverForm(){
   const b1=await sigToBlob('hoSig1'),b2=await sigToBlob('hoSig2');
   const p1=await uploadToStorage(new File([b1],'sig1.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
   const p2=await uploadToStorage(new File([b2],'sig2.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
-  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:p1,signature2_url:p2});
+  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:p1,signature2_url:p2,status:LV_P1});
   if(error)throw error;
   closeModal('formSubmitModal');await loadAll();epRenderForms();
   toast('✅ تم إرسال نموذج تسليم المشروع موقّعاً للإدارة');
