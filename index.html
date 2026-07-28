@@ -526,7 +526,8 @@ tbody tr:hover{background:#FAFCFB}
     <div><b>هوم هيلرز</b><small>بوابة الموظف</small></div>
   </div>
   <nav>
-    <button class="nav-item active" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
+    <button class="nav-item active" data-ep="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
+    <button class="nav-item" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
     <div class="nav-label">خدماتي</div>
     <button class="nav-item" data-ep="alerts"><span class="ic">🔔</span> الإشعارات <span class="nav-badge" id="epAlertCount">0</span></button>
     <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
@@ -541,7 +542,7 @@ tbody tr:hover{background:#FAFCFB}
 </aside>
 <main>
 <div class="topbar">
-  <h2 id="epTopTitle">الملف الشخصي</h2>
+  <h2 id="epTopTitle">لوحة التحكم</h2>
   <div class="top-user">
     <button class="bell" onclick="epGo('alerts')">🔔<span class="dot" id="epBellDot" style="display:none"></span></button>
     <div class="avatar" id="epAvatar">م</div>
@@ -549,7 +550,27 @@ tbody tr:hover{background:#FAFCFB}
   </div>
 </div>
 
-<section class="page on" id="ep-profile">
+<section class="page on" id="ep-dashboard">
+  <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p>نظرة سريعة على كل ما يخصك</p></div></div>
+  <div class="stats" id="epDashStats"></div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>🔔 أحدث الإشعارات</h3><div id="epDashAlerts"></div>
+      <button class="btn btn-ghost btn-sm" onclick="epGo('alerts')">عرض جميع الإشعارات</button>
+    </div>
+    <div class="card">
+      <h3>⚡ إجراءات سريعة</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+        <button class="btn btn-primary btn-block" onclick="epGo('leaves');openModal('epLeaveModal')">+ طلب إجازة جديد</button>
+        <button class="btn btn-primary btn-block" onclick="epGo('permits');openModal('epPermitModal')">+ طلب استئذان جديد</button>
+        <button class="btn btn-ghost btn-block" onclick="openSelfEdit()">✎ تعديل بياناتي</button>
+        <button class="btn btn-ghost btn-block" onclick="epGo('policies')">§ الأنظمة والسياسات</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="ep-profile">
   <div class="profile-hero">
     <div class="avatar" id="epHeroAvatar">م</div>
     <div style="flex:1"><h2 id="epHeroName"></h2><small id="epHeroMeta"></small></div>
@@ -1882,7 +1903,7 @@ async function viewFileInline(path,title){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم'};
+const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
@@ -1906,7 +1927,34 @@ function initEmpPortal(){
   return `<div class="info-item" ${f?`style="cursor:pointer" onclick="openStoredFile('${f.path}','${d}')"`:''}><div class="k">${f?'متوفر — اضغط للعرض':'لم يُرفع بعد'}</div><div class="v">📎 ${d}</div></div>`}).join('');
  epRenderAll();
 }
-function epRenderAll(){epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();if(currentEmp.role==='manager')mgrRenderApprovals()}
+function epRenderDashboard(){
+ const e=currentEmp;
+ $('epDashGreeting').textContent='أهلاً بك، '+(e.name||'').split(' ')[0];
+ const b=balance(e.name);
+ const myLv=leaves.filter(l=>l.employee_id===e.id);
+ const myPr=permits.filter(p=>p.employee_id===e.id);
+ const pendingLv=myLv.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
+ const pendingPr=myPr.filter(p=>p.status==='بانتظار الموافقة').length;
+ const myContract=contracts.find(c=>c.employee_id===e.id);
+ const contractDays=myContract?daysTo(myContract.end):null;
+ const probDays=e.probEnd?daysTo(e.probEnd):null;
+ const A=sortAlerts(buildAlerts().filter(a=>{
+   if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr-')))return false;
+   return a.d.includes(e.name)||a.t.includes('سياسة');
+ }));
+ const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
+ const S=[
+  {n:b.annualAvail,l:'الرصيد السنوي المتاح',k:'ok'},
+  {n:b.sickAvail,l:'الرصيد المرضي المتاح',k:'ok'},
+  {n:pendingLv+pendingPr,l:'طلباتي المعلّقة',k:'sand'},
+  {n:unreadCount,l:'إشعارات غير مقروءة',k:unreadCount?'danger':''},
+ ];
+ if(myContract&&contractDays!==null)S.push({n:contractDays>=0?contractDays:'منتهي',l:'أيام حتى نهاية العقد',k:contractDays!==null&&contractDays<=30?'sand':'info'});
+ if(e.probEnd&&probDays!==null&&probDays>=0)S.push({n:probDays,l:'أيام حتى نهاية فترة التجربة',k:'info'});
+ $('epDashStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+ $('epDashAlerts').innerHTML=A.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد إشعارات حالياً</div>';
+}
+function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();if(currentEmp.role==='manager')mgrRenderApprovals()}
 function mgrRenderApprovals(){
  $('mgrNavBtn').style.display='flex';
  const pending=leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id);
