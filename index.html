@@ -1811,6 +1811,7 @@ function showFormSubs(formId){
      ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
      ${s.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
      ${s.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
+     ${me.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="delFormSubmission('${s.id}','${formId}')">🗑 حذف التقديم</button>`:''}
     </div>
    </div>
    <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>renderAnswerValue(k,v)).join('')}</div>
@@ -1818,6 +1819,18 @@ function showFormSubs(formId){
    ${s.file?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="viewFileInline('${s.file}','مرفق')">📎 عرض المرفق</button>`:''}
   </div>`).join(''):'<div class="empty">لا توجد تقديمات بعد</div>'}`;
  openModal('empProfileModal');
+}
+async function delFormSubmission(subId,formId){
+ const s=formSubs.find(x=>x.id===subId);if(!s)return;
+ if(!confirm('حذف هذا التقديم نهائياً؟ سيتمكن الموظف من تقديم النموذج من جديد. لا يمكن التراجع.'))return;
+ try{
+  for(const p of [s.sig1,s.sig2,s.file]){if(p)await sb.storage.from('hrms-files').remove([p]).catch(()=>{})}
+  const {error}=await sb.from('form_submissions').delete().eq('id',subId);
+  if(error)throw error;
+  await refresh();
+  toast('تم حذف التقديم — يمكن للموظف تقديم النموذج من جديد');
+  showFormSubs(formId);
+ }catch(e){err(e)}
 }
 async function decideFormSub(subId,approve){
  const s=formSubs.find(x=>x.id===subId);if(!s)return;
