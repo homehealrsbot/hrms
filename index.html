@@ -939,6 +939,19 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-foot"><button class="btn btn-primary" onclick="saveSelfEdit()">حفظ التعديلات</button><button class="btn btn-ghost" onclick="closeModal('selfEditModal')">إلغاء</button></div>
 </div></div>
 
+<!-- تأكيد الحذف الموحّد -->
+<div class="modal-back" id="confirmModal"><div class="modal sm">
+  <div style="text-align:center;padding:6px 0 4px">
+    <div style="font-size:42px;line-height:1">🗑️</div>
+    <h3 style="margin:12px 0 6px">تأكيد الحذف</h3>
+    <p id="confirmModalMsg" style="color:var(--muted);font-size:14px"></p>
+  </div>
+  <div class="modal-foot" style="justify-content:center">
+    <button class="btn btn-danger" onclick="resolveConfirm(true)">نعم، احذف نهائياً</button>
+    <button class="btn btn-ghost" onclick="resolveConfirm(false)">إلغاء</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <script>
 /* ================= الاتصال بقاعدة البيانات ================= */
@@ -1109,6 +1122,13 @@ async function uploadToStorage(file,folder){
 async function registerFile(file,category,source,path){
  await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
 }
+let _confirmResolve=null;
+function showConfirm(message){
+ $('confirmModalMsg').textContent=message;
+ openModal('confirmModal');
+ return new Promise(res=>{_confirmResolve=res});
+}
+function resolveConfirm(val){closeModal('confirmModal');if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val)}}
 function pickFile(accept){return new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept=accept||'';i.onchange=()=>res(i.files[0]||null);i.click()})}
 const staged={};
 async function stageFile(key,accept,boxId){
@@ -1284,13 +1304,13 @@ async function addNewPolicy(){
 }
 async function delPolicyFile(id){
  const p=policies.find(x=>x.id===id);if(!p||!p.file)return;
- if(!confirm('حذف المستند المرفق فقط؟ (تبقى السياسة بدون ملف)'))return;
+ if(!(await showConfirm('حذف المستند المرفق فقط؟ (تبقى السياسة بدون ملف)')))return;
  try{await sb.storage.from('hrms-files').remove([p.file])}catch(e){}
  const {error}=await sb.from('policies').update({file_url:null}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast('تم حذف المستند المرفق — السياسة باقية');
 }
-async function delPolicy(id){if(!confirm('حذف السياسة نهائياً بكل بياناتها؟'))return;
+async function delPolicy(id){if(!(await showConfirm('حذف السياسة نهائياً بكل بياناتها؟')))return;
  const {error}=await sb.from('policies').delete().eq('id',id);
  if(error){err(error);return} await refresh();toast('تم الحذف')}
 
@@ -1720,7 +1740,7 @@ function runGlobalSearch(q){
 /* ================= إدارة الملفات ================= */
 let currentFileCat='';
 function renderFiles(){
- const cats=['الكل','ملفات الموظفين','عقود الموظفين','العروض الوظيفية','طلبات الإجازة','التقارير'];
+ const cats=['الكل','ملفات الموظفين','عقود الموظفين','العروض الوظيفية','طلبات الإجازة','النماذج المعتمدة','التقارير'];
  $('fileCats').innerHTML=cats.map(c=>`<div class="file-cat ${currentFileCat===(c==='الكل'?'':c)?'active':''}" onclick="currentFileCat='${c==='الكل'?'':c}';renderFiles()">🗂 ${c}</div>`).join('');
  const rows=filesData.filter(f=>!currentFileCat||f.cat===currentFileCat);
  $('filesTbody').innerHTML=rows.length?rows.map(f=>`<tr>
@@ -1729,7 +1749,7 @@ function renderFiles(){
   <td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${f.path||''}','${f.name}')">عرض / تحميل</button> <button class="btn btn-danger btn-sm" onclick="delGeneralFile('${f.id}','${f.path||''}')">حذف</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد ملفات في هذا التصنيف</td></tr>';
 }
 async function delGeneralFile(fileId,path){
- if(!confirm('حذف هذا الملف نهائياً؟ لا يمكن التراجع بعد الحذف.'))return;
+ if(!(await showConfirm('حذف هذا الملف نهائياً؟ لا يمكن التراجع بعد الحذف.')))return;
  try{if(path)await sb.storage.from('hrms-files').remove([path])}catch(e){}
  const {error}=await sb.from('files_registry').delete().eq('id',fileId);
  if(error){err(error);return}
@@ -1811,6 +1831,8 @@ function showFormSubs(formId){
      ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
      ${s.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
      ${s.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
+     ${s.status==='تم الرفض'&&me.role==='admin'?`<button class="btn btn-sand btn-sm" onclick="reopenFormSub('${s.id}','${formId}')">🔄 إعادة فتح الطلب</button>`:''}
+     ${me.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="delFormSubmission('${s.id}','${formId}')">🗑 حذف التقديم</button>`:''}
     </div>
    </div>
    <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>renderAnswerValue(k,v)).join('')}</div>
@@ -1819,16 +1841,47 @@ function showFormSubs(formId){
   </div>`).join(''):'<div class="empty">لا توجد تقديمات بعد</div>'}`;
  openModal('empProfileModal');
 }
+async function reopenFormSub(subId,formId){
+ if(!(await showConfirm('إعادة فتح هذا الطلب من جديد بنفس البيانات المقدَّمة؟ سيمر مرة أخرى على مسار الاعتماد بدءاً من رئيس القسم.')))return;
+ const {error}=await sb.from('form_submissions').update({status:LV_P1,dept_head:null}).eq('id',subId);
+ if(error){err(error);return}
+ await refresh();toast('تمت إعادة فتح الطلب — سيمر على مسار الاعتماد من جديد');
+ showFormSubs(formId);
+}
+async function delFormSubmission(subId,formId){
+ const s=formSubs.find(x=>x.id===subId);if(!s)return;
+ if(!(await showConfirm('حذف هذا التقديم نهائياً؟ سيتمكن الموظف من تقديم النموذج من جديد. لا يمكن التراجع.')))return;
+ try{
+  for(const p of [s.sig1,s.sig2,s.file]){if(p)await sb.storage.from('hrms-files').remove([p]).catch(()=>{})}
+  const {error}=await sb.from('form_submissions').delete().eq('id',subId);
+  if(error)throw error;
+  await refresh();
+  toast('تم حذف التقديم — يمكن للموظف تقديم النموذج من جديد');
+  showFormSubs(formId);
+ }catch(e){err(e)}
+}
+async function registerArchivedFile(fileName,category,source,path,employeeId){
+ if(!path)return;
+ const ext=(path.split('.').pop()||'FILE').toUpperCase();
+ await sb.from('files_registry').insert({file_name:fileName,file_type:ext,file_size:'—',category,source,uploaded_by:me.name,storage_path:path,employee_id:employeeId||null}).then(()=>{});
+}
 async function decideFormSub(subId,approve){
  const s=formSubs.find(x=>x.id===subId);if(!s)return;
  const f=formsData.find(x=>x.id===s.form_id);
  const {error}=await sb.from('form_submissions').update({status:approve?'تمت الموافقة':'تم الرفض'}).eq('id',subId);
  if(error){err(error);return}
+ if(approve){
+  const empName=(empById[s.employee_id]||{}).name||s.emp;
+  const label=(f&&f.name)||'نموذج';
+  if(s.sig1)await registerArchivedFile('توقيع — '+label,'النماذج المعتمدة',label+' — '+empName,s.sig1,s.employee_id);
+  if(s.sig2)await registerArchivedFile('توقيع المستلم — '+label,'النماذج المعتمدة',label+' — '+empName,s.sig2,s.employee_id);
+  if(s.file)await registerArchivedFile('مرفق — '+label,'النماذج المعتمدة',label+' — '+empName,s.file,s.employee_id);
+ }
  if(approve&&f&&f.template==='clearance'){
   const {error:e2}=await sb.from('employees').update({status:'غير نشط'}).eq('id',s.employee_id);
-  if(e2){err(e2)}else{toast('تم الاعتماد النهائي — وتحديث حالة الموظف تلقائياً إلى «غير نشط»')}
+  if(e2){err(e2)}else{toast('تم الاعتماد النهائي — وتحديث حالة الموظف تلقائياً إلى «غير نشط»، وأُرشفت مرفقاته في إدارة الملفات')}
  }else{
-  toast(approve?'تم الاعتماد النهائي':'تم رفض النموذج');
+  toast(approve?'تم الاعتماد النهائي — وأُرشفت مرفقات النموذج في إدارة الملفات':'تم رفض النموذج');
  }
  await refresh();showFormSubs(s.form_id);
 }
@@ -1889,7 +1942,7 @@ async function printOfficialForm(subId){
  w.document.close();
 }
 async function delForm(id){
- if(!confirm('حذف هذا النموذج نهائياً؟ (تقديماته المعبأة تبقى محفوظة)'))return;
+ if(!(await showConfirm('حذف هذا النموذج نهائياً؟ (تقديماته المعبأة تبقى محفوظة)')))return;
  const {error}=await sb.from('forms').delete().eq('id',id);
  if(error){err(error);return}
  await refresh();toast('تم حذف النموذج');
@@ -1960,7 +2013,7 @@ function renderDocsModal(){
    </div></div>`}).join('');
 }
 async function delEmpDoc(fileId,path,docType){
- if(!confirm('حذف مستند «'+docType+'» نهائياً؟'))return;
+ if(!(await showConfirm('حذف مستند «'+docType+'» نهائياً؟')))return;
  try{await sb.storage.from('hrms-files').remove([path])}catch(e){}
  const {error}=await sb.from('files_registry').delete().eq('id',fileId);
  if(error){err(error);return}
