@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نظام إدارة الموارد البشرية | HRMS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --pine:#0F4C3F; --pine-deep:#0A342C; --pine-soft:#E7F0EC;
+  --pine:#143087; --pine-deep:#0B1F5C; --pine-soft:#E7ECFB;
   --ink:#17251F; --muted:#6B7A73; --line:#E2E8E4;
-  --bg:#F3F6F4; --card:#FFFFFF;
-  --sand:#D89C3E; --sand-soft:#FBF3E3;
+  --bg:#EAF5F2; --card:#FFFFFF;
+  --sand:#62A0F6; --sand-soft:#EAF2FE;
   --ok:#2E8B62; --ok-soft:#E6F3EC;
   --danger:#C34A3C; --danger-soft:#FAEAE7;
   --info:#3A6EA5; --info-soft:#E9F0F8;
@@ -20,8 +20,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65}
-h1,h2,h3,h4{font-family:'Tajawal',sans-serif;line-height:1.35}
+body{font-family:'Alexandria',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65}
+h1,h2,h3,h4{font-family:'Alexandria',sans-serif;line-height:1.35;font-weight:700}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit;font-size:14px;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);transition:border-color .15s, box-shadow .15s}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px rgba(15,76,63,.12)}
@@ -30,11 +30,11 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 
 /* ---------- شاشة الدخول ---------- */
 #loginScreen{position:fixed;inset:0;display:flex;z-index:100;background:var(--bg)}
-.login-side{flex:1;background:linear-gradient(160deg,#0D2154,var(--pine) 60%,#146552);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
-.login-side::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 20% 110%,rgba(216,156,62,.22),transparent 60%)}
+.login-side{flex:1;background:linear-gradient(160deg,var(--pine-deep),var(--pine) 55%,#2F63D6);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
+.login-side::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 20% 110%,rgba(98,160,246,.28),transparent 60%)}
 .login-side h1{font-size:34px;font-weight:900;margin:18px 0 10px;position:relative}
 .login-side p{opacity:.85;max-width:420px;position:relative}
-.logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Alexandria';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .login-form-wrap{width:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff}
 .login-form{width:100%;max-width:340px}
 .login-form h2{font-size:24px;font-weight:800;margin-bottom:6px}
@@ -49,7 +49,7 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 .btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
 .btn-ghost:hover{border-color:var(--pine);color:var(--pine)}
 .btn-danger{background:var(--danger-soft);color:var(--danger)}
-.btn-sand{background:var(--sand-soft);color:#9A6C1E}
+.btn-sand{background:var(--sand-soft);color:var(--pine-deep)}
 .btn-ok{background:var(--ok-soft);color:var(--ok)}
 .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
 .btn-block{width:100%}
@@ -63,7 +63,7 @@ aside::-webkit-scrollbar{width:5px}
 aside::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
 .side-head{padding:22px 20px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)}
 .side-head .logo-mark{width:42px;height:42px;font-size:17px;border-radius:12px}
-.side-head b{font-family:'Tajawal';font-size:16px;display:block}
+.side-head b{font-family:'Alexandria';font-size:16px;display:block}
 .side-head small{opacity:.6;font-size:11.5px}
 nav{padding:14px 12px;flex:1}
 .nav-label{font-size:10.5px;letter-spacing:.5px;opacity:.45;padding:14px 10px 6px;font-weight:600}
@@ -72,7 +72,7 @@ nav{padding:14px 12px;flex:1}
 .nav-item.active{background:rgba(255,255,255,.13);color:#fff;font-weight:700}
 .nav-item.active::before{content:"";position:absolute;inset-inline-start:-12px;top:20%;bottom:20%;width:3.5px;border-radius:3px;background:var(--sand)}
 .nav-item .ic{width:20px;text-align:center;font-size:15px;opacity:.9}
-.nav-badge{margin-inline-start:auto;background:var(--sand);color:#3A2A08;font-size:10.5px;font-weight:800;border-radius:20px;padding:1px 7px}
+.nav-badge{margin-inline-start:auto;background:var(--sand);color:var(--pine-deep);font-size:10.5px;font-weight:800;border-radius:20px;padding:1px 7px}
 .side-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;opacity:.7;display:flex;justify-content:space-between;align-items:center}
 main{margin-inline-start:264px;flex:1;min-width:0}
 
@@ -83,7 +83,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .top-search input{padding-inline-start:38px;border-radius:22px;background:var(--bg)}
 .top-search .ic{position:absolute;inset-inline-start:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
 .top-user{margin-inline-start:auto;display:flex;align-items:center;gap:12px}
-.avatar{width:37px;height:37px;border-radius:50%;background:var(--pine);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Tajawal'}
+.avatar{width:37px;height:37px;border-radius:50%;background:var(--pine);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Alexandria'}
 .bell{position:relative;font-size:19px;color:var(--muted);padding:4px}
 .bell .dot{position:absolute;top:2px;inset-inline-end:0;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid #fff}
 
@@ -100,8 +100,8 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .stat:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(20,37,31,.12)}
 .alert-item[data-nav]{cursor:pointer;transition:background .12s}
 .alert-item[data-nav]:hover{background:#F7FAF8}
-.chip-filter{display:inline-flex;align-items:center;gap:6px;background:var(--sand-soft);color:#9A6C1E;font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:20px;cursor:pointer;margin-bottom:12px}
-.stat .num{font-family:'Tajawal';font-size:28px;font-weight:900;line-height:1.2}
+.chip-filter{display:inline-flex;align-items:center;gap:6px;background:var(--sand-soft);color:var(--pine-deep);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:20px;cursor:pointer;margin-bottom:12px}
+.stat .num{font-family:'Alexandria';font-size:28px;font-weight:900;line-height:1.2}
 .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:600}
 .stat.sand{border-color:var(--sand)} .stat.danger{border-color:var(--danger)} .stat.info{border-color:var(--info)} .stat.ok{border-color:var(--ok)}
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px}
@@ -110,16 +110,16 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 fieldset{border:1.5px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-legend{font-family:'Tajawal';font-weight:800;font-size:14px;padding:0 10px;color:var(--pine)}
+legend{font-family:'Alexandria';font-weight:800;font-size:14px;padding:0 10px;color:var(--pine)}
 
 /* ---------- الجداول ---------- */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
 table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;min-width:640px}
-th{background:var(--pine-soft);color:var(--pine);font-family:'Tajawal';font-weight:800;font-size:12.5px;padding:11px 13px;text-align:right;white-space:nowrap}
+th{background:var(--pine-soft);color:var(--pine);font-family:'Alexandria';font-weight:800;font-size:12.5px;padding:11px 13px;text-align:right;white-space:nowrap}
 td{padding:11px 13px;border-top:1px solid var(--line);vertical-align:middle}
 tbody tr:hover{background:#FAFCFB}
 .tag{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
-.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.sand{background:var(--sand-soft);color:#9A6C1E}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.sand{background:var(--sand-soft);color:var(--pine-deep)}
 .tag.danger{background:var(--danger-soft);color:var(--danger)} .tag.info{background:var(--info-soft);color:var(--info)}
 .tag.gray{background:#EEF1EF;color:var(--muted)}
 .link-name{color:var(--pine);font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:.13s}
@@ -147,7 +147,7 @@ tbody tr:hover{background:#FAFCFB}
 .policy{display:flex;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff;flex-wrap:wrap}
 .policy .pic{width:44px;height:44px;border-radius:11px;background:var(--pine-soft);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
 .policy .pinfo{flex:1;min-width:200px}
-.policy b{font-size:14.5px;font-family:'Tajawal'}
+.policy b{font-size:14.5px;font-family:'Alexandria'}
 .policy small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .policy .actions{display:flex;gap:7px;flex-wrap:wrap}
 .file-cat{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--pine-soft);border-radius:11px;font-weight:700;cursor:pointer;transition:.13s;border:1.5px solid transparent}
@@ -156,9 +156,9 @@ tbody tr:hover{background:#FAFCFB}
 /* ---------- بوابة الموظف ---------- */
 .empapp{display:none;min-height:100vh}
 .empapp.on{display:flex}
-.empapp aside{background:#123A5C}
+.empapp aside{background:var(--pine-deep)}
 .profile-hero{background:linear-gradient(140deg,var(--pine-deep),var(--pine));color:#fff;border-radius:var(--radius);padding:26px;display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-.empapp .profile-hero{background:linear-gradient(140deg,#0E2E49,#1B5788)}
+.empapp .profile-hero{background:linear-gradient(140deg,var(--pine-deep),var(--pine))}
 .profile-hero .avatar{width:70px;height:70px;font-size:26px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35)}
 .profile-hero h2{font-size:22px;font-weight:900}
 .profile-hero small{opacity:.85}
@@ -184,7 +184,7 @@ tbody tr:hover{background:#FAFCFB}
 .hint{font-size:12px;color:var(--muted);margin-top:4px}
 .mini-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .mini-stat{background:var(--pine-soft);border-radius:11px;padding:11px 13px}
-.mini-stat .num{font-family:'Tajawal';font-weight:900;font-size:19px}
+.mini-stat .num{font-family:'Alexandria';font-weight:900;font-size:19px}
 .mini-stat .lbl{font-size:11.5px;color:var(--muted);font-weight:600}
 .upload-box{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;background:#FBFCFB}
 .upload-box:hover{border-color:var(--pine);color:var(--pine)}
@@ -1116,7 +1116,7 @@ async function markAllRead(keys){
 }
 function alertItem(a,i){
  const k=alertKey(a),unread=!readKeys.has(k);
- return `<div class="alert-item" data-nav="1" onclick="alertGo(${i})" title="اضغط للانتقال إلى الطلب" style="${unread?'border-inline-start:4px solid var(--sand);background:#FFFDF7':'opacity:.78'}">
+ return `<div class="alert-item" data-nav="1" onclick="alertGo(${i})" title="اضغط للانتقال إلى الطلب" style="${unread?'border-inline-start:4px solid var(--sand);background:var(--sand-soft)':'opacity:.78'}">
   <div class="aic ${a.k}">${a.ic}</div>
   <div style="flex:1"><b>${unread?'● ':''}${a.t}</b><small>${a.d}</small></div>
   ${unread?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();markRead('${k}')">✓ مقروء</button>`:'<span class="tag gray">مقروء</span>'}
@@ -1599,8 +1599,8 @@ function openLeaveDetail(emp){
    <div class="mini-stat"><div class="num">${b.sickUsed}</div><div class="lbl">أيام مرضية مستخدمة</div></div>
    <div class="mini-stat"><div class="num">${totalSpecial}</div><div class="lbl">أيام إجازات خاصة</div></div>
    <div class="mini-stat"><div class="num">${totalNoPay}</div><div class="lbl">أيام بدون راتب</div></div>
-   <div class="mini-stat"><div class="num" style="color:#9A6C1E">${b.annualPend}</div><div class="lbl">سنوية قيد الطلب</div></div>
-   <div class="mini-stat"><div class="num" style="color:#9A6C1E">${b.sickPend}</div><div class="lbl">مرضية قيد الطلب</div></div>
+   <div class="mini-stat"><div class="num" style="color:var(--pine-deep)">${b.annualPend}</div><div class="lbl">سنوية قيد الطلب</div></div>
+   <div class="mini-stat"><div class="num" style="color:var(--pine-deep)">${b.sickPend}</div><div class="lbl">مرضية قيد الطلب</div></div>
    <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.annualAvail}</div><div class="lbl">السنوي المتاح (بعد المحجوز)</div></div>
    <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.sickAvail}</div><div class="lbl">المرضي المتاح (بعد المحجوز)</div></div>
   </div>
@@ -1692,9 +1692,9 @@ function printReport(i){
  const r=window.REPORTS[i];const d=r.data();
  const w=window.open('','_blank');
  w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${r.t}</title>
- <style>body{font-family:Tahoma,Arial;padding:30px;color:#17251F}h1{color:#0F4C3F;font-size:22px;border-bottom:3px solid #0F4C3F;padding-bottom:10px}
+ <style>body{font-family:'Alexandria',Tahoma,Arial;padding:30px;color:#17251F}h1{color:#143087;font-size:22px;border-bottom:3px solid #143087;padding-bottom:10px}
  .meta{color:#6B7A73;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}
- th{background:#E7F0EC;color:#0F4C3F;padding:9px 12px;text-align:right;border:1px solid #ccd}td{padding:8px 12px;border:1px solid #dde;text-align:right}
+ th{background:#E7ECFB;color:#143087;padding:9px 12px;text-align:right;border:1px solid #ccd}td{padding:8px 12px;border:1px solid #dde;text-align:right}
  @media print{@page{size:A4;margin:15mm}}</style></head><body>
  <h1>نظام إدارة الموارد البشرية — ${r.t}</h1>
  <div class="meta">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-SA-u-nu-latn')} — عدد السجلات: ${d.rows.length}</div>
@@ -2060,7 +2060,7 @@ function epRenderPolicies(){
 </html>
 <script>
 (function(){
-var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;background:#E7F0EC;color:#0F4C3F;font-size:19px;flex-shrink:0;border:none;cursor:pointer}'
+var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;background:#E7ECFB;color:#143087;font-size:19px;flex-shrink:0;border:none;cursor:pointer}'
 +'#sideOverlay2{position:fixed;inset:0;background:rgba(12,26,21,.5);z-index:49;display:none}'
 +'#sideOverlay2.on{display:block}'
 +'html,body{overflow-x:hidden}'
