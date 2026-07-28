@@ -1811,7 +1811,6 @@ function showFormSubs(formId){
      ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
      ${s.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
      ${s.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:''}
-     ${me.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="delFormSubmission('${s.id}','${formId}')">🗑 حذف التقديم</button>`:''}
     </div>
    </div>
    <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>renderAnswerValue(k,v)).join('')}</div>
@@ -1819,18 +1818,6 @@ function showFormSubs(formId){
    ${s.file?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="viewFileInline('${s.file}','مرفق')">📎 عرض المرفق</button>`:''}
   </div>`).join(''):'<div class="empty">لا توجد تقديمات بعد</div>'}`;
  openModal('empProfileModal');
-}
-async function delFormSubmission(subId,formId){
- const s=formSubs.find(x=>x.id===subId);if(!s)return;
- if(!confirm('حذف هذا التقديم نهائياً؟ سيتمكن الموظف من تقديم النموذج من جديد. لا يمكن التراجع.'))return;
- try{
-  for(const p of [s.sig1,s.sig2,s.file]){if(p)await sb.storage.from('hrms-files').remove([p]).catch(()=>{})}
-  const {error}=await sb.from('form_submissions').delete().eq('id',subId);
-  if(error)throw error;
-  await refresh();
-  toast('تم حذف التقديم — يمكن للموظف تقديم النموذج من جديد');
-  showFormSubs(formId);
- }catch(e){err(e)}
 }
 async function decideFormSub(subId,approve){
  const s=formSubs.find(x=>x.id===subId);if(!s)return;
@@ -2230,15 +2217,27 @@ async function saveSelfEdit(){
 function epRenderForms(){
  const mySubs=formSubs.filter(x=>x.employee_id===currentEmp.id);
  $('epFormsList').innerHTML=formsData.length?formsData.map(f=>{
-  const sub=mySubs.find(x=>x.form_id===f.id);
+  const hist=mySubs.filter(x=>x.form_id===f.id); // formSubs محمّلة الأحدث أولاً
+  const latest=hist[0];
+  const pending=latest&&(latest.status===LV_P1||latest.status===LV_P2);
+  const canResubmit=!latest||!pending;
   return `<div class="policy"><div class="pic">📄</div>
-   <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}${sub?' · قُدّم بتاريخ '+fmt(sub.created_at):''}</small></div>
+   <div class="pinfo"><b>${f.name}</b><small>${f.goal||'—'} — أُضيف بتاريخ ${fmt(f.date)}${latest?' · آخر تقديم '+fmt(latest.created_at):''}${hist.length>1?' · ('+hist.length+' تقديمات سابقة)':''}</small></div>
    <div class="actions">
      ${f.pdf?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.pdf}','${f.name}')">عرض</button>`:''}
      ${f.doc?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.doc}','${f.name}')">تنزيل DOC</button>`:''}
      ${f.pdf?`<button class="btn btn-ok btn-sm" onclick="openStoredFile('${f.pdf}','${f.name}')">تنزيل PDF</button>`:''}
-     ${f.fillable?(sub?`<span class="tag ${lvTag(sub.status)}">${sub.status}</span>`:`<button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">تعبئة وإرسال</button>`):''}
+     ${hist.length?`<button class="btn btn-ghost btn-sm" onclick="epShowFormHistory('${f.id}')">📜 سجل تقديماتي</button>`:''}
+     ${f.fillable?(latest?`<span class="tag ${lvTag(latest.status)}">${latest.status}</span>`:'')+(canResubmit?` <button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">${latest?'تقديم طلب جديد':'تعبئة وإرسال'}</button>`:''):''}
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مرفوعة بعد</div>';
+}
+function epShowFormHistory(formId){
+ const f=formsData.find(x=>x.id===formId);
+ const hist=formSubs.filter(x=>x.form_id===formId&&x.employee_id===currentEmp.id);
+ $('empProfileBody').innerHTML=`<div class="modal-head"><h3>سجل تقديماتي: ${f.name}</h3><button class="x-btn" onclick="closeModal('empProfileModal')">✕</button></div>
+  <div class="tbl-wrap"><table><thead><tr><th>تاريخ التقديم</th><th>الحالة</th></tr></thead>
+  <tbody>${hist.map(s=>`<tr><td>${fmt(s.created_at)}</td><td><span class="tag ${lvTag(s.status)}">${s.status}</span></td></tr>`).join('')}</tbody></table></div>`;
+ openModal('empProfileModal');
 }
 /* ================= لوحة التوقيع الإلكتروني ================= */
 function mountSigPad(canvasId){
