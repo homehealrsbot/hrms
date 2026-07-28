@@ -1129,7 +1129,10 @@ function buildAlerts(){
  employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
   if(n>=0&&n<=14)A.push({sid:'prob-'+e.num,t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num}})});
  leaves.forEach(l=>{
+  if(l.status==='تمت الموافقة'&&daysTo(l.start)===0)A.push({sid:'lvstart-'+l.id,t:'بداية إجازة',d:`تبدأ اليوم إجازة الموظف ${l.emp}`,k:'sand',ic:'🏖️',nav:{p:'leaves',detail:l.emp}});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.emp}});
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp}});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp}});
   if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
   if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
  permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({sid:'pr-'+p.id,t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp,status:'بانتظار الموافقة'}})});
