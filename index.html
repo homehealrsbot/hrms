@@ -857,7 +857,14 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-head"><h3>إضافة نموذج</h3><button class="x-btn" onclick="closeModal('formModal')">✕</button></div>
   <div class="field"><label>اسم النموذج</label><input id="fmName"></div>
   <div class="field"><label>الهدف من النموذج</label><input id="fmGoal"></div>
-  <label style="display:flex;align-items:center;gap:8px;margin:6px 0 14px;cursor:pointer">
+  <div class="field"><label>قالب النموذج</label>
+   <select id="fmTemplate">
+    <option value="">عام — نصي مخصّص (تحدد الحقول بنفسك)</option>
+    <option value="clearance">جاهز: نموذج إخلاء طرف (تعبئة + توقيع تلقائي)</option>
+    <option value="handover">جاهز: نموذج تسليم مشروع تسويقي (تعبئة + توقيعان)</option>
+   </select>
+  </div>
+  <label id="fmFillableWrap" style="display:flex;align-items:center;gap:8px;margin:6px 0 14px;cursor:pointer">
    <input type="checkbox" id="fmFillable" style="width:18px;height:18px"> يتطلب تعبئة بيانات من الموظف مباشرة داخل النظام
   </label>
   <div id="fmFieldsBuilder" style="display:none;margin-bottom:14px">
@@ -1061,9 +1068,9 @@ async function loadAll(){
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
- formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
- const FS=await sb.from('form_submissions').select('*').order('created_at',{ascending:false});
- formSubs=(FS.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,created_at:r.created_at}));
+ formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
+ const FS2=await sb.from('form_submissions').select('*').order('created_at',{ascending:false});
+ formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,created_at:r.created_at}));
 }
 async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
@@ -1757,16 +1764,84 @@ function renderForms(){
      <button class="btn btn-danger btn-sm" onclick="delForm('${f.id}')">حذف</button>
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مضافة — ابدأ بإضافة نموذج جديد</div>';
 }
+function renderAnswerValue(k,v){
+ if(Array.isArray(v)){
+  return `<div class="info-item" style="grid-column:1/-1"><div class="k">${k}</div>
+   <div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>البند</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+   <tbody>${v.map(row=>`<tr><td>${row.item}</td><td><span class="tag ${row.status==='تم التسليم'?'ok':row.status==='لا ينطبق'?'gray':'sand'}">${row.status}</span></td><td>${row.note||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+ }
+ return `<div class="info-item"><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
+}
 function showFormSubs(formId){
  const f=formsData.find(x=>x.id===formId);
  const subs=formSubs.filter(x=>x.form_id===formId);
  $('empProfileBody').innerHTML=`<div class="modal-head"><h3>تقديمات نموذج: ${f.name}</h3><button class="x-btn" onclick="closeModal('empProfileModal')">✕</button></div>
   ${subs.length?subs.map(s=>`<div class="card" style="margin-bottom:10px">
-   <b>${s.emp}</b> <small style="color:var(--muted)">— ${fmt(s.created_at)}</small>
-   <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>`<div class="info-item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+   <div style="display:flex;justify-content:space-between;align-items:center">
+    <div><b>${s.emp}</b> <small style="color:var(--muted)">— ${fmt(s.created_at)}</small></div>
+    ${(f.template==='clearance'||f.template==='handover')?`<button class="btn btn-primary btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة النموذج الرسمي</button>`:''}
+   </div>
+   <div class="info-grid" style="margin-top:10px">${Object.entries(s.answers).map(([k,v])=>renderAnswerValue(k,v)).join('')}</div>
+   ${s.sig1?`<div style="margin-top:10px"><small style="color:var(--muted)">التوقيع:</small><br><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${s.sig1}','التوقيع')">✍ عرض التوقيع</button>${s.sig2?` <button class="btn btn-ghost btn-sm" onclick="viewFileInline('${s.sig2}','توقيع المستلم')">✍ توقيع المستلم</button>`:''}</div>`:''}
    ${s.file?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="viewFileInline('${s.file}','مرفق')">📎 عرض المرفق</button>`:''}
   </div>`).join(''):'<div class="empty">لا توجد تقديمات بعد</div>'}`;
  openModal('empProfileModal');
+}
+async function printOfficialForm(subId){
+ const s=formSubs.find(x=>x.id===subId);if(!s)return;
+ const f=formsData.find(x=>x.id===s.form_id);
+ const e=empById[s.employee_id]||{};
+ const sign=async p=>{if(!p)return null;const r=await sb.storage.from('hrms-files').createSignedUrl(p,3600);return r.data?r.data.signedUrl:null};
+ const sig1Url=await sign(s.sig1), sig2Url=await sign(s.sig2);
+ const a=s.answers;
+ const checklistHtml=(items)=>`<table style="width:100%;border-collapse:collapse;margin:10px 0"><thead><tr>
+   <th style="border:1px solid #ccd;padding:8px;background:#E7F0EC">البند</th><th style="border:1px solid #ccd;padding:8px;background:#E7F0EC">الحالة</th><th style="border:1px solid #ccd;padding:8px;background:#E7F0EC">ملاحظات</th></tr></thead>
+   <tbody>${items.map(r=>`<tr><td style="border:1px solid #ddd;padding:7px">${r.item}</td><td style="border:1px solid #ddd;padding:7px">${r.status}</td><td style="border:1px solid #ddd;padding:7px">${r.note||'—'}</td></tr>`).join('')}</tbody></table>`;
+ let bodyHtml='';
+ if(f.template==='clearance'){
+  bodyHtml=`
+   <h2>بيانات الموظف</h2>
+   <table style="width:100%;border-collapse:collapse;margin-bottom:14px"><tr><td style="padding:6px"><b>الاسم:</b> ${e.name||''}</td><td style="padding:6px"><b>الرقم الوظيفي:</b> ${e.num||''}</td></tr>
+   <tr><td style="padding:6px"><b>القسم:</b> ${e.dept||''}</td><td style="padding:6px"><b>المسمى الوظيفي:</b> ${e.job||''}</td></tr>
+   <tr><td style="padding:6px"><b>تاريخ التعيين:</b> ${fmt(e.hire)}</td><td style="padding:6px"><b>آخر يوم عمل:</b> ${fmt(a['آخر يوم عمل'])}</td></tr>
+   <tr><td style="padding:6px" colspan="2"><b>سبب انتهاء الخدمة:</b> ${a['سبب انتهاء الخدمة']||''}</td></tr></table>
+   <h2>قائمة إخلاء الطرف</h2>${checklistHtml(a['قائمة إخلاء الطرف']||[])}
+   <p style="margin-top:16px">أقرّ أنا الموقّع أدناه بأنني قمت بتسليم جميع ممتلكات الشركة وليس لدي أي التزامات مستحقة تجاه الشركة.</p>
+   <div style="display:flex;justify-content:space-between;margin-top:30px">
+    <div><b>توقيع الموظف:</b><br>${sig1Url?`<img src="${sig1Url}" style="height:70px">`:'—'}</div>
+    <div><b>التاريخ:</b><br>${fmt(s.created_at)}</div>
+   </div>`;
+ } else if(f.template==='handover'){
+  bodyHtml=`
+   <h2>بيانات الحملة/المشروع</h2>
+   <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+   <tr><td style="padding:6px"><b>اسم الحملة:</b> ${a['اسم الحملة/المشروع']||''}</td><td style="padding:6px"><b>رقم المشروع:</b> ${a['رقم المشروع']||'—'}</td></tr>
+   <tr><td style="padding:6px"><b>العميل/العلامة:</b> ${a['العميل/العلامة التجارية']||'—'}</td><td style="padding:6px"><b>المنصات:</b> ${a['المنصات']||'—'}</td></tr>
+   <tr><td style="padding:6px"><b>الهدف:</b> ${a['الهدف من الحملة']||'—'}</td><td style="padding:6px"><b>الجمهور المستهدف:</b> ${a['الجمهور المستهدف']||'—'}</td></tr>
+   <tr><td style="padding:6px"><b>تاريخ البدء:</b> ${fmt(a['تاريخ البدء'])}</td><td style="padding:6px"><b>تاريخ الانتهاء:</b> ${fmt(a['تاريخ الانتهاء'])}</td></tr>
+   <tr><td style="padding:6px"><b>المُسلِّم:</b> ${a['المُسلِّم']||''}</td><td style="padding:6px"><b>المُستلِم:</b> ${a['المُستلِم']||''}</td></tr></table>
+   <h2>قائمة بنود التسليم</h2>${checklistHtml(a['قائمة بنود التسليم']||[])}
+   <h2>ملخص النتائج</h2>
+   <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+   <tr><td style="padding:6px"><b>الوصول/الظهور:</b> ${a['الوصول/مرات الظهور']||'—'}</td><td style="padding:6px"><b>معدل التفاعل:</b> ${a['معدل التفاعل']||'—'}</td></tr>
+   <tr><td style="padding:6px"><b>العملاء المحتملين:</b> ${a['العملاء المحتملين/التحويلات']||'—'}</td><td style="padding:6px"><b>تكلفة النتيجة:</b> ${a['تكلفة النتيجة']||'—'}</td></tr></table>
+   <p><b>ملاحظات:</b> ${a['ملاحظات عامة']||'—'}</p>
+   <p style="margin-top:10px">يقرّ الطرفان بأنه تمت مراجعة البنود أعلاه وتسليمها/استلامها وفقاً لذلك.</p>
+   <div style="display:flex;justify-content:space-between;margin-top:30px">
+    <div><b>توقيع المُسلِّم:</b><br>${sig1Url?`<img src="${sig1Url}" style="height:70px">`:'—'}</div>
+    <div><b>توقيع المُستلِم:</b><br>${sig2Url?`<img src="${sig2Url}" style="height:70px">`:'—'}</div>
+   </div>`;
+ }
+ const w=window.open('','_blank');
+ w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${f.name}</title>
+ <style>body{font-family:Tahoma,Arial;padding:30px;color:#17251F}h1{color:#0F4C3F;font-size:22px;border-bottom:3px solid #0F4C3F;padding-bottom:10px}
+ h2{color:#0F4C3F;font-size:16px;margin-top:20px}.meta{color:#6B7A73;font-size:12px;margin-bottom:16px}
+ @media print{@page{size:A4;margin:15mm}}</style></head><body>
+ <h1>${f.name} — Home Healers</h1>
+ <div class="meta">تاريخ التقديم: ${fmt(s.created_at)} — الموظف: ${e.name||s.emp}</div>
+ ${bodyHtml}
+ <script>window.onload=()=>window.print()<\/script></body></html>`);
+ w.document.close();
 }
 async function delForm(id){
  if(!confirm('حذف هذا النموذج نهائياً؟ (تقديماته المعبأة تبقى محفوظة)'))return;
@@ -1781,11 +1856,12 @@ async function addForm(){
   const fd=takeStaged('formDoc','fmDocBox','📎 صيغة DOC'),fp=takeStaged('formPdf','fmPdfBox','📎 صيغة PDF');
   if(fd){toast('جاري رفع صيغة DOC...');doc=await uploadToStorage(fd,'forms')}
   if(fp){toast('جاري رفع صيغة PDF...');pdf=await uploadToStorage(fp,'forms')}
-  const fillable=$('fmFillable').checked;
-  const fields=fillable?$('fmFieldsText').value.split('\n').map(x=>x.trim()).filter(Boolean):[];
-  const {error}=await sb.from('forms').insert({name:$('fmName').value,goal:$('fmGoal').value,doc_url:doc,pdf_url:pdf,fillable,fields:fields.length?JSON.stringify(fields):null});
+  const template=$('fmTemplate').value||null;
+  const fillable=template?true:$('fmFillable').checked;
+  const fields=(!template&&fillable)?$('fmFieldsText').value.split('\n').map(x=>x.trim()).filter(Boolean):[];
+  const {error}=await sb.from('forms').insert({name:$('fmName').value,goal:$('fmGoal').value,doc_url:doc,pdf_url:pdf,fillable,fields:fields.length?JSON.stringify(fields):null,template});
   if(error)throw error;
-  closeModal('formModal');await refresh();toast('تمت إضافة النموذج بمرفقاته');$('fmName').value='';$('fmGoal').value='';
+  closeModal('formModal');await refresh();toast('تمت إضافة النموذج بمرفقاته');$('fmName').value='';$('fmGoal').value='';$('fmTemplate').value='';
  }catch(e){err(e)}
 }
 
@@ -2072,16 +2148,103 @@ function epRenderForms(){
      ${f.fillable?(sub?`<span class="tag ok">تم الإرسال ✓</span>`:`<button class="btn btn-primary btn-sm" onclick="openFormFill('${f.id}')">تعبئة وإرسال</button>`):''}
    </div></div>`}).join(''):'<div class="empty">لا توجد نماذج مرفوعة بعد</div>';
 }
-let currentFillFormId=null;
+/* ================= لوحة التوقيع الإلكتروني ================= */
+function mountSigPad(canvasId){
+ const c=$(canvasId);if(!c||c._mounted)return;c._mounted=true;
+ const ctx=c.getContext('2d');ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#17251F';
+ let drawing=false,last=null;
+ const pos=e=>{const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:(t.clientX-r.left)*(c.width/r.width),y:(t.clientY-r.top)*(c.height/r.height)}};
+ const start=e=>{drawing=true;last=pos(e);e.preventDefault()};
+ const move=e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;e.preventDefault()};
+ const end=()=>{drawing=false};
+ c.addEventListener('mousedown',start);c.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+ c.addEventListener('touchstart',start,{passive:false});c.addEventListener('touchmove',move,{passive:false});c.addEventListener('touchend',end);
+}
+function clearSigPad(id){const c=$(id);c.getContext('2d').clearRect(0,0,c.width,c.height)}
+function sigIsEmpty(id){const c=$(id),ctx=c.getContext('2d');const d=ctx.getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i]!==0)return false;return true}
+function sigToBlob(id){return new Promise(res=>$(id).toBlob(res,'image/png'))}
+function sigPadHtml(id,label){return `<div class="field"><label>${label} <b style="color:var(--danger)">*</b></label>
+ <div style="border:1.5px dashed var(--line);border-radius:10px;background:#fff">
+ <canvas id="${id}" width="560" height="170" style="width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas></div>
+ <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="clearSigPad('${id}')">مسح التوقيع</button></div>`}
+
+/* ================= قوالب النماذج الجاهزة ================= */
+const CLEARANCE_REASONS=['استقالة','إنهاء خدمة','انتهاء العقد','تقاعد','أخرى'];
+const CLEARANCE_ITEMS=['بطاقة الهوية/الدخول','جهاز/معدات الشركة','جوال/شريحة اتصال','الزي الموحد','مفاتيح','سيارة الشركة','إخلاء القسم المالي','إخلاء قسم تقنية المعلومات','إخلاء الموارد البشرية','إخلاء المستودع','تسليم المستندات/الملفات','أخرى'];
+const HANDOVER_ITEMS=['التصاميم والفيديوهات','دليل الهوية البصرية','التقويم الشهري للمحتوى','النصوص والسكربتات','حسابات التواصل الاجتماعي وكلمات المرور','حسابات الإعلانات (Meta/Google/TikTok)','خطة الشراء الإعلاني','عقود المؤثرين والوكالات','التقارير والتحليلات','تسوية الميزانية','موافقات ومراسلات العميل','الملفات المصدرية للتصاميم','أخرى'];
+
+let currentFillFormId=null, currentFillMode='generic';
 function openFormFill(formId){
  const f=formsData.find(x=>x.id===formId);if(!f)return;
  currentFillFormId=formId;
  $('fsTitle').textContent='تعبئة: '+f.name;
+ if(f.template==='clearance'){openClearanceFill();return}
+ if(f.template==='handover'){openHandoverFill();return}
+ currentFillMode='generic';
  $('fsFieldsWrap').innerHTML=(f.fields&&f.fields.length?f.fields:['التفاصيل']).map((lbl,i)=>
   `<div class="field"><label>${lbl} <b style="color:var(--danger)">*</b></label><input class="fsField" data-label="${lbl}" id="fsF${i}"></div>`).join('');
  openModal('formSubmitModal');
 }
+function openClearanceFill(){
+ currentFillMode='clearance';const e=currentEmp;
+ const item=(k,v)=>`<div class="info-item"><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
+ $('fsFieldsWrap').innerHTML=`
+  <div class="section-note">بياناتك الوظيفية معبأة تلقائياً من ملفك في النظام.</div>
+  <div class="info-grid" style="margin-bottom:14px">${item('الاسم',e.name)+item('الرقم الوظيفي',e.num)+item('القسم',e.dept)+item('المسمى الوظيفي',e.job)+item('تاريخ التعيين',fmt(e.hire))+item('الجوال',e.phone)}</div>
+  <div class="grid-2">
+   <div class="field"><label>سبب انتهاء الخدمة <b style="color:var(--danger)">*</b></label><select id="clReason">${CLEARANCE_REASONS.map(r=>`<option>${r}</option>`).join('')}</select></div>
+   <div class="field"><label>آخر يوم عمل <b style="color:var(--danger)">*</b></label><input id="clLastDay" type="date"></div>
+  </div>
+  <div id="clOtherWrap" style="display:none" class="field"><label>وضّح السبب</label><input id="clOtherReason"></div>
+  <h3 style="font-size:15px;margin:16px 0 8px">قائمة إخلاء الطرف — أقرّ بحالة كل بند</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>البند</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+   <tbody>${CLEARANCE_ITEMS.map((it,i)=>`<tr><td>${it}</td><td><select id="clItem${i}"><option>تم التسليم</option><option>لم يتم بعد</option><option>لا ينطبق</option></select></td><td><input id="clNote${i}" placeholder="اختياري"></td></tr>`).join('')}</tbody></table></div>
+  <div class="section-note" style="margin-top:14px">أقرّ أنا الموقّع أدناه بأنني سأقوم بتسليم جميع ممتلكات الشركة وليس لدي أي التزامات مستحقة تجاه الشركة عند إتمام الإجراء.</div>
+  ${sigPadHtml('clSig','التوقيع الإلكتروني')}`;
+ openModal('formSubmitModal');
+ const rsel=$('clReason');if(rsel)rsel.onchange=ev=>{$('clOtherWrap').style.display=ev.target.value==='أخرى'?'block':'none'};
+ mountSigPad('clSig');
+}
+function openHandoverFill(){
+ currentFillMode='handover';const e=currentEmp;
+ $('fsFieldsWrap').innerHTML=`
+  <div class="grid-2">
+   <div class="field"><label>اسم الحملة/المشروع <b style="color:var(--danger)">*</b></label><input id="hoCampaign"></div>
+   <div class="field"><label>رقم المشروع</label><input id="hoProjNo"></div>
+   <div class="field"><label>العميل / العلامة التجارية</label><input id="hoClient"></div>
+   <div class="field"><label>المنصات</label><input id="hoPlatforms" placeholder="Instagram, TikTok..."></div>
+   <div class="field"><label>الهدف من الحملة</label><input id="hoObjective"></div>
+   <div class="field"><label>الجمهور المستهدف</label><input id="hoAudience"></div>
+   <div class="field"><label>تاريخ البدء</label><input id="hoStart" type="date"></div>
+   <div class="field"><label>تاريخ الانتهاء</label><input id="hoEnd" type="date"></div>
+  </div>
+  <h3 style="font-size:15px;margin:16px 0 8px">أطراف التسليم</h3>
+  <div class="grid-2">
+   <div class="field"><label>المُسلِّم</label><input value="${e.name} — ${e.job||''}" disabled></div>
+   <div class="field"><label>المُستلِم (الاسم والمنصب) <b style="color:var(--danger)">*</b></label><input id="hoReceiver" placeholder="مثال: أحمد شعبان — Media Production"></div>
+  </div>
+  <h3 style="font-size:15px;margin:16px 0 8px">قائمة بنود التسليم</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>البند</th><th>تم التسليم؟</th><th>ملاحظات</th></tr></thead>
+   <tbody>${HANDOVER_ITEMS.map((it,i)=>`<tr><td>${it}</td><td><select id="hoItem${i}"><option>تم التسليم</option><option>غير مكتمل</option><option>لا ينطبق</option></select></td><td><input id="hoNote${i}" placeholder="اختياري"></td></tr>`).join('')}</tbody></table></div>
+  <h3 style="font-size:15px;margin:16px 0 8px">ملخص النتائج</h3>
+  <div class="grid-2">
+   <div class="field"><label>الوصول / مرات الظهور</label><input id="hoReach"></div>
+   <div class="field"><label>معدل التفاعل</label><input id="hoEngage"></div>
+   <div class="field"><label>العملاء المحتملين / التحويلات</label><input id="hoLeads"></div>
+   <div class="field"><label>تكلفة النتيجة</label><input id="hoCost"></div>
+  </div>
+  <div class="field"><label>المهام المتبقية / ملاحظات عامة</label><textarea id="hoNotes" rows="3"></textarea></div>
+  <div class="section-note">يقرّ الطرفان بأنه تمت مراجعة البنود أعلاه وتسليمها/استلامها وفقاً لذلك.</div>
+  <div class="grid-2">${sigPadHtml('hoSig1','توقيع المُسلِّم ('+e.name+')')}${sigPadHtml('hoSig2','توقيع المُستلِم')}</div>`;
+ openModal('formSubmitModal');
+ mountSigPad('hoSig1');mountSigPad('hoSig2');
+}
 async function submitFormFill(){
+ if(currentFillMode==='clearance')return submitClearanceForm();
+ if(currentFillMode==='handover')return submitHandoverForm();
+ return submitGenericForm();
+}
+async function submitGenericForm(){
  const inputs=[...document.querySelectorAll('.fsField')];
  const empty=inputs.find(i=>!i.value.trim());
  if(empty){toast('عبّئ جميع الحقول قبل الإرسال');return}
@@ -2093,6 +2256,39 @@ async function submitFormFill(){
   if(error)throw error;
   closeModal('formSubmitModal');await loadAll();epRenderForms();
   toast('✅ تم إرسال النموذج المعبّى للإدارة');
+ }catch(e){err(e)}
+}
+async function submitClearanceForm(){
+ if(!$('clLastDay').value){toast('حدد آخر يوم عمل');return}
+ if(sigIsEmpty('clSig')){toast('التوقيع الإلكتروني إلزامي لإتمام النموذج');return}
+ const items=CLEARANCE_ITEMS.map((it,i)=>({item:it,status:$('clItem'+i).value,note:$('clNote'+i).value||''}));
+ const reasonOther=$('clOtherReason');
+ const answers={'سبب انتهاء الخدمة':$('clReason').value+(($('clReason').value==='أخرى'&&reasonOther&&reasonOther.value)?(' — '+reasonOther.value):''),'آخر يوم عمل':$('clLastDay').value,'قائمة إخلاء الطرف':items};
+ try{
+  toast('جاري رفع التوقيع...');
+  const blob=await sigToBlob('clSig');
+  const sigPath=await uploadToStorage(new File([blob],'signature.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
+  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:sigPath});
+  if(error)throw error;
+  closeModal('formSubmitModal');await loadAll();epRenderForms();
+  toast('✅ تم إرسال نموذج إخلاء الطرف موقّعاً للإدارة');
+ }catch(e){err(e)}
+}
+async function submitHandoverForm(){
+ if(!$('hoCampaign').value.trim()){toast('أدخل اسم الحملة أو المشروع');return}
+ if(!$('hoReceiver').value.trim()){toast('أدخل اسم ومنصب المُستلِم');return}
+ if(sigIsEmpty('hoSig1')||sigIsEmpty('hoSig2')){toast('توقيع كل من المُسلِّم والمُستلِم إلزامي');return}
+ const items=HANDOVER_ITEMS.map((it,i)=>({item:it,status:$('hoItem'+i).value,note:$('hoNote'+i).value||''}));
+ const answers={'اسم الحملة/المشروع':$('hoCampaign').value,'رقم المشروع':$('hoProjNo').value,'العميل/العلامة التجارية':$('hoClient').value,'المنصات':$('hoPlatforms').value,'الهدف من الحملة':$('hoObjective').value,'الجمهور المستهدف':$('hoAudience').value,'تاريخ البدء':$('hoStart').value,'تاريخ الانتهاء':$('hoEnd').value,'المُسلِّم':currentEmp.name+' — '+(currentEmp.job||''),'المُستلِم':$('hoReceiver').value,'قائمة بنود التسليم':items,'الوصول/مرات الظهور':$('hoReach').value,'معدل التفاعل':$('hoEngage').value,'العملاء المحتملين/التحويلات':$('hoLeads').value,'تكلفة النتيجة':$('hoCost').value,'ملاحظات عامة':$('hoNotes').value};
+ try{
+  toast('جاري رفع التوقيعين...');
+  const b1=await sigToBlob('hoSig1'),b2=await sigToBlob('hoSig2');
+  const p1=await uploadToStorage(new File([b1],'sig1.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
+  const p2=await uploadToStorage(new File([b2],'sig2.png',{type:'image/png'}),'employees/'+currentEmp.id+'/forms');
+  const {error}=await sb.from('form_submissions').insert({form_id:currentFillFormId,employee_id:currentEmp.id,answers:JSON.stringify(answers),signature_url:p1,signature2_url:p2});
+  if(error)throw error;
+  closeModal('formSubmitModal');await loadAll();epRenderForms();
+  toast('✅ تم إرسال نموذج تسليم المشروع موقّعاً للإدارة');
  }catch(e){err(e)}
 }
 function epRenderPolicies(){
@@ -2173,6 +2369,12 @@ try{
   wrap.parentNode.insertBefore(div,wrap.nextSibling);
  }
  document.addEventListener('change',e=>{if(e.target&&e.target.id==='fmFillable'){$('fmFieldsBuilder').style.display=e.target.checked?'block':'none'}});
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='fmTemplate'){
+ const isSystem=!!e.target.value;
+ $('fmFillableWrap').style.display=isSystem?'none':'flex';
+ if(isSystem){$('fmFieldsBuilder').style.display='none'}
+ else{$('fmFieldsBuilder').style.display=$('fmFillable').checked?'block':'none'}
+}});
 window.addNewPolicy=async function(){
   var name=document.getElementById('pNewName').value.trim();
   if(!name){toast('أدخل اسم السياسة');return}
