@@ -1028,7 +1028,7 @@ function initRealtime(){
  if(rtStarted)return;rtStarted=true;
  try{
   const ch=sb.channel('hrms-live');
-  ['leaves','permits','meeting_records','site_attendance','contracts','policies'].forEach(t=>{
+  ['leaves','permits','meeting_records','site_attendance','contracts','policies','form_submissions'].forEach(t=>{
    ch.on('postgres_changes',{event:'*',schema:'public',table:t},payload=>{
      clearTimeout(rtTimer);
      rtTimer=setTimeout(()=>{refresh().catch(()=>{})},700);
@@ -1037,6 +1037,8 @@ function initRealtime(){
       else if(payload.eventType==='INSERT'&&t==='permits'&&me.role==='admin')toast('🔔 وصل طلب استئذان جديد الآن');
       else if(payload.eventType==='UPDATE'&&t==='leaves'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد طلباتك');
       else if(payload.eventType==='INSERT'&&t==='meeting_records'&&me.role==='admin')toast('✋ موظف سجّل حضوره الآن');
+      else if(payload.eventType==='INSERT'&&t==='form_submissions'&&me.role!=='employee')toast('📄 وصل تقديم نموذج جديد الآن');
+      else if(payload.eventType==='UPDATE'&&t==='form_submissions'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد نماذجك');
      }catch(e){}
    });
   });
@@ -1143,6 +1145,7 @@ function friendly(m){m=String(m||'');
  if(m.includes('Invalid key'))return 'اسم الملف غير مقبول — أعد المحاولة';
  if(m.includes('violates row-level security'))return 'لا تملك صلاحية هذا الإجراء';
  if(m.includes('Failed to fetch'))return 'تعذر الاتصال — تحقق من الإنترنت';
+ if(m.includes('schema cache')||m.includes('Could not find'))return 'قاعدة البيانات تحتاج تحديثاً — نفّذ آخر سكربت SQL المرسل من المطوّر ثم أعد المحاولة';
  return m}
 async function openStoredFile(path,friendlyName){
  if(!path){toast('لا يوجد ملف مرفوع');return}
