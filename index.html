@@ -303,7 +303,7 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="card">
     <h3>🚪 استئذانات بانتظار الاعتماد</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>إجراء</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>الحالة</th><th>إجراء</th></tr></thead>
     <tbody id="apvPermitsTbody"></tbody></table></div>
   </div>
   <div class="card">
@@ -486,7 +486,7 @@ tbody tr:hover{background:#FAFCFB}
     <div class="filters">
       <input id="fPermName" placeholder="بحث باسم الموظف" oninput="renderPermits()">
       <select id="fPermType" onchange="renderPermits()"><option value="">النوع: الكل</option><option>اجتماع</option><option>مقر العمل</option></select>
-      <select id="fPermStatus" onchange="renderPermits()"><option value="">الحالة: الكل</option><option>بانتظار الموافقة</option><option>معتمد</option><option>مرفوض</option></select>
+      <select id="fPermStatus" onchange="renderPermits()"><option value="">الحالة: الكل</option><option>بانتظار موافقة رئيس القسم</option><option>بانتظار الاعتماد النهائي</option><option>معتمد</option><option>مرفوض</option></select>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>التاريخ</th><th>موعد الاستئذان</th><th>نوع الاستئذان</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
@@ -671,6 +671,9 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><h3>سجل ما سبق اعتماده أو رفضه في قسمك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النوع</th><th>الفترة</th><th>الحالة</th></tr></thead>
     <tbody id="mgrHistoryTbody"></tbody></table></div></div>
+  <div class="card"><h3>🚪 استئذانات بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+    <tbody id="mgrPermitsTbody"></tbody></table></div></div>
   <div class="card"><h3>📄 نماذج بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النموذج</th><th>تاريخ التقديم</th><th>إجراء</th></tr></thead>
     <tbody id="mgrFormsTbody"></tbody></table></div></div>
@@ -1103,7 +1106,7 @@ async function loadAll(){
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
- permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,notes:r.notes}));
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,head:r.dept_head,notes:r.notes}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
@@ -1209,7 +1212,10 @@ function buildAlerts(){
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp}});
   if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
   if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
- permits.forEach(p=>{if(p.status==='بانتظار الموافقة')A.push({sid:'pr-'+p.id,t:'طلب استئذان جديد',d:`طلب استئذان (${p.type}) مقدَّم من ${p.emp}`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp,status:'بانتظار الموافقة'}})});
+ permits.forEach(p=>{
+  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp}});
+  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp}});
+ });
  employees.forEach(e=>{const b=balance(e.name);
   if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name}});
   if(b.sickLeft<=5&&b.sickLeft>0)A.push({sid:'balS-'+e.num,t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name}});
@@ -1259,7 +1265,7 @@ function renderDashboard(){
   {n:new Set(onLeave).size,l:'الموظفون في إجازة حالياً',k:'sand'},
   {n:exp30,l:'عقود تنتهي خلال 30 يوم',k:'danger'},
   {n:leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).length,l:'طلبات إجازات معلّقة',k:'sand'},
-  {n:permits.filter(p=>p.status==='بانتظار الموافقة').length,l:'طلبات استئذان جديدة',k:'sand'},
+  {n:permits.filter(p=>p.status===LV_P1||p.status===LV_P2).length,l:'طلبات استئذان معلّقة',k:'sand'},
   {n:siteAbs.filter(a=>String(a.date).startsWith(mNow)).length,l:'غيابات هذا الشهر',k:'danger'},
  ];
  $('dashStats').innerHTML=S.map((s,i)=>`<div class="stat ${s.k}" onclick="dashNav(${i})" title="اضغط للانتقال والفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
@@ -1352,7 +1358,7 @@ function dashNav(i){
   ()=>{go('leaves');clickTab('#page-leaves .tabs button',1);$('flvStatus').value='';leaveExtra='current';renderLeaveLog()},
   ()=>{go('contracts');contractsFilter='exp30';renderContracts()},
   ()=>{go('leaves');clickTab('#page-leaves .tabs button',1);$('flvStatus').value='';leaveExtra='pending';renderLeaveLog()},
-  ()=>{go('permits');$('fPermName').value='';$('fPermStatus').value='بانتظار الموافقة';renderPermits()},
+  ()=>{go('permits');$('fPermName').value='';$('fPermStatus').value='';renderPermits()},
   ()=>{go('attendance');clickTab('#page-attendance .tabs button',3)},
  ];
  if(acts[i])acts[i]();
@@ -1704,19 +1710,26 @@ function renderLeaveTypes(){
 /* ================= الاستئذانات ================= */
 function renderPermits(){
  const q=$('fPermName').value.trim(),tp=$('fPermType').value,st=$('fPermStatus').value;
- const stTag=s=>s==='معتمد'?'ok':s==='مرفوض'?'danger':'sand';
+ const stTag=lvTag;
  const rows=permits.filter(p=>(!q||p.emp.includes(q))&&(!tp||p.type===tp)&&(!st||p.status===st));
+ const prBtn=p=>p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
+   :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td>
-  <td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td>
-  <td style="white-space:nowrap">${p.status==='بانتظار الموافقة'?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+  <td><span class="tag ${stTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td>${p.notes||'—'}</td>
+  <td style="white-space:nowrap">${prBtn(p)}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
 }
 async function setPermit(id,status){
  const {error}=await sb.from('permits').update({status}).eq('id',id);
  if(error){err(error);return} await refresh();toast('تم تحديث حالة الاستئذان')}
+async function mgrDecidePermit(id,approve){
+ const {error}=await sb.from('permits').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
+}
 async function addPermit(){
  if(!$('prEmp').value){toast('اختر الموظف');return}
- const {error}=await sb.from('permits').insert({employee_id:$('prEmp').value,permit_date:$('prDate').value||D(0),permit_time:$('prTime').value||null,permit_type:$('prType').value,status:$('prStatus').value,notes:$('prNotes').value});
+ const {error}=await sb.from('permits').insert({employee_id:$('prEmp').value,permit_date:$('prDate').value||D(0),permit_time:$('prTime').value||null,permit_type:$('prType').value,status:LV_P1,notes:$('prNotes').value});
  if(error){err(error);return}
  closeModal('permitModal');await refresh();toast('تم إنشاء طلب الاستئذان');
 }
@@ -1969,7 +1982,7 @@ async function addForm(){
 /* ================= تهيئة لوحة الإدارة ================= */
 function renderApprovalsPage(){
  const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
- const pendingPr=permits.filter(p=>p.status==='بانتظار الموافقة');
+ const pendingPr=permits.filter(p=>p.status===LV_P1||p.status===LV_P2);
  const pendingFm=formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2);
  $('approvalsCount').textContent=pendingLv.length+pendingPr.length+pendingFm.length;
  const lvBtn=l=>l.status===LV_P2
@@ -1979,9 +1992,13 @@ function renderApprovalsPage(){
   <td><b>${l.emp}</b></td><td>${l.dept||'—'}</td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td>
   <td><span class="tag ${lvTag(l.status)}">${l.status}</span>${l.head?' — '+l.head:''}</td>
   <td style="white-space:nowrap">${lvBtn(l)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد إجازات بانتظار اعتماد 🎉</td></tr>';
+ const prBtn2=p=>p.status===LV_P2
+   ?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
+   :`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`;
  $('apvPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات بانتظار اعتمادك 🎉</td></tr>';
+  <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
+  <td style="white-space:nowrap">${prBtn2(p)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات بانتظار اعتماد 🎉</td></tr>';
  const fmBtn=s=>s.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`;
@@ -2143,7 +2160,7 @@ function epRenderDashboard(){
  const contractDays=myContract?daysTo(myContract.end):null;
  const probDays=e.probEnd?daysTo(e.probEnd):null;
  const A=sortAlerts(buildAlerts().filter(a=>{
-   if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr-')))return false;
+   if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')))return false;
    return a.d.includes(e.name)||a.t.includes('سياسة');
  }));
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
@@ -2163,7 +2180,11 @@ function mgrRenderApprovals(){
  $('mgrNavBtn').style.display='flex';
  const pending=leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id);
  const pendingForms=formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id);
- $('mgrBadge').textContent=pending.length+pendingForms.length;
+ const pendingPr=permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
+ $('mgrBadge').textContent=pending.length+pendingForms.length+pendingPr.length;
+ $('mgrPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
+  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td><td>${p.notes||'—'}</td>
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePermit('${p.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePermit('${p.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات بانتظار اعتمادك 🎉</td></tr>';
  $('mgrFormsTbody').innerHTML=pendingForms.length?pendingForms.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr>
   <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
@@ -2187,11 +2208,12 @@ async function mgrDecideForm(id,approve){
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>{
-  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')))return false;
+  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
  if(currentEmp.role==='manager')formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'mgrfm-'+s.id,t:'نموذج بانتظار اعتمادك',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'📄',nav:{p:'approvals'}})});
+ if(currentEmp.role==='manager')permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id).forEach(p=>A.push({sid:'mgrpr-'+p.id,t:'استئذان بانتظار اعتمادك',d:`${p.emp} قدّم استئذان (${p.type}) بتاريخ ${fmt(p.date)} — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'🚪',nav:{p:'approvals'}}));
  leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
  permits.filter(p=>p.employee_id===currentEmp.id&&(p.status==='معتمد'||p.status==='مرفوض')).forEach(p=>A.push({sid:'prst-'+p.id+'-'+(p.status==='معتمد'?'a':'r'),t:'تحديث حالة طلب استئذان',d:`طلبك للاستئذان (${p.type}) بتاريخ ${fmt(p.date)}: ${p.status}`,k:p.status==='معتمد'?'ok':'danger',ic:'🚪',nav:{p:'permits'}}));
  formSubs.filter(s=>s.employee_id===currentEmp.id&&(s.status==='تمت الموافقة'||s.status==='تم الرفض')).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'fmst-'+s.id,t:'تحديث حالة نموذج',d:`نموذجك «${fm.name||''}»: ${s.status}`,k:s.status==='تمت الموافقة'?'ok':'danger',ic:'📄',nav:{p:'forms'}})});
@@ -2241,10 +2263,10 @@ async function epAddLeave(){
  try{
   const fs2=takeStaged('leaveEmpSick','eplSickBox','📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)');
   if(fs2){toast('جاري رفع التقرير الطبي...');const sp=await uploadToStorage(fs2,'employees/'+currentEmp.id+'/sick');
-   await sb.from('files_registry').insert({file_name:fs2.name,file_type:(fs2.name.split('.').pop()||'').toUpperCase(),file_size:(fs2.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',subcategory:'تقرير طبي',source:'إجازة مرضية: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:sp,employee_id:currentEmp.id}).catch(()=>{})}
+   try{await sb.from('files_registry').insert({file_name:fs2.name,file_type:(fs2.name.split('.').pop()||'').toUpperCase(),file_size:(fs2.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',subcategory:'تقرير طبي',source:'إجازة مرضية: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:sp,employee_id:currentEmp.id})}catch(e){}}
   let attachment=null;const f=takeStaged('leaveEmp','eplFileBox','📎 إرفاق مستند طلب الإجازة <b style="color:var(--danger)">*</b>');
   if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+currentEmp.id);
-   await sb.from('files_registry').insert({file_name:f.name,file_type:(f.name.split('.').pop()||'').toUpperCase(),file_size:(f.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',source:'إجازة: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:attachment,employee_id:currentEmp.id}).catch(()=>{})}
+   try{await sb.from('files_registry').insert({file_name:f.name,file_type:(f.name.split('.').pop()||'').toUpperCase(),file_size:(f.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',source:'إجازة: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:attachment,employee_id:currentEmp.id})}catch(e){}}
   const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,attachment_url:attachment,status:currentEmp.role==='manager'?LV_P2:LV_P1});
   if(error)throw error;
   closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
@@ -2264,9 +2286,9 @@ function epRenderPermits(){
  $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>';
 }
 async function epAddPermit(){
- const {error}=await sb.from('permits').insert({employee_id:currentEmp.id,permit_date:$('eppDate').value||D(0),permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value});
+ const {error}=await sb.from('permits').insert({employee_id:currentEmp.id,permit_date:$('eppDate').value||D(0),permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value,status:currentEmp.role==='manager'?LV_P2:LV_P1});
  if(error){err(error);return}
- closeModal('epPermitModal');await refresh();toast('تم إرسال طلب الاستئذان — بانتظار موافقة الإدارة');
+ closeModal('epPermitModal');await refresh();toast('تم إرسال طلب الاستئذان — سيمر على رئيس القسم ثم الاعتماد النهائي');
 }
 function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';openModal('selfEditModal')}
 async function saveSelfEdit(){
@@ -2503,7 +2525,7 @@ try{
  if(pr){var s2=document.createElement('span');s2.className='nav-badge';s2.id='prNavBadge';s2.style.display='none';pr.appendChild(s2)}
  setInterval(function(){try{
   var l=(typeof leaves!=='undefined'?leaves:[]).filter(function(x){return typeof LV_P2!=='undefined'&&x.status===LV_P2}).length;
-  var p=(typeof permits!=='undefined'?permits:[]).filter(function(x){return x.status==='بانتظار الموافقة'}).length;
+  var p=(typeof permits!=='undefined'?permits:[]).filter(function(x){return typeof LV_P2!=='undefined'&&x.status===LV_P2}).length;
   var a=document.getElementById('lvNavBadge');if(a){a.textContent=l;a.style.display=l?'inline-block':'none'}
   var b=document.getElementById('prNavBadge');if(b){b.textContent=p;b.style.display=p?'inline-block':'none'}
  }catch(e){}},3000);
