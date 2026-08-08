@@ -24,6 +24,7 @@ body{font-family:'Alexandria',Tahoma,Arial,sans-serif;background:var(--bg);color
 h1,h2,h3,h4{font-family:'Alexandria',sans-serif;line-height:1.35;font-weight:700}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit;font-size:14px;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);transition:border-color .15s, box-shadow .15s}
+input[type="date"],input[type="time"],input[type="datetime-local"]{direction:ltr;text-align:right}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px rgba(15,76,63,.12)}
 label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(--ink)}
 ::placeholder{color:#9AA8A1}
@@ -572,7 +573,7 @@ tbody tr:hover{background:#FAFCFB}
 </div>
 
 <section class="page on" id="ep-dashboard">
-  <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p>نظرة سريعة على كل ما يخصك</p></div>
+  <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p id="epDailyPhrase">نظرة سريعة على كل ما يخصك</p></div>
    <div class="tag info" id="epTodayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div class="stats" id="epDashStats"></div>
   <div class="grid-2">
@@ -695,15 +696,23 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>نوع الإجازة</label>
       <select id="eplType" onchange="epLeaveTypeChanged(this.value)">
         <option>سنوية</option><option>مرضية</option><option>خاصة</option><option>بدون راتب</option></select></div>
-    <div id="eplReasonWrap" style="display:none"><label>سبب الإجازة <b style="color:var(--danger)">*</b></label><input id="eplReason"></div>
-    <div id="eplSickWrap" style="display:none;grid-column:1/-1"><label>التقرير الطبي <b style="color:var(--danger)">*</b></label>
+    <div id="eplSickWrap" style="display:none"><label>التقرير الطبي <b style="color:var(--danger)">*</b></label>
      <div class="upload-box" id="eplSickBox" onclick="stageFile('leaveEmpSick','.pdf,.jpg,.jpeg,.png,.doc,.docx','eplSickBox')">📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)</div></div>
-    <div><label>بداية الإجازة</label><input id="eplStart" type="date" onchange="epCalcDays()"></div>
-    <div><label>نهاية الإجازة</label><input id="eplEnd" type="date" onchange="epCalcDays()"></div>
+    <div style="grid-column:1/-1"><label>سبب الإجازة <b style="color:var(--danger)">*</b></label><textarea id="eplReason" rows="2" placeholder="اكتب سبب طلب الإجازة"></textarea></div>
+    <div><label>بداية الإجازة</label><input id="eplStart" type="date" dir="ltr" onchange="epCalcDays()"></div>
+    <div><label>نهاية الإجازة</label><input id="eplEnd" type="date" dir="ltr" onchange="epCalcDays()"></div>
     <div><label>عدد الأيام (تلقائي مع إمكانية التعديل)</label><input id="eplDays" type="number" min="1"></div>
     <div><label>ملاحظات</label><input id="eplNotes"></div>
   </div>
-  <div class="upload-box" style="margin-top:12px" id="eplFileBox" onclick="stageFile('leaveEmp','.pdf,.doc,.docx,.jpg,.jpeg,.png','eplFileBox')">📎 إرفاق مستند طلب الإجازة <b style="color:var(--danger)">*</b></div>
+  <h3 style="font-size:14px;margin:14px 0 8px">📞 معلومات التواصل أثناء الإجازة</h3>
+  <div class="grid-2">
+    <div><label>رقم الجوال <b style="color:var(--danger)">*</b></label><input id="eplPhone" type="tel" dir="ltr" placeholder="05xxxxxxxx"></div>
+    <div><label>البريد الإلكتروني <b style="color:var(--danger)">*</b></label><input id="eplEmail" type="email" dir="ltr"></div>
+  </div>
+  <label style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:12px;background:var(--bg);border-radius:10px;cursor:pointer">
+   <input type="checkbox" id="eplCommit" style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
+   <span style="font-size:12.5px;color:var(--dark);line-height:1.7">أتعهد بأني سأعمل على تحقيق المستهدف الشهري الكامل بعد عودتي من الإجازة، ولن يؤثر حصولي على الإجازة على تحقيق التارجت المطلوب لهذا الشهر بالإضافة إلى إتمام المهام المطلوبة مني.</span>
+  </label>
   <div class="modal-foot"><button class="btn btn-primary" onclick="epAddLeave()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epLeaveModal')">إلغاء</button></div>
 </div></div>
 
@@ -986,7 +995,13 @@ const fmt=d=>d? `${fmtHijri(d)} (${fmtGreg(d)}م)` : '—';
 const tfmt=t=>t?String(t).slice(0,5):'—';
 const daysTo=d=>Math.ceil((new Date(d)-today)/864e5);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200)}
-function openModal(id){$(id).classList.add('on')}
+function openModal(id){
+ if(id==='epLeaveModal'&&currentEmp){
+  if($('eplPhone')&&!$('eplPhone').value)$('eplPhone').value=currentEmp.phone||'';
+  if($('eplEmail')&&!$('eplEmail').value)$('eplEmail').value=currentEmp.email||'';
+ }
+ $(id).classList.add('on')
+}
 function closeModal(id){$(id).classList.remove('on')}
 document.querySelectorAll('.modal-back').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')}));
 const err=e=>{console.error(e);toast('خطأ: '+friendly(e.message||e));};
@@ -2160,10 +2175,44 @@ function initEmpPortal(){
   return `<div class="info-item" ${f?`style="cursor:pointer" onclick="openStoredFile('${f.path}','${d}')"`:''}><div class="k">${f?'متوفر — اضغط للعرض':'لم يُرفع بعد'}</div><div class="v">📎 ${d}</div></div>`}).join('');
  epRenderAll();
 }
+const DAILY_PHRASES=[
+ 'نتمنى لك يومًا خفيفًا ومثمرًا.',
+ 'خذها خطوة بخطوة، والباقي يهون.',
+ 'نتمنى لك يومًا مليئًا بالإنجازات الصغيرة.',
+ 'ركّز على أول مهمة والباقي يأتي تباعًا.',
+ 'نتمنى لك يومًا مليئًا بالإنجاز وكل ما تحتاجه ستجده هنا.',
+ 'بداية موفقة لك وبالتوفيق في مهامك.',
+ 'أهلاً بعودتك، نتمنى لك يومًا رائعًا.',
+ 'إنجازاتك اليومية تصنع فرقًا.',
+ 'استمر في التقدم، وأحسن استثمار وقتك.',
+ 'كل التفاصيل التي تحتاجها بين يديك.',
+ 'نجاحك يبدأ بتنظيم يومك.',
+ 'خطوة بخطوة نحو إنجازات جديدة.',
+ 'يوم جديد وفرص جديدة وإنجازات عظيمة.',
+ 'يسعدنا وجودك، نتمنى لك يومًا مليئًا بالإنجاز.',
+ 'عملك يضيف قيمة، استمر في التألق.',
+ 'كل إنجاز يبدأ بخطوة لذلك نحن واثقون بك.',
+ 'عطاؤك يُحدث أثرًا إيجابيًا لذلك شكرًا لك.',
+ 'شكرًا لكونك جزءًا من نجاح الفريق.',
+ 'كل خطوة تقوم بها تقود إلى نجاح أكبر.',
+ 'نتمنى أن تجد كل ما تحتاجه بسهولة.',
+ 'جميع خدماتك وطلباتك في مكان واحد.',
+ 'كل ما تحتاجه ليوم عملك بين يديك.',
+ 'كل تفاصيلك الوظيفية أصبحت أقرب إليك.',
+];
+function dailyPhrase(){
+ // اختيار ثابت طوال اليوم الواحد (نفس العبارة لو دخل عدة مرات)، ويتغير تلقائياً
+ // في اليوم التالي، ويدور على القائمة من جديد بعد آخر عبارة — بحساب عدد الأيام
+ // المنقضية منذ تاريخ مرجعي ثابت.
+ const daysSinceEpoch=Math.floor(new Date().setHours(0,0,0,0)/86400000);
+ const idx=((daysSinceEpoch%DAILY_PHRASES.length)+DAILY_PHRASES.length)%DAILY_PHRASES.length;
+ return DAILY_PHRASES[idx];
+}
 function epRenderDashboard(){
  const e=currentEmp;
  if($('epTodayDateBadge'))$('epTodayDateBadge').textContent=todayFullStr();
  $('epDashGreeting').textContent='أهلاً بك، '+(e.name||'').split(' ')[0];
+ if($('epDailyPhrase'))$('epDailyPhrase').textContent=dailyPhrase();
  const b=balance(e.name);
  const myLv=leaves.filter(l=>l.employee_id===e.id);
  const myPr=permits.filter(p=>p.employee_id===e.id);
@@ -2260,7 +2309,6 @@ function epRenderLeaves(){
  $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 function epLeaveTypeChanged(v){
- $('eplReasonWrap').style.display=v==='خاصة'?'block':'none';
  $('eplSickWrap').style.display=v==='مرضية'?'block':'none';
 }
 function epCalcDays(){const s=$('eplStart').value,en=$('eplEnd').value;if(s&&en){const n=Math.round((new Date(en)-new Date(s))/864e5)+1;if(n>0)$('eplDays').value=n}}
@@ -2268,22 +2316,22 @@ async function epAddLeave(){
  if(!$('eplStart').value||!$('eplEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
  if($('eplEnd').value<$('eplStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
  if(!(+$('eplDays').value>0)){toast('أدخل عدد الأيام');return}
- if($('eplType').value==='خاصة'&&!$('eplReason').value.trim()){toast('سبب الإجازة إلزامي للإجازة الخاصة');return}
+ if(!$('eplReason').value.trim()){toast('سبب الإجازة إلزامي');return}
  if($('eplType').value==='مرضية'&&!staged['leaveEmpSick']){toast('إرفاق التقرير الطبي إلزامي للإجازة المرضية');return}
- if(!staged['leaveEmp']){toast('إرفاق مستند طلب الإجازة إلزامي لإتمام الطلب');return}
+ if(!$('eplPhone').value.trim()){toast('رقم الجوال إلزامي للتواصل أثناء الإجازة');return}
+ if(!$('eplEmail').value.trim()){toast('البريد الإلكتروني إلزامي للتواصل أثناء الإجازة');return}
+ if(!$('eplCommit').checked){toast('لازم توافق على التعهد أولاً لإتمام الطلب');return}
  const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1);
  if(balErr){toast(balErr);return}
  try{
   const fs2=takeStaged('leaveEmpSick','eplSickBox','📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)');
   if(fs2){toast('جاري رفع التقرير الطبي...');const sp=await uploadToStorage(fs2,'employees/'+currentEmp.id+'/sick');
    try{await sb.from('files_registry').insert({file_name:fs2.name,file_type:(fs2.name.split('.').pop()||'').toUpperCase(),file_size:(fs2.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',subcategory:'تقرير طبي',source:'إجازة مرضية: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:sp,employee_id:currentEmp.id})}catch(e){}}
-  let attachment=null;const f=takeStaged('leaveEmp','eplFileBox','📎 إرفاق مستند طلب الإجازة <b style="color:var(--danger)">*</b>');
-  if(f){toast('جاري رفع المرفق...');attachment=await uploadToStorage(f,'employees/'+currentEmp.id);
-   try{await sb.from('files_registry').insert({file_name:f.name,file_type:(f.name.split('.').pop()||'').toUpperCase(),file_size:(f.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',source:'إجازة: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:attachment,employee_id:currentEmp.id})}catch(e){}}
-  const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,attachment_url:attachment,status:currentEmp.role==='manager'?LV_P2:LV_P1});
+  const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,contact_phone:$('eplPhone').value.trim(),contact_email:$('eplEmail').value.trim(),commitment_accepted:true,status:currentEmp.role==='manager'?LV_P2:LV_P1});
   if(error)throw error;
   closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
-  ['eplStart','eplEnd','eplDays','eplNotes','eplReason'].forEach(id=>$(id).value='');
+  ['eplStart','eplEnd','eplDays','eplNotes','eplReason','eplPhone','eplEmail'].forEach(id=>$(id).value='');
+  $('eplCommit').checked=false;
  }catch(e){err(e)}
 }
 function epRenderAttendance(){
