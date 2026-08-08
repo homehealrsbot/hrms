@@ -272,7 +272,8 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- ===== لوحة التحكم ===== -->
 <section class="page on" id="page-dashboard">
-  <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة عامة على مؤشرات الموارد البشرية</p></div></div>
+  <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة عامة على مؤشرات الموارد البشرية</p></div>
+   <div class="tag info" id="todayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div class="stats" id="dashStats"></div>
   <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
   <div style="display:none"><table><tbody id="dashContracts"></tbody></table></div>
@@ -571,7 +572,8 @@ tbody tr:hover{background:#FAFCFB}
 </div>
 
 <section class="page on" id="ep-dashboard">
-  <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p>نظرة سريعة على كل ما يخصك</p></div></div>
+  <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p>نظرة سريعة على كل ما يخصك</p></div>
+   <div class="tag info" id="epTodayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div class="stats" id="epDashStats"></div>
   <div class="grid-2">
     <div class="card">
@@ -971,7 +973,16 @@ let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs
 let empById={},empByName={},me=null,currentEmp=null;
 
 const $=id=>document.getElementById(id);
-const fmt=d=>d? new Date(d).toLocaleDateString('ar-SA-u-nu-latn',{year:'numeric',month:'short',day:'numeric'}):'—';
+const fmtHijri=d=>d? new Date(d).toLocaleDateString('ar-SA-u-nu-latn',{year:'numeric',month:'short',day:'numeric'}):'—';
+function todayFullStr(){
+ const now=new Date();
+ const weekday=now.toLocaleDateString('ar-SA-u-nu-latn',{weekday:'long'});
+ const hij=now.toLocaleDateString('ar-SA-u-nu-latn',{year:'numeric',month:'long',day:'numeric'});
+ const greg=now.toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'});
+ return `📅 اليوم ${weekday} — ${hij} (${greg}م)`;
+}
+const fmtGreg=d=>d? new Date(d).toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'}):'';
+const fmt=d=>d? `${fmtHijri(d)} (${fmtGreg(d)}م)` : '—';
 const tfmt=t=>t?String(t).slice(0,5):'—';
 const daysTo=d=>Math.ceil((new Date(d)-today)/864e5);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200)}
@@ -1253,6 +1264,7 @@ function renderAlerts(){
 
 /* ================= لوحة التحكم ================= */
 function renderDashboard(){
+ if($('todayDateBadge'))$('todayDateBadge').textContent=todayFullStr();
  const onLeave=leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0).map(l=>l.emp);
  const probation=employees.filter(e=>e.probEnd&&daysTo(e.probEnd)>=0).length;
  const exp30=contracts.filter(c=>{const n=daysTo(c.end);return n>=0&&n<=30}).length;
@@ -2150,6 +2162,7 @@ function initEmpPortal(){
 }
 function epRenderDashboard(){
  const e=currentEmp;
+ if($('epTodayDateBadge'))$('epTodayDateBadge').textContent=todayFullStr();
  $('epDashGreeting').textContent='أهلاً بك، '+(e.name||'').split(' ')[0];
  const b=balance(e.name);
  const myLv=leaves.filter(l=>l.employee_id===e.id);
