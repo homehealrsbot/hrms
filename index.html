@@ -584,8 +584,8 @@ tbody tr:hover{background:#FAFCFB}
     <div class="card">
       <h3>⚡ إجراءات سريعة</h3>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
-        <button class="btn btn-primary btn-block" onclick="epGo('leaves');openModal('epLeaveModal')">+ طلب إجازة جديد</button>
-        <button class="btn btn-primary btn-block" onclick="epGo('permits');openModal('epPermitModal')">+ طلب استئذان جديد</button>
+        <button class="btn btn-primary btn-block" onclick="epGo('leaves');epNewLeave()">+ طلب إجازة جديد</button>
+        <button class="btn btn-primary btn-block" onclick="epGo('permits');epNewPermit()">+ طلب استئذان جديد</button>
         <button class="btn btn-ghost btn-block" onclick="openSelfEdit()">✎ تعديل بياناتي</button>
         <button class="btn btn-ghost btn-block" onclick="epGo('policies')">§ الأنظمة والسياسات</button>
       </div>
@@ -623,11 +623,11 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page" id="ep-leaves">
   <div class="page-head">
     <div><h1>الاجازات</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
-    <button class="btn btn-primary" onclick="openModal('epLeaveModal')">+ طلب إجازة جديد</button>
+    <button class="btn btn-primary" onclick="epNewLeave()">+ طلب إجازة جديد</button>
   </div>
   <div class="stats" id="epLeaveStats"></div>
   <div class="card"><h3>سجل طلباتي</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
     <tbody id="epLeaveTbody"></tbody></table></div></div>
 </section>
 
@@ -654,10 +654,10 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page" id="ep-permits">
   <div class="page-head">
     <div><h1>طلبات الاستئذان</h1><p>طلبات الاستئذان الخاصة بك</p></div>
-    <button class="btn btn-primary" onclick="openModal('epPermitModal')">+ طلب استئذان جديد</button>
+    <button class="btn btn-primary" onclick="epNewPermit()">+ طلب استئذان جديد</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>التاريخ</th><th>موعد الاستئذان</th><th>النوع</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <thead><tr><th>التاريخ</th><th>موعد الاستئذان</th><th>النوع</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
     <tbody id="epPermitTbody"></tbody></table></div></div>
 </section>
 
@@ -713,7 +713,7 @@ tbody tr:hover{background:#FAFCFB}
    <input type="checkbox" id="eplCommit" style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
    <span style="font-size:12.5px;color:var(--dark);line-height:1.7">أتعهد بأني سأعمل على تحقيق المستهدف الشهري الكامل بعد عودتي من الإجازة، ولن يؤثر حصولي على الإجازة على تحقيق التارجت المطلوب لهذا الشهر بالإضافة إلى إتمام المهام المطلوبة مني.</span>
   </label>
-  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddLeave()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epLeaveModal')">إلغاء</button></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddLeave()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingLeaveId=null;closeModal('epLeaveModal')">إلغاء</button></div>
 </div></div>
 
 <!-- طلب استئذان (موظف) -->
@@ -725,7 +725,7 @@ tbody tr:hover{background:#FAFCFB}
     <div><label>نوع الاستئذان</label><select id="eppType"><option>اجتماع</option><option>مقر العمل</option></select></div>
     <div><label>ملاحظات</label><input id="eppNotes"></div>
   </div>
-  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPermit()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('epPermitModal')">إلغاء</button></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPermit()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingPermitId=null;closeModal('epPermitModal')">إلغاء</button></div>
 </div></div>
 
 <!-- ================= النوافذ المنبثقة ================= -->
@@ -1127,7 +1127,7 @@ async function loadAll(){
  contracts=Object.entries(byEmp).map(([eid,rows])=>{rows.sort((a,b)=>a.version-b.version);const cur=rows[rows.length-1];
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,file:cur.pdf_url,history:rows}});
  contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
- leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,notes:r.notes}));
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,notes:r.notes}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
@@ -1612,8 +1612,8 @@ async function confirmCheckin(mid,mObj){
 }
 
 /* ================= الإجازات ================= */
-function balance(empName){
- const mine=leaves.filter(l=>l.emp===empName);
+function balance(empName,excludeId){
+ const mine=leaves.filter(l=>l.emp===empName&&l.id!==excludeId);
  const ok=mine.filter(l=>l.status==='تمت الموافقة');
  const pend=mine.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const annualUsed=ok.filter(l=>l.type==='سنوية').reduce((s,l)=>s+l.days,0);
@@ -1624,8 +1624,8 @@ function balance(empName){
   annualLeft:Math.max(0,21-annualUsed),sickLeft:Math.max(0,21-sickUsed),
   annualAvail:Math.max(0,21-annualUsed-annualPend),sickAvail:Math.max(0,21-sickUsed-sickPend)};
 }
-function checkLeaveBalance(empName,type,days){
- const b=balance(empName);
+function checkLeaveBalance(empName,type,days,excludeId){
+ const b=balance(empName,excludeId);
  if(type==='سنوية'&&days>b.annualAvail)return `الرصيد السنوي المتاح ${b.annualAvail} يوم فقط (مستخدم: ${b.annualUsed} + قيد الطلب: ${b.annualPend}) — لا يمكن طلب ${days} يوم`;
  if(type==='مرضية'&&days>b.sickAvail)return `الرصيد المرضي المتاح ${b.sickAvail} يوم فقط (مستخدم: ${b.sickUsed} + قيد الطلب: ${b.sickPend}) — لا يمكن طلب ${days} يوم`;
  return null;
@@ -2306,7 +2306,29 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات إجازة</td></tr>';
+}
+let editingLeaveId=null;
+function epNewLeave(){
+ editingLeaveId=null;
+ ['eplType','eplStart','eplEnd','eplDays','eplReason','eplNotes'].forEach(id=>$(id).value='');
+ $('eplCommit').checked=false;epLeaveTypeChanged('سنوية');
+ document.querySelector('#epLeaveModal .modal-head h3').textContent='طلب إجازة جديد';
+ document.querySelector('#epLeaveModal .btn-primary').textContent='إرسال الطلب';
+ openModal('epLeaveModal');
+}
+function epEditLeave(id){
+ const l=leaves.find(x=>x.id===id);if(!l)return;
+ editingLeaveId=id;
+ $('eplType').value=l.type;epLeaveTypeChanged(l.type);
+ $('eplStart').value=l.start;$('eplEnd').value=l.end;$('eplDays').value=l.days;
+ $('eplReason').value=l.reason||'';$('eplNotes').value=l.notes||'';
+ $('eplPhone').value=l.contact_phone||currentEmp.phone||'';
+ $('eplEmail').value=l.contact_email||currentEmp.email||'';
+ $('eplCommit').checked=!!l.commitAccepted;
+ document.querySelector('#epLeaveModal .modal-head h3').textContent='تعديل طلب إجازة';
+ document.querySelector('#epLeaveModal .btn-primary').textContent='حفظ التعديل';
+ openModal('epLeaveModal');
 }
 function epLeaveTypeChanged(v){
  $('eplSickWrap').style.display=v==='مرضية'?'block':'none';
@@ -2317,19 +2339,30 @@ async function epAddLeave(){
  if($('eplEnd').value<$('eplStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
  if(!(+$('eplDays').value>0)){toast('أدخل عدد الأيام');return}
  if(!$('eplReason').value.trim()){toast('سبب الإجازة إلزامي');return}
- if($('eplType').value==='مرضية'&&!staged['leaveEmpSick']){toast('إرفاق التقرير الطبي إلزامي للإجازة المرضية');return}
+ if($('eplType').value==='مرضية'&&!staged['leaveEmpSick']&&!(editingLeaveId&&(leaves.find(x=>x.id===editingLeaveId)||{}).type==='مرضية')){toast('إرفاق التقرير الطبي إلزامي للإجازة المرضية');return}
  if(!$('eplPhone').value.trim()){toast('رقم الجوال إلزامي للتواصل أثناء الإجازة');return}
  if(!$('eplEmail').value.trim()){toast('البريد الإلكتروني إلزامي للتواصل أثناء الإجازة');return}
  if(!$('eplCommit').checked){toast('لازم توافق على التعهد أولاً لإتمام الطلب');return}
- const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1);
+ const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1,editingLeaveId);
  if(balErr){toast(balErr);return}
  try{
   const fs2=takeStaged('leaveEmpSick','eplSickBox','📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)');
-  if(fs2){toast('جاري رفع التقرير الطبي...');const sp=await uploadToStorage(fs2,'employees/'+currentEmp.id+'/sick');
-   try{await sb.from('files_registry').insert({file_name:fs2.name,file_type:(fs2.name.split('.').pop()||'').toUpperCase(),file_size:(fs2.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',subcategory:'تقرير طبي',source:'إجازة مرضية: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:sp,employee_id:currentEmp.id})}catch(e){}}
-  const {error}=await sb.from('leaves').insert({employee_id:currentEmp.id,leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,contact_phone:$('eplPhone').value.trim(),contact_email:$('eplEmail').value.trim(),commitment_accepted:true,status:currentEmp.role==='manager'?LV_P2:LV_P1});
+  let sickPath=null;
+  if(fs2){toast('جاري رفع التقرير الطبي...');sickPath=await uploadToStorage(fs2,'employees/'+currentEmp.id+'/sick');
+   try{await sb.from('files_registry').insert({file_name:fs2.name,file_type:(fs2.name.split('.').pop()||'').toUpperCase(),file_size:(fs2.size/1024/1024).toFixed(2)+' MB',category:'طلبات الإجازة',subcategory:'تقرير طبي',source:'إجازة مرضية: '+currentEmp.name,uploaded_by:currentEmp.name,storage_path:sickPath,employee_id:currentEmp.id})}catch(e){}}
+  const payload={leave_type:$('eplType').value,start_date:$('eplStart').value,end_date:$('eplEnd').value,days:+$('eplDays').value||1,reason:$('eplReason').value,notes:$('eplNotes').value,contact_phone:$('eplPhone').value.trim(),contact_email:$('eplEmail').value.trim(),commitment_accepted:true};
+  let error;
+  if(editingLeaveId){
+   ({error}=await sb.from('leaves').update(payload).eq('id',editingLeaveId));
+  }else{
+   payload.employee_id=currentEmp.id;payload.status=currentEmp.role==='manager'?LV_P2:LV_P1;
+   ({error}=await sb.from('leaves').insert(payload));
+  }
   if(error)throw error;
-  closeModal('epLeaveModal');await refresh();toast('تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
+  const wasEdit=!!editingLeaveId;editingLeaveId=null;
+  document.querySelector('#epLeaveModal .modal-head h3').textContent='طلب إجازة جديد';
+  document.querySelector('#epLeaveModal .btn-primary').textContent='إرسال الطلب';
+  closeModal('epLeaveModal');await refresh();toast(wasEdit?'تم حفظ التعديل على طلبك':'تم إرسال طلب الإجازة — بانتظار موافقة الإدارة');
   ['eplStart','eplEnd','eplDays','eplNotes','eplReason','eplPhone','eplEmail'].forEach(id=>$(id).value='');
   $('eplCommit').checked=false;
  }catch(e){err(e)}
@@ -2342,14 +2375,40 @@ function epRenderAttendance(){
  $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${r.meet}</b></td><td>${r.title||'—'}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
 }
 function epRenderPermits(){
- const stTag=st=>st==='معتمد'?'ok':st==='مرفوض'?'danger':'sand';
  const rows=permits.filter(p=>p.employee_id===currentEmp.id);
- $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${stTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>';
+ $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات</td></tr>';
+}
+let editingPermitId=null;
+function epNewPermit(){
+ editingPermitId=null;
+ ['eppDate','eppTime','eppNotes'].forEach(id=>$(id).value='');$('eppType').value='اجتماع';
+ document.querySelector('#epPermitModal .modal-head h3').textContent='طلب استئذان جديد';
+ document.querySelector('#epPermitModal .btn-primary').textContent='إرسال الطلب';
+ openModal('epPermitModal');
+}
+function epEditPermit(id){
+ const p=permits.find(x=>x.id===id);if(!p)return;
+ editingPermitId=id;
+ $('eppDate').value=p.date;$('eppTime').value=p.time&&p.time!=='—'?p.time:'';$('eppType').value=p.type;$('eppNotes').value=p.notes||'';
+ document.querySelector('#epPermitModal .modal-head h3').textContent='تعديل طلب استئذان';
+ document.querySelector('#epPermitModal .btn-primary').textContent='حفظ التعديل';
+ openModal('epPermitModal');
 }
 async function epAddPermit(){
- const {error}=await sb.from('permits').insert({employee_id:currentEmp.id,permit_date:$('eppDate').value||D(0),permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value,status:currentEmp.role==='manager'?LV_P2:LV_P1});
+ if(!$('eppDate').value){toast('حدد تاريخ الاستئذان');return}
+ const payload={permit_date:$('eppDate').value,permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value};
+ let error;
+ if(editingPermitId){
+  ({error}=await sb.from('permits').update(payload).eq('id',editingPermitId));
+ }else{
+  payload.employee_id=currentEmp.id;payload.status=currentEmp.role==='manager'?LV_P2:LV_P1;
+  ({error}=await sb.from('permits').insert(payload));
+ }
  if(error){err(error);return}
- closeModal('epPermitModal');await refresh();toast('تم إرسال طلب الاستئذان — سيمر على رئيس القسم ثم الاعتماد النهائي');
+ const wasEdit=!!editingPermitId;editingPermitId=null;
+ document.querySelector('#epPermitModal .modal-head h3').textContent='طلب استئذان جديد';
+ document.querySelector('#epPermitModal .btn-primary').textContent='إرسال الطلب';
+ closeModal('epPermitModal');await refresh();toast(wasEdit?'تم حفظ التعديل على طلبك':'تم إرسال طلب الاستئذان — سيمر على رئيس القسم ثم الاعتماد النهائي');
 }
 function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';openModal('selfEditModal')}
 async function saveSelfEdit(){
