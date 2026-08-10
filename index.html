@@ -753,6 +753,12 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>المسمى الوظيفي</th><th>نوع التوظيف</th><th>الحالة</th><th>الجوال</th><th>البريد</th></tr></thead>
     <tbody id="mgrTeamTbody"></tbody></table></div></div>
+  <div class="card"><h3>📋 طلبات إجازات واستئذانات القسم (كل الحالات)</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>النوع</th><th>التفاصيل</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
+    <tbody id="mgrTeamRequestsTbody"></tbody></table></div></div>
+  <div class="card"><h3>🚫 سجل غياب القسم</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>التاريخ</th><th>سبب الغياب</th></tr></thead>
+    <tbody id="mgrTeamAbsenceTbody"></tbody></table></div></div>
 </section>
 
 <section class="page" id="ep-approvals">
@@ -2931,6 +2937,17 @@ function mgrRenderApprovals(){
  $('mgrTeamNavBtn').style.display='flex';
  const team=employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
  $('mgrTeamTbody').innerHTML=team.length?team.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td><td dir="ltr" style="text-align:right">${e.phone||'—'}</td><td dir="ltr" style="text-align:right">${e.email||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا يوجد موظفون في قسمك بعد</td></tr>';
+
+ // كل طلبات القسم (إجازات + استئذانات) بكل حالاتها — مو بس المعلّق
+ const deptLeaves=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).map(l=>({emp:l.emp,type:'إجازة '+l.type,details:fmt(l.start)+' → '+fmt(l.end)+' ('+l.days+' يوم)',date:l.req||l.start,status:l.status}));
+ const deptPermits=permits.filter(p=>p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id).map(p=>({emp:p.emp,type:'استئذان '+p.type,details:fmt(p.date)+' — '+(p.time||''),date:p.date,status:p.status}));
+ const allReqs=[...deptLeaves,...deptPermits].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ $('mgrTeamRequestsTbody').innerHTML=allReqs.length?allReqs.map(r=>`<tr><td><b>${r.emp}</b></td><td>${r.type}</td><td>${r.details}</td><td>${fmt(r.date)}</td><td><span class="tag ${lvTag(r.status)}">${r.status}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات من موظفي قسمك بعد</td></tr>';
+
+ // سجل غياب القسم
+ const deptAbs=siteAbs.filter(a=>a.dept===currentEmp.dept&&a.employee_id!==currentEmp.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ $('mgrTeamAbsenceTbody').innerHTML=deptAbs.length?deptAbs.map(a=>`<tr><td><b>${a.emp}</b></td><td>${fmt(a.date)}</td><td>${a.reason||'—'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">لا توجد غيابات مسجّلة لقسمك 🎉</td></tr>';
+
  const pendingPay=paymentRequests.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
  $('mgrPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td>
