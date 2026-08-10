@@ -613,6 +613,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="forms"><span class="ic">📄</span> النماذج</button>
     <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
     <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
+    <button class="nav-item" data-ep="myTeam" id="mgrTeamNavBtn" style="display:none"><span class="ic">👥</span> موظفي قسمي</button>
     <button class="nav-item" data-ep="approvals" id="mgrNavBtn" style="display:none"><span class="ic">✅</span> اعتمادات القسم <span class="nav-badge" id="mgrBadge">0</span></button>
     <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
@@ -722,6 +723,13 @@ tbody tr:hover{background:#FAFCFB}
 <section class="page" id="ep-forms">
   <div class="page-head"><div><h1>النماذج</h1><p>النماذج الرسمية المرفوعة من الإدارة — اعرضها أو نزّلها</p></div></div>
   <div class="card" id="epFormsList"></div>
+</section>
+
+<section class="page" id="ep-myTeam">
+  <div class="page-head"><div><h1>موظفي قسمي</h1><p>الفريق التابع لك كرئيس قسم — بيانات للاطلاع فقط</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>المسمى الوظيفي</th><th>نوع التوظيف</th><th>الحالة</th><th>الجوال</th><th>البريد</th></tr></thead>
+    <tbody id="mgrTeamTbody"></tbody></table></div></div>
 </section>
 
 <section class="page" id="ep-approvals">
@@ -2001,14 +2009,22 @@ function renderReports(){
   {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.map(r=>[r.emp,r.dept,r.date,r.reason])})},
   {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
   {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
- ].map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
- $('reportCards').innerHTML=reps.map((r,i)=>`<div class="card" style="margin:0">
+ ];
+ if(hasPerm('payroll','view'))reps.push({t:'تقرير الرواتب',ic:'📑',data:()=>({headers:['الموظف','الشهر','السنة','الأساسي','الإضافات','الخصومات','الصافي'],
+  rows:payrollItems.map(it=>{const run=payrollRuns.find(r=>r.id===it.runId)||{};const e=empById[it.employee_id]||{};
+   return [e.name||'—',MONTH_NAMES[(run.month||1)-1],run.year||'—',it.base,it.additions,it.deductions,it.net]})})});
+ if(hasPerm('paymentsAdmin','view'))reps.push({t:'تقرير طلبات وأوامر الصرف',ic:'💵',data:()=>({headers:['الموظف','القسم','المبلغ','الفئة','السبب','الحالة','مرجع الصرف','تاريخ الصرف'],
+  rows:paymentRequests.map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',p.status,p.paymentRef||'—',p.paidAt?fmt(p.paidAt):'—'])})});
+ if(hasPerm('custody','view'))reps.push({t:'تقرير العهد',ic:'📦',data:()=>({headers:['الموظف','النوع','الوصف','المبلغ/القيمة','تاريخ التسليم','تاريخ الاسترجاع','الحالة'],
+  rows:custodyRecords.map(c=>[c.emp,c.type,c.desc,c.amount||'—',fmt(c.dateGiven),c.dateReturned?fmt(c.dateReturned):'—',c.status])})});
+ const repsFinal=reps.map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
+ $('reportCards').innerHTML=repsFinal.map((r,i)=>`<div class="card" style="margin:0">
   <h3>${r.ic} ${r.t}</h3>
   <div style="display:flex;gap:8px">
    <button class="btn btn-primary btn-sm" onclick="REPORTS[${i}].fn()">⬇ Excel</button>
    <button class="btn btn-ghost btn-sm" onclick="printReport(${i})">🖨 PDF</button>
   </div></div>`).join('');
- window.REPORTS=reps;
+ window.REPORTS=repsFinal;
 }
 
 /* ================= النماذج ================= */
@@ -2416,7 +2432,7 @@ async function viewFileInline(path,title){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف'};
+const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
@@ -2760,6 +2776,9 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
 }
 function mgrRenderApprovals(){
  $('mgrNavBtn').style.display='flex';
+ $('mgrTeamNavBtn').style.display='flex';
+ const team=employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
+ $('mgrTeamTbody').innerHTML=team.length?team.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td><td dir="ltr" style="text-align:right">${e.phone||'—'}</td><td dir="ltr" style="text-align:right">${e.email||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا يوجد موظفون في قسمك بعد</td></tr>';
  const pendingPay=paymentRequests.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
  $('mgrPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td>
