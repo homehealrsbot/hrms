@@ -244,18 +244,18 @@ tbody tr:hover{background:#FAFCFB}
     <div class="nav-label">القوائم الرئيسية</div>
     <button class="nav-item" data-page="alerts"><span class="ic">🔔</span> التنبيهات / الإشعارات <span class="nav-badge" id="alertCount">0</span></button>
     <button class="nav-item" data-page="approvals"><span class="ic">✅</span> الاعتمادات <span class="nav-badge" id="approvalsCount">0</span></button>
-    <button class="nav-item" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
-    <button class="nav-item" data-page="employees"><span class="ic">👥</span> الموظفين</button>
-    <button class="nav-item" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
-    <button class="nav-item" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
-    <button class="nav-item" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
-    <button class="nav-item" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-    <button class="nav-item" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
-    <button class="nav-item" data-page="reports"><span class="ic">📊</span> التقارير</button>
-    <button class="nav-item" data-page="forms"><span class="ic">📄</span> النماذج</button>
-    <button class="nav-item" id="navPayroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
-    <button class="nav-item" id="navCustody" data-page="custody"><span class="ic">📦</span> العهد</button>
-    <button class="nav-item" id="navPayments" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
+    <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+    <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
+    <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
+    <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
+    <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
+    <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
+    <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
+    <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
+    <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
+    <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
+    <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
+    <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
     <button class="nav-item" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
@@ -582,11 +582,12 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 
 <section class="page" id="page-permissions">
-  <div class="page-head"><div><h1>الصلاحيات</h1><p>التحكم بمنح أو سحب الوصول للنظام المالي عن أي أدمن — بمعزل عن صلاحيات الموارد البشرية</p></div></div>
+  <div class="page-head"><div><h1>الصلاحيات</h1><p>تحكّم دقيق بوصول كل موظف لكل قسم من أقسام النظام — مستقل تماماً عن دوره الأساسي</p></div></div>
   <div class="card">
-    <div class="section-note">دور «محاسب» يملك الوصول المالي دائماً. أما دور «أدمن»، فهذا هو المكان الوحيد للتحكم إذا كان يملك الوصول للرواتب والعهد وطلبات الصرف أو لا — منحها لا يعطيه أي صلاحية إضافية خارج النظام المالي.</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>الدور</th><th>الوصول للنظام المالي</th></tr></thead>
+    <div class="section-note">لكل موظف، حدد مستوى وصوله لكل قسم: <b>بدون وصول</b> (لا يظهر له إطلاقاً)، <b>عرض فقط</b> (يشوف البيانات بدون تعديل)، أو <b>تحكم كامل</b> (يشوف ويضيف ويعدّل). يمكنك منح أي موظف عادي صلاحية عرض على أي قسم دون تغيير دوره الأساسي.</div>
+    <div class="field" style="max-width:320px"><label>بحث باسم الموظف</label><input id="permSearchName" oninput="renderPermissionsPage()" placeholder="اكتب اسماً للتصفية..."></div>
+    <div class="tbl-wrap" style="overflow-x:auto"><table id="permMatrixTable">
+      <thead id="permMatrixHead"></thead>
       <tbody id="permissionsTbody"></tbody></table></div>
   </div>
 </section>
@@ -1251,7 +1252,8 @@ sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp(
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
 function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
-function hasFinance(){return me&&(me.role==='accountant'||(me.role==='admin'&&me.financeAccess))}
+/* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
+function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
 const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
@@ -1298,6 +1300,13 @@ async function loadAll(){
  custodyRecords=(CU.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),type:r.custody_type,desc:r.description,amount:r.amount,dateGiven:r.date_given,dateReturned:r.date_returned,status:r.status,notes:r.notes}));
  payrollRuns=(PRUN.data||[]).map(r=>({id:r.id,month:r.month,year:r.year,status:r.status}));
  payrollItems=(PIT.data||[]).map(r=>({id:r.id,runId:r.run_id,employee_id:r.employee_id,base:+r.base_salary||0,additions:+r.additions||0,addNote:r.additions_note,deductions:+r.deductions||0,dedNote:r.deductions_note,net:+r.net_pay||0}));
+ const PERM=await sb.from('permissions').select('*');
+ permsMap={};
+ (PERM.data||[]).forEach(r=>{
+  permsMap[r.employee_id]=permsMap[r.employee_id]||{};
+  permsMap[r.employee_id][r.module]=r.level;
+  permsMap[r.employee_id][r.module+'_id']=r.id;
+ });
 }
 async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
@@ -2197,8 +2206,8 @@ function renderApprovalsPage(){
  const payBtn=p=>p.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
- if(!hasFinance()){
-  $('apvPaymentsTbody').innerHTML='<tr><td colspan="5" class="empty">تحتاج وصولاً مالياً لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
+ if(!hasPerm('paymentsAdmin','view')){
+  $('apvPaymentsTbody').innerHTML='<tr><td colspan="5" class="empty">تحتاج صلاحية على قسم «طلبات الصرف» لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
  }else{
  $('apvPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td>
@@ -2207,15 +2216,15 @@ function renderApprovalsPage(){
  }
 }
 function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts();renderApprovalsPage();
- // النظام المالي مقصور على من يملك الوصول المالي فقط (محاسب دائماً، أدمن بمنح صريح من صفحة الصلاحيات)
- const fin=hasFinance();
- ['navPayroll','navCustody','navPayments'].forEach(id=>{if($(id))$(id).style.display=fin?'flex':'none'});
- if(fin){
-  fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderCustodyInto('custodyTbodyAdmin','custEmp');renderPaymentsAdmin();
- }else{
-  const activeId=(document.querySelector('#app .page.on')||{}).id||'';
-  if(['page-payroll','page-custody','page-paymentsAdmin'].includes(activeId))go('dashboard');
- }
+ // تطبيق الصلاحيات على كل قسم إداري — الوصول الافتراضي للأدمن كامل إلا بسحب صريح،
+ // وبدون وصول لغيره إلا بمنح صريح من صفحة الصلاحيات
+ MODULES.forEach(m=>{const el=$('nav_'+m.key);if(el)el.style.display=hasPerm(m.key,'view')?'flex':'none'});
+ if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true)}
+ if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
+ if(hasPerm('paymentsAdmin','view'))renderPaymentsAdmin();
+ const activeId=(document.querySelector('#app .page.on')||{}).id||'';
+ const activeModule=activeId.replace('page-','');
+ if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
  renderPermissionsPage();
 }
 function renderPaymentsAdmin(){
@@ -2227,25 +2236,69 @@ function renderPaymentsAdmin(){
   return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${btn}</td></tr>`;
  }).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات صرف بعد</td></tr>';
 }
-function renderPermissionsPage(){
- if(!$('permissionsTbody'))return;
- if(!hasFinance()){
-  $('permissionsTbody').innerHTML='<tr><td colspan="4" class="empty">هذه الصفحة تحتاج وصولاً مالياً حالياً لعرضها أو التحكم بها</td></tr>';
-  return;
- }
- const admins=employees.filter(e=>e.role==='admin'||e.role==='accountant');
- $('permissionsTbody').innerHTML=admins.length?admins.map(e=>`<tr>
-  <td><b>${e.name}</b></td><td>${e.num}</td><td><span class="tag info">${e.role==='admin'?'أدمن':'محاسب'}</span></td>
-  <td>${e.role==='accountant'?'<span class="tag ok">مالكها دائماً (محاسب)</span>':
-    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-      <input type="checkbox" ${e.financeAccess?'checked':''} onchange="toggleFinanceAccess('${e.id}',this.checked)" style="width:18px;height:18px">
-      <span>${e.financeAccess?'ممنوحة ✅':'غير ممنوحة'}</span>
-     </label>`}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد أدمن أو محاسب بعد</td></tr>';
+/* ================= نظام الصلاحيات الشامل ================= */
+const MODULES=[
+ {key:'policies',label:'السياسات'},
+ {key:'employees',label:'الموظفين'},
+ {key:'contracts',label:'العقود'},
+ {key:'attendance',label:'الحضور'},
+ {key:'leaves',label:'الإجازات'},
+ {key:'permits',label:'الاستئذانات'},
+ {key:'files',label:'الملفات'},
+ {key:'reports',label:'التقارير'},
+ {key:'forms',label:'النماذج'},
+ {key:'payroll',label:'الرواتب'},
+ {key:'custody',label:'العهد'},
+ {key:'paymentsAdmin',label:'طلبات الصرف'},
+];
+let permsMap={}; // {employeeId: {moduleKey: 'view'|'full'}} — غياب المفتاح = بدون صلاحية صريحة
+function permLevel(empId,module){
+ const explicit=permsMap[empId]&&permsMap[empId][module];
+ if(explicit)return explicit; // صلاحية محفوظة صراحة (منح أو سحب) تطغى دائماً على الافتراضي
+ const emp=empById[empId];
+ if(!emp)return 'none';
+ if(emp.role==='admin')return 'full'; // الافتراضي للأدمن: كامل، إلا إذا سُحبت صراحة
+ if(emp.role==='accountant'&&['payroll','custody','paymentsAdmin'].includes(module))return 'full';
+ return 'none'; // الموظف/رئيس القسم: بدون وصول افتراضياً، إلا بمنح صريح
 }
-async function toggleFinanceAccess(empId,grant){
- const {error}=await sb.from('employees').update({finance_access:grant}).eq('id',empId);
- if(error){err(error);return}
- await refresh();toast(grant?'تم منح الوصول المالي':'تم سحب الوصول المالي');
+function hasPerm(module,minLevel){
+ if(!me)return false;
+ const lvl=permLevel(me.id,module);
+ if(minLevel==='full')return lvl==='full';
+ return lvl==='view'||lvl==='full';
+}
+async function savePermission(empId,module,level){
+ const existing=permsMap[empId]&&permsMap[empId][module+'_id'];
+ try{
+  if(level==='__default__'){
+   if(existing){const {error}=await sb.from('permissions').delete().eq('id',existing);if(error)throw error}
+  }else if(existing){
+   const {error}=await sb.from('permissions').update({level}).eq('id',existing);if(error)throw error
+  }else{
+   const {error}=await sb.from('permissions').insert({employee_id:empId,module,level});if(error)throw error
+  }
+  await refresh();toast('تم تحديث الصلاحية');
+ }catch(e){err(e)}
+}
+function renderPermissionsPage(){
+ if(!$('permMatrixHead'))return;
+ $('permMatrixHead').innerHTML='<tr><th>الموظف</th><th>الدور</th>'+MODULES.map(m=>`<th>${m.label}</th>`).join('')+'</tr>';
+ const q=($('permSearchName')?$('permSearchName').value:'').trim();
+ const rows=employees.filter(e=>e.role!=='admin'||true).filter(e=>!q||e.name.includes(q));
+ const roleLabel=r=>r==='admin'?'أدمن':r==='manager'?'رئيس قسم':r==='accountant'?'محاسب':'موظف';
+ $('permissionsTbody').innerHTML=rows.length?rows.map(e=>{
+  const cells=MODULES.map(m=>{
+   const lvl=permLevel(e.id,m.key);
+   const explicit=permsMap[e.id]&&permsMap[e.id][m.key];
+   return `<td><select onchange="savePermission('${e.id}','${m.key}',this.value)" style="min-width:110px;font-size:12px">
+    <option value="__default__" ${!explicit?'selected':''}>افتراضي (${lvl==='full'?'كامل':lvl==='view'?'عرض':'بدون'})</option>
+    <option value="none" ${explicit==='none'?'selected':''}>بدون وصول</option>
+    <option value="view" ${explicit==='view'?'selected':''}>عرض فقط</option>
+    <option value="full" ${explicit==='full'?'selected':''}>تحكم كامل</option>
+   </select></td>`;
+  }).join('');
+  return `<tr><td><b>${e.name}</b><br><small style="color:var(--muted)">${e.num}</small></td><td><span class="tag info">${roleLabel(e.role)}</span></td>${cells}</tr>`;
+ }).join(''):'<tr><td colspan="14" class="empty">لا يوجد موظفون</td></tr>';
 }
 function initAll(){fillDeptFilter();renderAll()}
 
