@@ -591,8 +591,8 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
     <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
     <button class="nav-item" data-ep="forms"><span class="ic">📄</span> النماذج</button>
-    <button class="nav-item" data-ep="payments"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
-    <button class="nav-item" data-ep="mysalary"><span class="ic">🧾</span> راتبي</button>
+    <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
     <button class="nav-item" data-ep="approvals" id="mgrNavBtn" style="display:none"><span class="ic">✅</span> اعتمادات القسم <span class="nav-badge" id="mgrBadge">0</span></button>
     <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
@@ -1094,6 +1094,14 @@ const today = new Date();
 const D = o=>{const d=new Date(today);d.setDate(d.getDate()+o);return d.toISOString().slice(0,10)};
 const DEPTS = ['التقنية', 'التسويق', 'المالية', 'العمليات', 'الطبي', 'خدمة العملاء', 'الإداري', 'الموارد البشرية', 'B2B'];
 const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظار الاعتماد النهائي';
+/* ============================================================
+   🔧 مفتاح تشغيل النظام المالي للموظف العادي
+   حالياً: false = مخفي عن الموظف العادي (تجربة داخلية بس لك
+   وللمحاسب ورئيس القسم). لما تخلص التجربة وتبي تفعّله لكل
+   الموظفين، غيّر القيمة تحت لـ true فقط — بدون أي تعديل ثاني.
+   ============================================================ */
+const FINANCE_ENABLED_FOR_EMPLOYEES = false;
+
 let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[];
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[];
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -2537,6 +2545,14 @@ function epRenderMySalary(){
 }
 
 function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();epRenderPayments();epRenderMySalary();
+ // إخفاء النظام المالي عن الموظف العادي أثناء التجربة الداخلية (راجع المفتاح أعلى الملف)
+ const financeVisible=FINANCE_ENABLED_FOR_EMPLOYEES||currentEmp.role!=='employee';
+ if($('empPaymentsNavBtn'))$('empPaymentsNavBtn').style.display=financeVisible?'flex':'none';
+ if($('empSalaryNavBtn'))$('empSalaryNavBtn').style.display=financeVisible?'flex':'none';
+ if(!financeVisible){
+  const activeId=(document.querySelector('#empApp .page.on')||{}).id||'';
+  if(activeId==='ep-payments'||activeId==='ep-mysalary')epGo('dashboard');
+ }
  if(currentEmp.role==='manager')mgrRenderApprovals();
  if(currentEmp.role==='accountant'){
   $('acctPayrollNavBtn').style.display='flex';$('acctCustodyNavBtn').style.display='flex';$('acctPayApprovalsNavBtn').style.display='flex';
