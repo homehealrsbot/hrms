@@ -253,8 +253,10 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
     <button class="nav-item" data-page="reports"><span class="ic">📊</span> التقارير</button>
     <button class="nav-item" data-page="forms"><span class="ic">📄</span> النماذج</button>
-    <button class="nav-item" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
-    <button class="nav-item" data-page="custody"><span class="ic">📦</span> العهد</button>
+    <button class="nav-item" id="navPayroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
+    <button class="nav-item" id="navCustody" data-page="custody"><span class="ic">📦</span> العهد</button>
+    <button class="nav-item" id="navPayments" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
+    <button class="nav-item" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -570,6 +572,23 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النوع</th><th>الوصف</th><th>المبلغ/القيمة</th><th>تاريخ التسليم</th><th>الحالة</th><th>إجراء</th></tr></thead>
     <tbody id="custodyTbodyAdmin"></tbody></table></div></div>
+</section>
+
+<section class="page" id="page-paymentsAdmin">
+  <div class="page-head"><div><h1>طلبات الصرف</h1><p>كل طلبات الصرف بمختلف حالاتها — اعتماد، رفض، وطباعة أوامر الصرف</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>الحالة</th><th>المرجع</th><th>إجراء</th></tr></thead>
+    <tbody id="paymentsAdminTbody"></tbody></table></div></div>
+</section>
+
+<section class="page" id="page-permissions">
+  <div class="page-head"><div><h1>الصلاحيات</h1><p>التحكم بمنح أو سحب الوصول للنظام المالي عن أي أدمن — بمعزل عن صلاحيات الموارد البشرية</p></div></div>
+  <div class="card">
+    <div class="section-note">دور «محاسب» يملك الوصول المالي دائماً. أما دور «أدمن»، فهذا هو المكان الوحيد للتحكم إذا كان يملك الوصول للرواتب والعهد وطلبات الصرف أو لا — منحها لا يعطيه أي صلاحية إضافية خارج النظام المالي.</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>الدور</th><th>الوصول للنظام المالي</th></tr></thead>
+      <tbody id="permissionsTbody"></tbody></table></div>
+  </div>
 </section>
 </main>
 </div>
@@ -1230,7 +1249,9 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access}}
+/* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
+function hasFinance(){return me&&(me.role==='accountant'||(me.role==='admin'&&me.financeAccess))}
 const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
@@ -1332,7 +1353,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -2176,13 +2197,55 @@ function renderApprovalsPage(){
  const payBtn=p=>p.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
+ if(!hasFinance()){
+  $('apvPaymentsTbody').innerHTML='<tr><td colspan="5" class="empty">تحتاج وصولاً مالياً لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
+ }else{
  $('apvPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td>
   <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
   <td style="white-space:nowrap">${payBtn(p)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات صرف بانتظار اعتماد 🎉</td></tr>';
+ }
 }
 function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts();renderApprovalsPage();
- fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderCustodyInto('custodyTbodyAdmin','custEmp');
+ // النظام المالي مقصور على من يملك الوصول المالي فقط (محاسب دائماً، أدمن بمنح صريح من صفحة الصلاحيات)
+ const fin=hasFinance();
+ ['navPayroll','navCustody','navPayments'].forEach(id=>{if($(id))$(id).style.display=fin?'flex':'none'});
+ if(fin){
+  fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderCustodyInto('custodyTbodyAdmin','custEmp');renderPaymentsAdmin();
+ }else{
+  const activeId=(document.querySelector('#app .page.on')||{}).id||'';
+  if(['page-payroll','page-custody','page-paymentsAdmin'].includes(activeId))go('dashboard');
+ }
+ renderPermissionsPage();
+}
+function renderPaymentsAdmin(){
+ if(!$('paymentsAdminTbody'))return;
+ $('paymentsAdminTbody').innerHTML=paymentRequests.length?paymentRequests.map(p=>{
+  const btn=p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
+   :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
+   :p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:'—';
+  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${btn}</td></tr>`;
+ }).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات صرف بعد</td></tr>';
+}
+function renderPermissionsPage(){
+ if(!$('permissionsTbody'))return;
+ if(!hasFinance()){
+  $('permissionsTbody').innerHTML='<tr><td colspan="4" class="empty">هذه الصفحة تحتاج وصولاً مالياً حالياً لعرضها أو التحكم بها</td></tr>';
+  return;
+ }
+ const admins=employees.filter(e=>e.role==='admin'||e.role==='accountant');
+ $('permissionsTbody').innerHTML=admins.length?admins.map(e=>`<tr>
+  <td><b>${e.name}</b></td><td>${e.num}</td><td><span class="tag info">${e.role==='admin'?'أدمن':'محاسب'}</span></td>
+  <td>${e.role==='accountant'?'<span class="tag ok">مالكها دائماً (محاسب)</span>':
+    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" ${e.financeAccess?'checked':''} onchange="toggleFinanceAccess('${e.id}',this.checked)" style="width:18px;height:18px">
+      <span>${e.financeAccess?'ممنوحة ✅':'غير ممنوحة'}</span>
+     </label>`}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد أدمن أو محاسب بعد</td></tr>';
+}
+async function toggleFinanceAccess(empId,grant){
+ const {error}=await sb.from('employees').update({finance_access:grant}).eq('id',empId);
+ if(error){err(error);return}
+ await refresh();toast(grant?'تم منح الوصول المالي':'تم سحب الوصول المالي');
 }
 function initAll(){fillDeptFilter();renderAll()}
 
