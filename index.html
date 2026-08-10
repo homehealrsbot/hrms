@@ -750,15 +750,26 @@ tbody tr:hover{background:#FAFCFB}
 
 <section class="page" id="ep-myTeam">
   <div class="page-head"><div><h1>موظفي قسمي</h1><p>الفريق التابع لك كرئيس قسم — بيانات للاطلاع فقط</p></div></div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>المسمى الوظيفي</th><th>نوع التوظيف</th><th>الحالة</th><th>الجوال</th><th>البريد</th></tr></thead>
-    <tbody id="mgrTeamTbody"></tbody></table></div></div>
-  <div class="card"><h3>📋 طلبات إجازات واستئذانات القسم (كل الحالات)</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>النوع</th><th>التفاصيل</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
-    <tbody id="mgrTeamRequestsTbody"></tbody></table></div></div>
-  <div class="card"><h3>🚫 سجل غياب القسم</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>التاريخ</th><th>سبب الغياب</th></tr></thead>
-    <tbody id="mgrTeamAbsenceTbody"></tbody></table></div></div>
+  <div class="tabs">
+    <button class="active" onclick="mgrTeamTab('roster',this)">الفريق</button>
+    <button onclick="mgrTeamTab('requests',this)">الطلبات</button>
+    <button onclick="mgrTeamTab('absence',this)">الغياب</button>
+  </div>
+  <div id="mgrTeam-roster">
+    <div class="card"><div class="tbl-wrap"><table>
+      <thead><tr><th>الاسم</th><th>الرقم الوظيفي</th><th>المسمى الوظيفي</th><th>نوع التوظيف</th><th>الحالة</th><th>الجوال</th><th>البريد</th></tr></thead>
+      <tbody id="mgrTeamTbody"></tbody></table></div></div>
+  </div>
+  <div id="mgrTeam-requests" style="display:none">
+    <div class="card"><div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>النوع</th><th>التفاصيل</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
+      <tbody id="mgrTeamRequestsTbody"></tbody></table></div></div>
+  </div>
+  <div id="mgrTeam-absence" style="display:none">
+    <div class="card"><div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>التاريخ</th><th>سبب الغياب</th></tr></thead>
+      <tbody id="mgrTeamAbsenceTbody"></tbody></table></div></div>
+  </div>
 </section>
 
 <section class="page" id="ep-approvals">
@@ -2598,6 +2609,8 @@ function epGo(p){
 }
 function epAttTab(t,btn){document.querySelectorAll('#ep-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  $('epAtt-site').style.display=t==='site'?'block':'none';$('epAtt-meet').style.display=t==='meet'?'block':'none'}
+function mgrTeamTab(t,btn){document.querySelectorAll('#ep-myTeam .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+ ['roster','requests','absence'].forEach(k=>$('mgrTeam-'+k).style.display=k===t?'block':'none')}
 
 function initEmpPortal(){
  const e=currentEmp;
