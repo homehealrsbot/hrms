@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --pine:#143087; --pine-deep:#0B1F5C; --pine-soft:#E7ECFB;
@@ -97,6 +98,9 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 /* ---------- البطاقات ---------- */
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px;margin-bottom:26px}
 .stat{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-inline-start:4px solid var(--pine);display:flex;flex-direction:column;gap:2px}
+.dash-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-box{position:relative;height:260px;margin-top:6px}
+@media (max-width:1024px){.dash-charts-grid{grid-template-columns:1fr}}
 .stat{cursor:pointer;transition:transform .12s, box-shadow .12s}
 .stat:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(20,37,31,.12)}
 .alert-item[data-nav]{cursor:pointer;transition:background .12s}
@@ -277,9 +281,15 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- ===== لوحة التحكم ===== -->
 <section class="page on" id="page-dashboard">
-  <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة عامة على مؤشرات الموارد البشرية</p></div>
+  <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة تنفيذية على مؤشرات الشركة</p></div>
    <div class="tag info" id="todayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div class="stats" id="dashStats"></div>
+  <div class="dash-charts-grid">
+    <div class="card"><h3>👥 توزيع الموظفين حسب القسم</h3><div class="chart-box"><canvas id="chartDept"></canvas></div></div>
+    <div class="card"><h3>📋 الطلبات المعلّقة حسب النوع</h3><div class="chart-box"><canvas id="chartPending"></canvas></div></div>
+    <div class="card"><h3>🌴 استخدام الإجازات هذا العام</h3><div class="chart-box"><canvas id="chartLeaves"></canvas></div></div>
+    <div class="card"><h3>📈 اتجاه طلبات الإجازة — آخر 6 أشهر</h3><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
+  </div>
   <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
   <div style="display:none"><table><tbody id="dashContracts"></tbody></table></div>
 </section>
@@ -1455,6 +1465,12 @@ function renderAlerts(){
 }
 
 /* ================= لوحة التحكم ================= */
+let DASH_CHARTS={};
+function drawChart(canvasId,config){
+ const el=$(canvasId);if(!el||typeof Chart==='undefined')return;
+ if(DASH_CHARTS[canvasId])DASH_CHARTS[canvasId].destroy();
+ DASH_CHARTS[canvasId]=new Chart(el.getContext('2d'),config);
+}
 function renderDashboard(){
  if($('todayDateBadge'))$('todayDateBadge').textContent=todayFullStr();
  const onLeave=leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0).map(l=>l.emp);
@@ -1472,6 +1488,42 @@ function renderDashboard(){
   {n:permits.filter(p=>p.status===LV_P1||p.status===LV_P2).length,l:'طلبات استئذان معلّقة',k:'sand'},
   {n:siteAbs.filter(a=>String(a.date).startsWith(mNow)).length,l:'غيابات هذا الشهر',k:'danger'},
  ];
+ // ألوان الهوية البصرية الفعلية للموقع (متوافقة مع متغيرات CSS الجذرية)
+ const CH={pine:'#143087',sand:'#62A0F6',ok:'#2E8B62',danger:'#C34A3C',info:'#3A6EA5',gray:'#93A69D'};
+ const PALETTE=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
+
+ // === شارت 1: توزيع الموظفين حسب القسم ===
+ const deptCounts={};
+ employees.forEach(e=>{const d=e.dept||'غير محدد';deptCounts[d]=(deptCounts[d]||0)+1});
+ const deptLabels=Object.keys(deptCounts);
+ drawChart('chartDept',{type:'doughnut',data:{labels:deptLabels,datasets:[{data:deptLabels.map(d=>deptCounts[d]),backgroundColor:PALETTE,borderWidth:2,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Tajawal'},padding:12}}}}});
+
+ // === شارت 2: الطلبات المعلّقة حسب النوع ===
+ const pendCats=[
+  {l:'إجازات',v:leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).length},
+  {l:'استئذانات',v:permits.filter(p=>p.status===LV_P1||p.status===LV_P2).length},
+  {l:'نماذج',v:formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2).length},
+ ];
+ if(hasPerm('paymentsAdmin','view'))pendCats.push({l:'طلبات صرف',v:paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2).length});
+ drawChart('chartPending',{type:'bar',data:{labels:pendCats.map(c=>c.l),datasets:[{data:pendCats.map(c=>c.v),backgroundColor:CH.sand,borderRadius:8,maxBarThickness:52}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
+
+ // === شارت 3: استخدام الإجازات هذا العام (سنوية/مرضية) ===
+ const yearNow=new Date().getFullYear();
+ const approvedThisYear=leaves.filter(l=>l.status==='تمت الموافقة'&&String(l.start||'').startsWith(String(yearNow)));
+ const annualUsed=approvedThisYear.filter(l=>l.type==='سنوية').reduce((s,l)=>s+(+l.days||0),0);
+ const sickUsed=approvedThisYear.filter(l=>l.type==='مرضية').reduce((s,l)=>s+(+l.days||0),0);
+ drawChart('chartLeaves',{type:'bar',data:{labels:['سنوية مستخدمة','مرضية مستخدمة'],datasets:[{data:[annualUsed,sickUsed],backgroundColor:[CH.pine,CH.info],borderRadius:8,maxBarThickness:70}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},y:{ticks:{font:{family:'Tajawal'}}}}}});
+
+ // === شارت 4: اتجاه طلبات الإجازة آخر 6 أشهر ===
+ const months=[];
+ for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}
+ const trendData=months.map(m=>leaves.filter(l=>String(l.req||l.start||'').startsWith(m.key)).length);
+ drawChart('chartTrend',{type:'line',data:{labels:months.map(m=>m.label),datasets:[{data:trendData,borderColor:CH.pine,backgroundColor:'rgba(20,48,135,.1)',fill:true,tension:.35,pointBackgroundColor:CH.pine,pointRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
+
  $('dashStats').innerHTML=S.map((s,i)=>`<div class="stat ${s.k}" onclick="dashNav(${i})" title="اضغط للانتقال والفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
  $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${c.emp}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد عقود قريبة الانتهاء</td></tr>';
 }
