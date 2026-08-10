@@ -775,6 +775,9 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>رئيس القسم</th><th>إجراء</th></tr></thead>
     <tbody id="acctPayApprovalsTbody"></tbody></table></div></div>
+  <div class="card"><h3>🖨 سجل أوامر الصرف المُصدرة</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>المبلغ</th><th>الفئة</th><th>تاريخ الصرف</th><th>المرجع</th><th>إجراء</th></tr></thead>
+    <tbody id="acctPayHistoryTbody"></tbody></table></div></div>
 </section>
 
 <section class="page" id="ep-policies">
@@ -2407,12 +2410,88 @@ function epRenderPayments(){
  const mine=paymentRequests.filter(p=>p.employee_id===currentEmp.id);
  const pendCount=mine.filter(p=>p.status===LV_P1||p.status===LV_P2).length;
  const badge=$('epPayBadge');if(badge){badge.textContent=pendCount;badge.style.display=pendCount?'inline-block':'none'}
- $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${p.amount} ر.س</td><td>${fmt(p.created_at)}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات صرف</td></tr>';
+ $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${p.amount} ر.س</td><td>${fmt(p.created_at)}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:''} ${p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات صرف</td></tr>';
 }
 async function mgrDecidePayment(id,approve){
  const {error}=await sb.from('payment_requests').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للمحاسب':'تم رفض الطلب');
+}
+async function printPaymentOrder(id){
+ const p=paymentRequests.find(x=>x.id===id);if(!p)return;
+ const e=empById[p.employee_id]||{};
+ const orderNo='PO-'+String(p.id).slice(0,8).toUpperCase();
+ const amountWords=numToArabicWords(p.amount);
+ const w=window.open('','_blank');
+ w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>أمر صرف ${orderNo}</title>
+ <style>
+  body{font-family:Tahoma,Arial;padding:36px;color:#17251F}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0F4C3F;padding-bottom:14px;margin-bottom:22px}
+  .head h1{color:#0F4C3F;font-size:22px;margin:0}
+  .head .meta{text-align:left;font-size:12px;color:#6B7A73}
+  .amount-box{background:#E7F0EC;border-radius:12px;padding:18px 22px;text-align:center;margin:20px 0}
+  .amount-box .num{font-size:34px;font-weight:900;color:#0F4C3F}
+  .amount-box .words{font-size:13px;color:#6B7A73;margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin:16px 0}
+  td{padding:9px 8px;border-bottom:1px solid #E2E8E4;font-size:13.5px}
+  td.k{color:#6B7A73;width:150px}
+  .sigs{display:flex;justify-content:space-between;margin-top:50px}
+  .sig{width:30%;text-align:center;border-top:1.5px solid #17251F;padding-top:8px;font-size:12px;color:#6B7A73}
+  @media print{@page{size:A4;margin:15mm}}
+ </style></head><body>
+ <div class="head">
+  <div><h1>أمر صرف — Home Healers</h1><div style="font-size:12px;color:#6B7A73;margin-top:4px">هوم هيلرز</div></div>
+  <div class="meta">رقم الأمر: <b>${orderNo}</b><br>تاريخ الإصدار: ${fmt(p.paidAt||D(0))}</div>
+ </div>
+ <div class="amount-box">
+  <div class="num">${p.amount.toLocaleString('en-US')} ريال سعودي</div>
+  <div class="words">فقط ${amountWords} ريال سعودي لا غير</div>
+ </div>
+ <table>
+  <tr><td class="k">المستفيد</td><td><b>${e.name||p.emp}</b></td></tr>
+  <tr><td class="k">الرقم الوظيفي</td><td>${e.num||'—'}</td></tr>
+  <tr><td class="k">القسم</td><td>${e.dept||p.dept||'—'}</td></tr>
+  <tr><td class="k">فئة الصرف</td><td>${p.category}</td></tr>
+  <tr><td class="k">السبب</td><td>${p.reason||'—'}</td></tr>
+  <tr><td class="k">مرجع الصرف</td><td>${p.paymentRef||'—'}</td></tr>
+ </table>
+ <div class="sigs">
+  <div class="sig">الموظف (${e.name||p.emp})</div>
+  <div class="sig">رئيس القسم (${p.head||'—'})</div>
+  <div class="sig">المحاسب (${me.name})</div>
+ </div>
+ <script>window.onload=()=>window.print()<\/script></body></html>`);
+ w.document.close();
+}
+function numToArabicWords(n){
+ n=Math.round(+n||0);
+ if(n===0)return 'صفر';
+ const ones=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة'];
+ const teens=['عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
+ const tens=['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
+ const hundreds=['','مائة','مائتان','ثلاثمائة','أربعمائة','خمسمائة','ستمائة','سبعمائة','ثمانمائة','تسعمائة'];
+ function under1000(x){
+  let out=[];
+  const h=Math.floor(x/100),r=x%100;
+  if(h)out.push(hundreds[h]);
+  if(r>=10&&r<20)out.push(teens[r-10]);
+  else{
+   const t=Math.floor(r/10),o=r%10;
+   if(o)out.push(ones[o]);
+   if(t)out.push(tens[t]);
+  }
+  return out.join(' و');
+ }
+ const thousands=Math.floor(n/1000), rest=n%1000;
+ let parts=[];
+ if(thousands){
+  if(thousands===1)parts.push('ألف');
+  else if(thousands===2)parts.push('ألفان');
+  else if(thousands<=10)parts.push(under1000(thousands)+' آلاف');
+  else parts.push(under1000(thousands)+' ألف');
+ }
+ if(rest)parts.push(under1000(rest));
+ return parts.join(' و')||'صفر';
 }
 async function acctDecidePayment(id,approve){
  if(approve){
@@ -2434,6 +2513,8 @@ function acctRenderPayApprovals(){
    :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
   return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td style="white-space:nowrap">${btn}</td></tr>`;
  }).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات صرف بانتظار اعتمادك 🎉</td></tr>';
+ const done=paymentRequests.filter(p=>p.status==='معتمد');
+ if($('acctPayHistoryTbody'))$('acctPayHistoryTbody').innerHTML=done.length?done.map(p=>`<tr><td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${fmt(p.paidAt)}</td><td>${p.paymentRef||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 طباعة أمر الصرف</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد أوامر صرف مُصدرة بعد</td></tr>';
 }
 
 /* ================= النظام المالي: العهد ================= */
