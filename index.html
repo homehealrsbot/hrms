@@ -2872,6 +2872,12 @@ async function generatePayroll(isAdmin){
  }catch(e){err(e)}
 }
 function renderPayrollTable(isAdmin){
+ const tbodyId0=isAdmin?'prollTbodyAdmin':'prollTbody';
+ // ⚠️ حماية: لا تعيد بناء الجدول إذا كان المستخدم يكتب داخله الآن — التحديث
+ // الدوري (كل 15 ثانية) كان يمحو جزءاً من الرقم المكتوب لأنه يعيد رسم كل
+ // الحقول من جديد فوق يد المستخدم وهو يكتب.
+ const active=document.activeElement;
+ if(active&&active.closest&&active.closest('#'+tbodyId0))return;
  const monthSel=isAdmin?'prollMonthAdmin':'prollMonth', yearSel=isAdmin?'prollYearAdmin':'prollYear';
  const tbodyId=isAdmin?'prollTbodyAdmin':'prollTbody', badgeId=isAdmin?'prollStatusBadgeAdmin':'prollStatusBadge';
  if(!$(monthSel).value)return;
