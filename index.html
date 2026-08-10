@@ -299,6 +299,9 @@ tbody tr:hover{background:#FAFCFB}
       <div class="card"><h3>📦 حالة العهد</h3><div class="chart-box"><canvas id="chartCustody"></canvas></div></div>
       <div class="card"><h3>📈 اتجاه المصروفات — آخر 6 أشهر</h3><div class="chart-box"><canvas id="chartSpendTrend"></canvas></div></div>
     </div>
+    <div class="card"><h3>🧾 تفاصيل الخصومات — آخر كشف رواتب</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>القسم</th><th>مبلغ الخصم</th><th>السبب</th></tr></thead>
+      <tbody id="dashDeductionsTbody"></tbody></table></div></div>
   </div>
   <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
   <div style="display:none"><table><tbody id="dashContracts"></tbody></table></div>
@@ -1156,6 +1159,20 @@ const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[];
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[];
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+/* عملة الموظف الفعلية — لا نفترض الريال أبداً، كل موظف له عملة راتبه المسجّلة */
+function empCurrency(empId){return (empById[empId]&&empById[empId].currency)||'ريال سعودي'}
+function money(amount,empId){return (+amount||0).toLocaleString('en-US')+' '+empCurrency(empId)}
+/* تجميع مبالغ متعددة العملات بشكل صحيح بدل جمعها كرقم واحد مضلِّل */
+function sumByCurrency(items,empIdFn,amountFn){
+ const m={};
+ items.forEach(it=>{const cur=empCurrency(empIdFn(it));m[cur]=(m[cur]||0)+(+amountFn(it)||0)});
+ return m; // {'ريال سعودي':5300,'جنيه مصري':12000}
+}
+function fmtCurrencyMap(m){
+ const keys=Object.keys(m);
+ if(!keys.length)return '—';
+ return keys.map(k=>m[k].toLocaleString('en-US')+' '+k).join(' + ');
+}
 let empById={},empByName={},me=null,currentEmp=null;
 
 const $=id=>document.getElementById(id);
@@ -1543,30 +1560,39 @@ function renderDashboard(){
  if(finVisible){
   const latestRun=[...payrollRuns].sort((a,b)=>(b.year*12+b.month)-(a.year*12+a.month))[0];
   const latestItems=latestRun?payrollItems.filter(i=>i.runId===latestRun.id):[];
-  const totalPayroll=latestItems.reduce((s,i)=>s+(+i.net||0),0);
+  // ⚠️ لا نجمع مبالغ من عملات مختلفة كرقم واحد أبداً — كل عملة تُجمع لحالها وتُعرض منفصلة
+  const payrollTotals=sumByCurrency(latestItems,i=>i.employee_id,i=>i.net);
   const openCustody=custodyRecords.filter(c=>c.status!=='مُرجعة').length;
   const mNow2=D(0).slice(0,7);
-  const spentThisMonth=paymentRequests.filter(p=>p.status==='معتمد'&&String(p.paidAt||'').startsWith(mNow2)).reduce((s,p)=>s+(+p.amount||0),0);
-  const pendingAmount=paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2).reduce((s,p)=>s+(+p.amount||0),0);
+  const spentTotals=sumByCurrency(paymentRequests.filter(p=>p.status==='معتمد'&&String(p.paidAt||'').startsWith(mNow2)),p=>p.employee_id,p=>p.amount);
+  const pendingTotals=sumByCurrency(paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2),p=>p.employee_id,p=>p.amount);
   const FS=[
-   {n:latestRun?totalPayroll.toLocaleString('en-US')+' ر.س':'—',l:'إجمالي رواتب آخر كشف ('+(latestRun?MONTH_NAMES[latestRun.month-1]:'')+')',k:''},
-   {n:spentThisMonth.toLocaleString('en-US')+' ر.س',l:'إجمالي المصروف هذا الشهر',k:'ok'},
-   {n:pendingAmount.toLocaleString('en-US')+' ر.س',l:'مبالغ طلبات معلّقة',k:'sand'},
+   {n:latestRun?fmtCurrencyMap(payrollTotals):'—',l:'إجمالي رواتب آخر كشف ('+(latestRun?MONTH_NAMES[latestRun.month-1]:'')+')',k:''},
+   {n:fmtCurrencyMap(spentTotals),l:'إجمالي المصروف هذا الشهر',k:'ok'},
+   {n:fmtCurrencyMap(pendingTotals),l:'مبالغ طلبات معلّقة',k:'sand'},
    {n:openCustody,l:'عُهد مفتوحة (لم تُرجع)',k:'info'},
   ];
-  $('dashFinanceStats').innerHTML=FS.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+  $('dashFinanceStats').innerHTML=FS.map(s=>`<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>12?'16px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 
   const CH2={pine:'#143087',sand:'#62A0F6',ok:'#2E8B62',danger:'#C34A3C',info:'#3A6EA5'};
   const PAL2=[CH2.pine,CH2.ok,CH2.sand,CH2.info,CH2.danger,'#8B5CF6','#F59E0B'];
 
-  // تكلفة الرواتب حسب القسم (آخر كشف)
-  const deptCost={};
-  latestItems.forEach(i=>{const e=empById[i.employee_id]||{};const d=e.dept||'غير محدد';deptCost[d]=(deptCost[d]||0)+(+i.net||0)});
-  const dcLabels=Object.keys(deptCost);
-  drawChart('chartPayrollDept',{type:'bar',data:{labels:dcLabels,datasets:[{data:dcLabels.map(d=>deptCost[d]),backgroundColor:CH2.pine,borderRadius:8,maxBarThickness:52}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
+  // تكلفة الرواتب حسب القسم — عمود منفصل لكل عملة حتى لا تختلط الأرقام (متعدد العملات = مجموعات أعمدة منفصلة)
+  const deptCurrencyCost={}; // {dept: {currency: total}}
+  const currenciesUsed=new Set();
+  latestItems.forEach(i=>{
+   const e=empById[i.employee_id]||{};const d=e.dept||'غير محدد';const cur=empCurrency(i.employee_id);
+   currenciesUsed.add(cur);
+   deptCurrencyCost[d]=deptCurrencyCost[d]||{};
+   deptCurrencyCost[d][cur]=(deptCurrencyCost[d][cur]||0)+(+i.net||0);
+  });
+  const dcLabels=Object.keys(deptCurrencyCost);
+  const curList=[...currenciesUsed];
+  const dcDatasets=curList.map((cur,ci)=>({label:cur,data:dcLabels.map(d=>deptCurrencyCost[d][cur]||0),backgroundColor:PAL2[ci%PAL2.length],borderRadius:6,maxBarThickness:40}));
+  drawChart('chartPayrollDept',{type:'bar',data:{labels:dcLabels,datasets:dcDatasets},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:curList.length>1,position:'bottom',rtl:true,labels:{font:{family:'Tajawal'}}}},scales:{y:{beginAtZero:true,ticks:{font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
 
-  // طلبات الصرف حسب الفئة
+  // طلبات الصرف حسب الفئة (عدّ الطلبات، لا يتأثر بالعملة)
   const catCounts={};
   paymentRequests.forEach(p=>{catCounts[p.category]=(catCounts[p.category]||0)+1});
   const catLabels=Object.keys(catCounts);
@@ -1579,12 +1605,25 @@ function renderDashboard(){
   drawChart('chartCustody',{type:'doughnut',data:{labels:['مستلمة (مفتوحة)','مُرجعة'],datasets:[{data:[custActive,custReturned],backgroundColor:[CH2.sand,CH2.ok],borderWidth:2,borderColor:'#fff'}]},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Tajawal'},padding:10}}}}});
 
-  // اتجاه المصروفات آخر 6 أشهر
+  // اتجاه المصروفات آخر 6 أشهر — خط منفصل لكل عملة
   const months2=[];
   for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);months2.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}
-  const spendTrend=months2.map(m=>paymentRequests.filter(p=>p.status==='معتمد'&&String(p.paidAt||'').startsWith(m.key)).reduce((s,p)=>s+(+p.amount||0),0));
-  drawChart('chartSpendTrend',{type:'line',data:{labels:months2.map(m=>m.label),datasets:[{data:spendTrend,borderColor:CH2.ok,backgroundColor:'rgba(46,139,98,.12)',fill:true,tension:.35,pointBackgroundColor:CH2.ok,pointRadius:4}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
+  const approvedPay=paymentRequests.filter(p=>p.status==='معتمد');
+  const spendCurrencies=[...new Set(approvedPay.map(p=>empCurrency(p.employee_id)))];
+  const trendDatasets=spendCurrencies.length?spendCurrencies.map((cur,ci)=>({
+   label:cur,
+   data:months2.map(m=>approvedPay.filter(p=>String(p.paidAt||'').startsWith(m.key)&&empCurrency(p.employee_id)===cur).reduce((s,p)=>s+(+p.amount||0),0)),
+   borderColor:PAL2[ci%PAL2.length],backgroundColor:PAL2[ci%PAL2.length]+'22',fill:true,tension:.35,pointRadius:4,
+  })):[{label:'',data:months2.map(()=>0),borderColor:CH2.ok,fill:false}];
+  drawChart('chartSpendTrend',{type:'line',data:{labels:months2.map(m=>m.label),datasets:trendDatasets},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:spendCurrencies.length>1,position:'bottom',rtl:true,labels:{font:{family:'Tajawal'}}}},scales:{y:{beginAtZero:true,ticks:{font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
+
+  // 🧾 تفاصيل الخصومات — شفافية كاملة: مين انخصم، كم، وليش
+  const dedRows=latestItems.filter(i=>(+i.deductions||0)>0).map(i=>{
+   const e=empById[i.employee_id]||{};
+   return `<tr><td><b>${e.name||'—'}</b></td><td>${e.dept||'—'}</td><td>${money(i.deductions,i.employee_id)}</td><td>${i.dedNote||'—'}</td></tr>`;
+  }).join('');
+  if($('dashDeductionsTbody'))$('dashDeductionsTbody').innerHTML=dedRows||'<tr><td colspan="4" class="empty">لا توجد خصومات في آخر كشف رواتب</td></tr>';
  }
 }
 
@@ -2361,7 +2400,7 @@ function renderPaymentsAdmin(){
   const btn=p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:'—';
-  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${btn}</td></tr>`;
+  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${btn}</td></tr>`;
  }).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات صرف بعد</td></tr>';
 }
 /* ================= نظام الصلاحيات الشامل ================= */
@@ -2654,7 +2693,7 @@ function epRenderPayments(){
  const mine=paymentRequests.filter(p=>p.employee_id===currentEmp.id);
  const pendCount=mine.filter(p=>p.status===LV_P1||p.status===LV_P2).length;
  const badge=$('epPayBadge');if(badge){badge.textContent=pendCount;badge.style.display=pendCount?'inline-block':'none'}
- $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${p.amount} ر.س</td><td>${fmt(p.created_at)}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:''} ${p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات صرف</td></tr>';
+ $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${money(p.amount,currentEmp.id)}</td><td>${fmt(p.created_at)}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:''} ${p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات صرف</td></tr>';
 }
 async function mgrDecidePayment(id,approve){
  const {error}=await sb.from('payment_requests').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
@@ -2688,8 +2727,8 @@ async function printPaymentOrder(id){
   <div class="meta">رقم الأمر: <b>${orderNo}</b><br>تاريخ الإصدار: ${fmt(p.paidAt||D(0))}</div>
  </div>
  <div class="amount-box">
-  <div class="num">${p.amount.toLocaleString('en-US')} ريال سعودي</div>
-  <div class="words">فقط ${amountWords} ريال سعودي لا غير</div>
+  <div class="num">${p.amount.toLocaleString('en-US')} ${empCurrency(p.employee_id)}</div>
+  <div class="words">فقط ${amountWords} ${empCurrency(p.employee_id)} لا غير</div>
  </div>
  <table>
   <tr><td class="k">المستفيد</td><td><b>${e.name||p.emp}</b></td></tr>
@@ -2755,10 +2794,10 @@ function acctRenderPayApprovals(){
  $('acctPayApprovalsTbody').innerHTML=pend.length?pend.map(p=>{
   const btn=p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
-  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td style="white-space:nowrap">${btn}</td></tr>`;
+  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td style="white-space:nowrap">${btn}</td></tr>`;
  }).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات صرف بانتظار اعتمادك 🎉</td></tr>';
  const done=paymentRequests.filter(p=>p.status==='معتمد');
- if($('acctPayHistoryTbody'))$('acctPayHistoryTbody').innerHTML=done.length?done.map(p=>`<tr><td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${fmt(p.paidAt)}</td><td>${p.paymentRef||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 طباعة أمر الصرف</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد أوامر صرف مُصدرة بعد</td></tr>';
+ if($('acctPayHistoryTbody'))$('acctPayHistoryTbody').innerHTML=done.length?done.map(p=>`<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${fmt(p.paidAt)}</td><td>${p.paymentRef||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 طباعة أمر الصرف</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد أوامر صرف مُصدرة بعد</td></tr>';
 }
 
 /* ================= النظام المالي: العهد ================= */
@@ -2782,7 +2821,7 @@ function renderCustodyInto(tbodyId,selectId){
   $(selectId)._filled=true;
  }
  const rows=custodyRecords;
- $(tbodyId).innerHTML=rows.length?rows.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?c.amount+' ر.س':'—'}</td><td>${fmt(c.dateGiven)}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td><td>${c.status!=='مُرجعة'?`<button class="btn btn-ghost btn-sm" onclick="returnCustody('${c.id}')">تسجيل استرجاع</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عهد مسجّلة</td></tr>';
+ $(tbodyId).innerHTML=rows.length?rows.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?money(c.amount,c.employee_id):'—'}</td><td>${fmt(c.dateGiven)}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td><td>${c.status!=='مُرجعة'?`<button class="btn btn-ghost btn-sm" onclick="returnCustody('${c.id}')">تسجيل استرجاع</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد عهد مسجّلة</td></tr>';
 }
 
 /* ================= النظام المالي: الرواتب ================= */
@@ -2827,12 +2866,12 @@ function renderPayrollTable(isAdmin){
   const e=empById[it.employee_id]||{};
   const net=it.base+(+it.additions||0)-(+it.deductions||0);
   return `<tr data-item="${it.id}">
-   <td><b>${e.name||'—'}</b></td><td>${e.dept||'—'}</td><td>${it.base} ر.س</td>
+   <td><b>${e.name||'—'}</b><br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
    <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px"></td>
    <td><input class="proll-addnote" data-id="${it.id}" value="${it.addNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
    <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px"></td>
    <td><input class="proll-dednote" data-id="${it.id}" value="${it.dedNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
-   <td><b>${net}</b> ر.س</td></tr>`;
+   <td><b>${net.toLocaleString('en-US')}</b></td></tr>`;
  }).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون في هذا الكشف</td></tr>';
 }
 async function savePayrollChanges(isAdmin){
@@ -2865,7 +2904,8 @@ function epRenderMySalary(){
  const mine=payrollItems.filter(i=>i.employee_id===currentEmp.id);
  $('epSalaryTbody').innerHTML=mine.length?mine.map(it=>{
   const run=payrollRuns.find(r=>r.id===it.runId)||{};
-  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base} ر.س</td><td>${it.additions} ر.س${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions} ر.س${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net} ر.س</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
+  const cur=empCurrency(currentEmp.id);
+  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
  }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
 }
 
@@ -2893,7 +2933,7 @@ function mgrRenderApprovals(){
  $('mgrTeamTbody').innerHTML=team.length?team.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td><td dir="ltr" style="text-align:right">${e.phone||'—'}</td><td dir="ltr" style="text-align:right">${e.email||'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا يوجد موظفون في قسمك بعد</td></tr>';
  const pendingPay=paymentRequests.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
  $('mgrPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td><td>${p.reason||'—'}</td>
+  <td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePayment('${p.id}',true)">اعتماد ورفع للمحاسب</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePayment('${p.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات صرف بانتظار اعتمادك 🎉</td></tr>';
  const pending=leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id);
  const pendingForms=formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id);
