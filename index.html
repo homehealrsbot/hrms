@@ -2871,6 +2871,15 @@ async function generatePayroll(isAdmin){
   toast('تم فتح/تحديث كشف الشهر');
  }catch(e){err(e)}
 }
+/* تحديث فوري لعمود "الصافي" فور كتابة أي إضافة أو خصم — بدون انتظار الحفظ */
+function updatePayrollNetLive(inputEl){
+ const row=inputEl.closest('tr');if(!row)return;
+ const base=+row.dataset.base||0;
+ const add=+row.querySelector('.proll-add').value||0;
+ const ded=+row.querySelector('.proll-ded').value||0;
+ const net=base+add-ded;
+ row.querySelector('.proll-net').innerHTML=`<b>${net.toLocaleString('en-US')}</b>`;
+}
 function renderPayrollTable(isAdmin){
  const tbodyId0=isAdmin?'prollTbodyAdmin':'prollTbody';
  // ⚠️ حماية: لا تعيد بناء الجدول إذا كان المستخدم يكتب داخله الآن — التحديث
@@ -2890,13 +2899,13 @@ function renderPayrollTable(isAdmin){
  $(tbodyId).innerHTML=items.length?items.map(it=>{
   const e=empById[it.employee_id]||{};
   const net=it.base+(+it.additions||0)-(+it.deductions||0);
-  return `<tr data-item="${it.id}">
+  return `<tr data-item="${it.id}" data-base="${it.base}">
    <td><b>${e.name||'—'}</b><br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
-   <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px"></td>
+   <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-addnote" data-id="${it.id}" value="${it.addNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
-   <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px"></td>
+   <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-dednote" data-id="${it.id}" value="${it.dedNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
-   <td><b>${net.toLocaleString('en-US')}</b></td></tr>`;
+   <td class="proll-net"><b>${net.toLocaleString('en-US')}</b></td></tr>`;
  }).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون في هذا الكشف</td></tr>';
 }
 async function savePayrollChanges(isAdmin){
