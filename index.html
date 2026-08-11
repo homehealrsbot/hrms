@@ -1268,7 +1268,7 @@ function initRealtime(){
  if(rtStarted)return;rtStarted=true;
  try{
   const ch=sb.channel('hrms-live');
-  ['leaves','permits','meeting_records','site_attendance','contracts','policies','form_submissions'].forEach(t=>{
+  ['leaves','permits','meeting_records','site_attendance','contracts','policies','form_submissions','payment_requests'].forEach(t=>{
    ch.on('postgres_changes',{event:'*',schema:'public',table:t},payload=>{
      clearTimeout(rtTimer);
      rtTimer=setTimeout(()=>{refresh().catch(()=>{})},700);
@@ -1279,6 +1279,8 @@ function initRealtime(){
       else if(payload.eventType==='INSERT'&&t==='meeting_records'&&me.role==='admin')toast('✋ موظف سجّل حضوره الآن');
       else if(payload.eventType==='INSERT'&&t==='form_submissions'&&me.role!=='employee')toast('📄 وصل تقديم نموذج جديد الآن');
       else if(payload.eventType==='UPDATE'&&t==='form_submissions'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد نماذجك');
+      else if(payload.eventType==='INSERT'&&t==='payment_requests'&&me.role!=='employee'&&hasPerm('paymentsAdmin','view'))toast('💵 وصل طلب صرف جديد الآن');
+      else if(payload.eventType==='UPDATE'&&t==='payment_requests'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد طلبات الصرف');
      }catch(e){}
    });
   });
@@ -1486,6 +1488,10 @@ function buildAlerts(){
   if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'}});
   if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'}});
  });
+ paymentRequests.forEach(p=>{
+  if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'}});
+  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'}});
+ });
  return A;
 }
 const SEV={danger:0,sand:1,info:2,ok:3};
@@ -1497,7 +1503,10 @@ function sortAlerts(A){
  });
 }
 function renderAlerts(){
- const A=sortAlerts(buildAlerts());
+ const A=sortAlerts(buildAlerts().filter(a=>{
+  if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-'))&&!hasPerm('paymentsAdmin','view'))return false;
+  return true;
+ }));
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
  $('alertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
@@ -3010,7 +3019,7 @@ async function mgrDecideForm(id,approve){
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>{
-  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')))return false;
+  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
