@@ -262,6 +262,9 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
     <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
     <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
+    <div class="nav-sep" style="border-top:1px solid rgba(255,255,255,.12);margin:10px 14px"></div>
+    <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
+    <button class="nav-item" data-page="mySalaryAdmin"><span class="ic">🧾</span> راتبي</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -624,6 +627,13 @@ tbody tr:hover{background:#FAFCFB}
       <thead id="permMatrixHead"></thead>
       <tbody id="permissionsTbody"></tbody></table></div>
   </div>
+</section>
+
+<section class="page" id="page-mySalaryAdmin">
+  <div class="page-head"><div><h1>راتبي</h1><p>كشف رواتبك الشهرية الخاصة بحسابك</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>الشهر</th><th>الراتب الأساسي</th><th>الإضافات</th><th>الخصومات</th><th>الصافي</th><th>الحالة</th></tr></thead>
+    <tbody id="adminSalaryTbody"></tbody></table></div></div>
 </section>
 </main>
 </div>
@@ -1465,7 +1475,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -2468,6 +2478,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
  if(activeId==='page-permissions'&&!hasPerm('permissions','view'))go('dashboard');
  renderPermissionsPage();
+ renderMySalaryAdmin();
 }
 function renderPaymentsAdmin(){
  if(!$('paymentsAdminTbody'))return;
@@ -3092,6 +3103,16 @@ function epRenderMySalary(){
  $('epSalaryTbody').innerHTML=mine.length?mine.map(it=>{
   const run=payrollRuns.find(r=>r.id===it.runId)||{};
   const cur=empCurrency(currentEmp.id);
+  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
+ }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
+}
+/* نفس المنطق تماماً، لأي حساب أدمن يشوف راتبه هو (بما فيهم إبراهيم) — بوابته لوحة الإدارة لا بوابة الموظف */
+function renderMySalaryAdmin(){
+ if(!$('adminSalaryTbody')||!me)return;
+ const mine=payrollItems.filter(i=>i.employee_id===me.id);
+ const cur=empCurrency(me.id);
+ $('adminSalaryTbody').innerHTML=mine.length?mine.map(it=>{
+  const run=payrollRuns.find(r=>r.id===it.runId)||{};
   return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
  }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
 }
