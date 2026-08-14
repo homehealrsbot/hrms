@@ -264,6 +264,10 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
     <div class="nav-sep" style="border-top:1px solid rgba(255,255,255,.12);margin:10px 14px"></div>
     <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
+    <button class="nav-item" onclick="adminOpenSelfEdit()"><span class="ic">✎</span> تعديل بياناتي</button>
+    <button class="nav-item" onclick="adminOpenDocs()"><span class="ic">📎</span> مستنداتي</button>
+    <button class="nav-item" onclick="adminNewLeave()"><span class="ic">🌴</span> طلب إجازة لي</button>
+    <button class="nav-item" onclick="adminNewPermit()"><span class="ic">🚪</span> طلب استئذان لي</button>
     <button class="nav-item" data-page="mySalaryAdmin"><span class="ic">🧾</span> راتبي</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
@@ -2130,7 +2134,7 @@ function openLeaveDetail(emp){
   <div class="tbl-wrap"><table>
    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
    <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة - ${l.emp}')">📎</button>`:'—'} ${l.notes||''}</td>
-   <td style="white-space:nowrap">${l.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:l.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
+   <td style="white-space:nowrap">${l.employee_id===me.id&&(l.status===LV_P1||l.status===LV_P2)?'<span style="color:var(--muted);font-size:12px">طلبك — بانتظار مدير آخر</span>':l.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:l.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
   </table></div>`;
  openModal('leaveDetailModal');
 }
@@ -2140,7 +2144,7 @@ function renderLeaveTypes(){
  $('leaveTypeTabs').innerHTML=types.map(t=>`<button class="${currentLeaveType===t?'active':''}" onclick="currentLeaveType='${t}';renderLeaveTypes()">الإجازة ${t==='بدون راتب'?'بدون راتب':'ال'+t}</button>`).join('');
  const stTag=lvTag;
  const rows=leaves.filter(l=>l.type===currentLeaveType);
- $('leaveTypeTbody').innerHTML=rows.length?rows.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.dept}</td><td>${l.job}</td><td>${l.days}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span>${l.status===LV_P2?` <button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:''}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إجازات من هذا النوع</td></tr>';
+ $('leaveTypeTbody').innerHTML=rows.length?rows.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.dept}</td><td>${l.job}</td><td>${l.days}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span>${l.employee_id===me.id?' <span style="color:var(--muted);font-size:12px">(طلبك)</span>':l.status===LV_P2?` <button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:''}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إجازات من هذا النوع</td></tr>';
 }
 
 /* ================= الاستئذانات ================= */
@@ -2148,7 +2152,7 @@ function renderPermits(){
  const q=$('fPermName').value.trim(),tp=$('fPermType').value,st=$('fPermStatus').value;
  const stTag=lvTag;
  const rows=permits.filter(p=>(!q||p.emp.includes(q))&&(!tp||p.type===tp)&&(!st||p.status===st));
- const prBtn=p=>p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
+ const prBtn=p=>p.employee_id===me.id?'<span style="color:var(--muted);font-size:12px">طلبك — بانتظار مدير آخر</span>':p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td>
@@ -2430,30 +2434,42 @@ function renderApprovalsPage(){
  const pendingFm=formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2);
  const pendingPay=paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2);
  $('approvalsCount').textContent=pendingLv.length+pendingPr.length+pendingFm.length+pendingPay.length;
- const lvBtn=l=>l.status===LV_P2
+ const lvBtn=l=>{
+  if(l.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
+  return l.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`;
+ };
  $('apvLeavesTbody').innerHTML=pendingLv.length?pendingLv.map(l=>`<tr>
   <td><b>${l.emp}</b></td><td>${l.dept||'—'}</td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td>
   <td><span class="tag ${lvTag(l.status)}">${l.status}</span>${l.head?' — '+l.head:''}</td>
   <td style="white-space:nowrap">${lvBtn(l)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد إجازات بانتظار اعتماد 🎉</td></tr>';
- const prBtn2=p=>p.status===LV_P2
+ const prBtn2=p=>{
+  if(p.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
+  return p.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`;
+ };
  $('apvPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td>
   <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
   <td style="white-space:nowrap">${prBtn2(p)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات بانتظار اعتماد 🎉</td></tr>';
- const fmBtn=s=>s.status===LV_P2
+ const fmBtn=s=>{
+  if(s.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
+  return s.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`;
+ };
  $('apvFormsTbody').innerHTML=pendingFm.length?pendingFm.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr>
   <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td>
   <td><span class="tag ${lvTag(s.status)}">${s.status}</span>${s.dept_head?' — '+s.dept_head:''}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> ${fmBtn(s)}</td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتماد 🎉</td></tr>';
- const payBtn=p=>p.status===LV_P2
+ const payBtn=p=>{
+  if(p.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
+  return p.status===LV_P2
    ?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
    :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
+ };
  if(!hasPerm('paymentsAdmin','view')){
   $('apvPaymentsTbody').innerHTML='<tr><td colspan="5" class="empty">تحتاج صلاحية على قسم «طلبات الصرف» لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
  }else{
@@ -2781,7 +2797,7 @@ async function epAddPayment(){
  try{
   let path=null;const f=takeStaged('paymentReceipt','eppayFileBox','📎 إرفاق إيصال/مستند داعم (اختياري)');
   if(f){toast('جاري رفع المرفق...');path=await uploadToStorage(f,'employees/'+currentEmp.id+'/payments')}
-  const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,status:currentEmp.role==='manager'?LV_P2:LV_P1});
+  const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,status:(currentEmp.role==='manager'||currentEmp.role==='admin')?LV_P2:LV_P1});
   if(error)throw error;
   closeModal('epPaymentModal');await refresh();toast('تم إرسال طلب الصرف — سيمر على رئيس القسم ثم المحاسب');
  }catch(e){err(e)}
@@ -3271,7 +3287,7 @@ async function epAddLeave(){
   if(editingLeaveId){
    ({error}=await sb.from('leaves').update(payload).eq('id',editingLeaveId));
   }else{
-   payload.employee_id=currentEmp.id;payload.status=currentEmp.role==='manager'?LV_P2:LV_P1;
+   payload.employee_id=currentEmp.id;payload.status=(currentEmp.role==='manager'||currentEmp.role==='admin')?LV_P2:LV_P1;
    ({error}=await sb.from('leaves').insert(payload));
   }
   if(error)throw error;
@@ -3317,7 +3333,7 @@ async function epAddPermit(){
  if(editingPermitId){
   ({error}=await sb.from('permits').update(payload).eq('id',editingPermitId));
  }else{
-  payload.employee_id=currentEmp.id;payload.status=currentEmp.role==='manager'?LV_P2:LV_P1;
+  payload.employee_id=currentEmp.id;payload.status=(currentEmp.role==='manager'||currentEmp.role==='admin')?LV_P2:LV_P1;
   ({error}=await sb.from('permits').insert(payload));
  }
  if(error){err(error);return}
@@ -3330,8 +3346,15 @@ function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').valu
 async function saveSelfEdit(){
  const {error}=await sb.rpc('update_my_profile',{p_phone:$('sePhone').value,p_city:$('seCity').value});
  if(error){err(error);return}
- closeModal('selfEditModal');await loadAll();currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();toast('تم تحديث بياناتك بنجاح');
+ closeModal('selfEditModal');await loadAll();
+ if(me.role==='admin'){renderAll();}else{currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();}
+ toast('تم تحديث بياناتك بنجاح');
 }
+/* ================= أدوات ذاتية لأي حساب أدمن (إبراهيم وغيره) — نفس تجربة الموظف تماماً ================= */
+function adminOpenSelfEdit(){currentEmp=me;openSelfEdit();}
+function adminOpenDocs(){openDocsModal(me.id);}
+function adminNewLeave(){currentEmp=me;epNewLeave();}
+function adminNewPermit(){currentEmp=me;epNewPermit();}
 function epRenderForms(){
  const mySubs=formSubs.filter(x=>x.employee_id===currentEmp.id);
  $('epFormsList').innerHTML=formsData.length?formsData.map(f=>{
