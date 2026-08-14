@@ -260,6 +260,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
+    <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
     <button class="nav-item" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
@@ -604,6 +605,16 @@ tbody tr:hover{background:#FAFCFB}
     <tbody id="paymentsAdminTbody"></tbody></table></div></div>
 </section>
 
+<section class="page" id="page-deductionsHR">
+  <div class="page-head"><div><h1>طلبات الخصم</h1><p>طلبات خصم مقدَّمة من رؤساء الأقسام أو المحاسب — مراجعة الموارد البشرية أول مرحلة قبل الاعتماد المالي</p></div></div>
+  <div class="card"><h3>بانتظار مراجعتك</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>السبب</th><th>الطالب</th><th>إجراء</th></tr></thead>
+    <tbody id="hrDedPendingTbody"></tbody></table></div></div>
+  <div class="card"><h3>سجل كل طلبات الخصم</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>السبب</th><th>الطالب</th><th>الحالة</th></tr></thead>
+    <tbody id="hrDedLogTbody"></tbody></table></div></div>
+</section>
+
 <section class="page" id="page-permissions">
   <div class="page-head"><div><h1>الصلاحيات</h1><p>تحكّم دقيق بوصول كل موظف لكل قسم من أقسام النظام — مستقل تماماً عن دوره الأساسي</p></div></div>
   <div class="card">
@@ -641,6 +652,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" data-ep="payApprovals" id="acctPayApprovalsNavBtn" style="display:none"><span class="ic">✅</span> اعتماد الصرف <span class="nav-badge" id="acctPayBadge">0</span></button>
+    <button class="nav-item" data-ep="deductions" id="dedNavBtn" style="display:none"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="dedNavBadge" style="display:none">0</span></button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -848,6 +860,20 @@ tbody tr:hover{background:#FAFCFB}
     <tbody id="acctPayHistoryTbody"></tbody></table></div></div>
 </section>
 
+<section class="page" id="ep-deductions">
+  <div class="page-head"><div><h1>طلبات الخصم</h1><p>طلب خصم من راتب موظف — يمر على الموارد البشرية ثم الاعتماد المالي النهائي</p></div>
+   <button class="btn btn-primary" onclick="openNewDeduction()">+ طلب خصم جديد</button></div>
+  <div class="card" id="acctDedApprovalsCard" style="display:none">
+    <h3>💰 خصومات بانتظار اعتمادك المالي النهائي</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>المبلغ</th><th>السبب</th><th>الطالب</th><th>مراجعة HR</th><th>إجراء</th></tr></thead>
+      <tbody id="acctDedApprovalsTbody"></tbody></table></div>
+  </div>
+  <div class="card"><h3>سجل طلباتي</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>المبلغ</th><th>السبب</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
+    <tbody id="dedMyRequestsTbody"></tbody></table></div></div>
+</section>
+
 <section class="page" id="ep-policies">
   <div class="page-head"><div><h1>الأنظمة والسياسات</h1><p>اطّلع على سياسات الشركة وحمّلها</p></div></div>
   <div class="card" id="epPoliciesList"></div>
@@ -902,6 +928,16 @@ tbody tr:hover{background:#FAFCFB}
   <div class="field"><label>السبب <b style="color:var(--danger)">*</b></label><textarea id="eppayReason" rows="2"></textarea></div>
   <div class="upload-box" id="eppayFileBox" onclick="stageFile('paymentReceipt','.pdf,.jpg,.jpeg,.png','eppayFileBox')">📎 إرفاق إيصال/مستند داعم (اختياري)</div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPayment()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingPaymentId=null;closeModal('epPaymentModal')">إلغاء</button></div>
+</div></div>
+
+<!-- طلب خصم جديد (رئيس القسم أو المحاسب) -->
+<div class="modal-back" id="dedModal"><div class="modal sm">
+  <div class="modal-head"><h3>طلب خصم جديد</h3><button class="x-btn" onclick="closeModal('dedModal')">✕</button></div>
+  <div class="field"><label>الموظف</label><select id="dedEmp"></select></div>
+  <div class="field"><label>مبلغ الخصم (ريال) <b style="color:var(--danger)">*</b></label><input id="dedAmount" type="number" min="1"></div>
+  <div class="field"><label>السبب <b style="color:var(--danger)">*</b></label><textarea id="dedReason" rows="2" placeholder="مثال: تأخير متكرر، مخالفة سياسة..."></textarea></div>
+  <div class="section-note">سيمر الطلب على مراجعة الموارد البشرية أولاً، ثم الاعتماد المالي النهائي — وعند الاعتماد يُخصَم تلقائياً من راتب الموظف بالكشف الحالي.</div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="submitDeduction()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('dedModal')">إلغاء</button></div>
 </div></div>
 
 <!-- إضافة عهدة (محاسب) -->
@@ -1174,7 +1210,8 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
 const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 
 let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[];
-let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[];
+let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[];
+const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 /* عملة الموظف الفعلية — لا نفترض الريال أبداً، كل موظف له عملة راتبه المسجّلة */
 function empCurrency(empId){return (empById[empId]&&empById[empId].currency)||'ريال سعودي'}
@@ -1371,6 +1408,8 @@ async function loadAll(){
   permsMap[r.employee_id][r.module]=r.level;
   permsMap[r.employee_id][r.module+'_id']=r.id;
  });
+ const DED=await sb.from('deduction_requests').select('*').order('created_at',{ascending:false});
+ deductionRequests=(DED.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:+r.amount||0,reason:r.reason,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,acctApprover:r.accountant_approver,createdAt:r.created_at}));
 }
 async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
@@ -1426,7 +1465,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -1492,6 +1531,10 @@ function buildAlerts(){
   if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'}});
   if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'}});
  });
+ deductionRequests.forEach(d=>{
+  if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'}});
+  if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'}});
+ });
  return A;
 }
 const SEV={danger:0,sand:1,info:2,ok:3};
@@ -1505,6 +1548,8 @@ function sortAlerts(A){
 function renderAlerts(){
  const A=sortAlerts(buildAlerts().filter(a=>{
   if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-'))&&!hasPerm('paymentsAdmin','view'))return false;
+  if(a.sid&&a.sid.startsWith('ded1-')&&!hasPerm('deductionsHR','view'))return false;
+  if(a.sid&&a.sid.startsWith('ded2-')&&!hasPerm('paymentsAdmin','full'))return false;
   return true;
  }));
  const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
@@ -2415,6 +2460,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true)}
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view'))renderPaymentsAdmin();
+ if(hasPerm('deductionsHR','view'))renderDeductionsHR();
  const activeId=(document.querySelector('#app .page.on')||{}).id||'';
  const activeModule=activeId.replace('page-','');
  if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
@@ -2443,6 +2489,7 @@ const MODULES=[
  {key:'payroll',label:'الرواتب'},
  {key:'custody',label:'العهد'},
  {key:'paymentsAdmin',label:'طلبات الصرف'},
+ {key:'deductionsHR',label:'مراجعة طلبات الخصم'},
 ];
 let permsMap={}; // {employeeId: {moduleKey: 'view'|'full'}} — غياب المفتاح = بدون صلاحية صريحة
 function permLevel(empId,module){
@@ -2609,7 +2656,7 @@ async function viewFileInline(path,title){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي'};
+const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي',deductions:'طلبات الخصم'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
@@ -2858,6 +2905,92 @@ function fillMonthSelect(id){
  $(id).innerHTML=MONTH_NAMES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
  $(id).value=new Date().getMonth()+1;$(id)._filled=true;
 }
+/* ================= طلبات الخصم (رئيس القسم/المحاسب ← HR ← المحاسب) ================= */
+function openNewDeduction(){
+ const isAcct=currentEmp.role==='accountant';
+ const pool=isAcct?employees.filter(e=>e.role!=='admin'):employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
+ $('dedEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ $('dedAmount').value='';$('dedReason').value='';
+ openModal('dedModal');
+}
+async function submitDeduction(){
+ if(!$('dedEmp').value){toast('اختر الموظف');return}
+ const amt=+$('dedAmount').value;
+ if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
+ if(!$('dedReason').value.trim()){toast('سبب الخصم إلزامي');return}
+ const {error}=await sb.from('deduction_requests').insert({
+  employee_id:$('dedEmp').value,amount:amt,reason:$('dedReason').value,
+  requested_by_name:currentEmp.name,requested_by_role:currentEmp.role,status:DED_P1});
+ if(error){err(error);return}
+ closeModal('dedModal');await refresh();toast('تم إرسال طلب الخصم — سيمر على مراجعة الموارد البشرية');
+}
+async function hrDecideDeduction(id,approve){
+ const {error}=await sb.from('deduction_requests').update({status:approve?DED_P2:'مرفوض',hr_reviewer:me.name}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(approve?'تمت المراجعة ورُفع الطلب للاعتماد المالي النهائي':'تم رفض الطلب');
+}
+/* عند الاعتماد المالي النهائي: يُخصَم المبلغ تلقائياً من كشف الراتب الحالي (يفتح كشف الشهر لو ما كان موجوداً) */
+async function applyDeductionToPayroll(employeeId,amount,reason){
+ const now=new Date();const month=now.getMonth()+1,year=now.getFullYear();
+ let run=payrollRuns.find(r=>r.month===month&&r.year===year);
+ if(!run){
+  const {error}=await sb.from('payroll_runs').insert({month,year,status:'مسودة'});
+  if(error)throw error;
+  await loadAll();run=payrollRuns.find(r=>r.month===month&&r.year===year);
+ }
+ let item=payrollItems.find(i=>i.runId===run.id&&i.employee_id===employeeId);
+ if(!item){
+  const emp=empById[employeeId]||{};
+  const {error}=await sb.from('payroll_items').insert({run_id:run.id,employee_id:employeeId,base_salary:emp.salary||0,additions:0,deductions:0,net_pay:emp.salary||0});
+  if(error)throw error;
+  await loadAll();item=payrollItems.find(i=>i.runId===run.id&&i.employee_id===employeeId);
+ }
+ const newDed=(+item.deductions||0)+(+amount||0);
+ const newNote=item.dedNote?item.dedNote+' + '+reason:reason;
+ const net=(+item.base||0)+(+item.additions||0)-newDed;
+ const {error:updErr}=await sb.from('payroll_items').update({deductions:newDed,deductions_note:newNote,net_pay:net}).eq('id',item.id);
+ if(updErr)throw updErr;
+}
+async function acctDecideDeduction(id,approve){
+ const d=deductionRequests.find(x=>x.id===id);if(!d)return;
+ try{
+  if(approve){
+   await applyDeductionToPayroll(d.employee_id,d.amount,d.reason);
+   const {error}=await sb.from('deduction_requests').update({status:'معتمد',accountant_approver:me.name}).eq('id',id);
+   if(error)throw error;
+   await refresh();toast('تم الاعتماد وخُصم المبلغ تلقائياً من كشف الراتب الحالي');
+  }else{
+   const {error}=await sb.from('deduction_requests').update({status:'مرفوض',accountant_approver:me.name}).eq('id',id);
+   if(error)throw error;
+   await refresh();toast('تم رفض طلب الخصم');
+  }
+ }catch(e){err(e)}
+}
+function renderDeductionsPage(){
+ if(!$('dedNavBtn'))return;
+ const canSubmit=currentEmp.role==='manager'||currentEmp.role==='accountant';
+ $('dedNavBtn').style.display=canSubmit?'flex':'none';
+ if(!canSubmit)return;
+ const mine=deductionRequests.filter(d=>d.requestedBy===currentEmp.name);
+ $('dedMyRequestsTbody').innerHTML=mine.length?mine.map(d=>`<tr><td><b>${d.emp}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${fmt(d.createdAt)}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات خصم قدّمتها بعد</td></tr>';
+
+ const isAcct=currentEmp.role==='accountant'&&hasPerm('paymentsAdmin','full');
+ $('acctDedApprovalsCard').style.display=isAcct?'block':'none';
+ if(isAcct){
+  const pend=deductionRequests.filter(d=>d.status===DED_P2);
+  $('dedNavBadge').style.display=pend.length?'inline-block':'none';$('dedNavBadge').textContent=pend.length;
+  $('acctDedApprovalsTbody').innerHTML=pend.length?pend.map(d=>`<tr><td><b>${d.emp}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td>${d.hrReviewer||'—'}</td>
+   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="acctDecideDeduction('${d.id}',true)">اعتماد وخصم فوري</button> <button class="btn btn-danger btn-sm" onclick="acctDecideDeduction('${d.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد خصومات بانتظار اعتمادك 🎉</td></tr>';
+ }
+}
+function renderDeductionsHR(){
+ if(!$('hrDedPendingTbody'))return;
+ const pend=deductionRequests.filter(d=>d.status===DED_P1);
+ $('hrDedBadge').style.display=pend.length?'inline-block':'none';$('hrDedBadge').textContent=pend.length;
+ $('hrDedPendingTbody').innerHTML=pend.length?pend.map(d=>`<tr><td><b>${d.emp}</b></td><td>${d.dept||'—'}</td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy} (${d.requestedByRole==='manager'?'رئيس قسم':'محاسب'})</td>
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="hrDecideDeduction('${d.id}',true)">مراجعة واعتماد</button> <button class="btn btn-danger btn-sm" onclick="hrDecideDeduction('${d.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات خصم بانتظار مراجعتك 🎉</td></tr>';
+ $('hrDedLogTbody').innerHTML=deductionRequests.length?deductionRequests.map(d=>`<tr><td><b>${d.emp}</b></td><td>${d.dept||'—'}</td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات خصم بعد</td></tr>';
+}
 async function generatePayroll(isAdmin){
  const monthSel=isAdmin?'prollMonthAdmin':'prollMonth', yearSel=isAdmin?'prollYearAdmin':'prollYear';
  const month=+$(monthSel).value,year=+$(yearSel).value;
@@ -2968,6 +3101,7 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
   renderCustodyInto('custodyTbody','custEmp');
   acctRenderPayApprovals();
  }
+ renderDeductionsPage();
 }
 function mgrRenderApprovals(){
  $('mgrNavBtn').style.display='flex';
@@ -3019,12 +3153,13 @@ async function mgrDecideForm(id,approve){
 
 function epRenderAlerts(){
  const A=buildAlerts().filter(a=>{
-  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')))return false;
+  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')||a.sid.startsWith('ded1-')||a.sid.startsWith('ded2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
  if(currentEmp.role==='manager')formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'mgrfm-'+s.id,t:'نموذج بانتظار اعتمادك',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'📄',nav:{p:'approvals'}})});
  if(currentEmp.role==='manager')permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id).forEach(p=>A.push({sid:'mgrpr-'+p.id,t:'استئذان بانتظار اعتمادك',d:`${p.emp} قدّم استئذان (${p.type}) بتاريخ ${fmt(p.date)} — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'🚪',nav:{p:'approvals'}}));
+ if(currentEmp.role==='accountant'&&hasPerm('paymentsAdmin','full'))deductionRequests.filter(d=>d.status===DED_P2).forEach(d=>A.push({sid:'acctded-'+d.id,t:'طلب خصم بانتظار اعتمادك النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك`,k:'info',ic:'⚠️',nav:{p:'deductions'}}));
  leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
  permits.filter(p=>p.employee_id===currentEmp.id&&(p.status==='معتمد'||p.status==='مرفوض')).forEach(p=>A.push({sid:'prst-'+p.id+'-'+(p.status==='معتمد'?'a':'r'),t:'تحديث حالة طلب استئذان',d:`طلبك للاستئذان (${p.type}) بتاريخ ${fmt(p.date)}: ${p.status}`,k:p.status==='معتمد'?'ok':'danger',ic:'🚪',nav:{p:'permits'}}));
  formSubs.filter(s=>s.employee_id===currentEmp.id&&(s.status==='تمت الموافقة'||s.status==='تم الرفض')).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'fmst-'+s.id,t:'تحديث حالة نموذج',d:`نموذجك «${fm.name||''}»: ${s.status}`,k:s.status==='تمت الموافقة'?'ok':'danger',ic:'📄',nav:{p:'forms'}})});
