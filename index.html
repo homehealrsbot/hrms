@@ -261,7 +261,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
     <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
-    <button class="nav-item" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
+    <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -2457,6 +2457,8 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  // تطبيق الصلاحيات على كل قسم إداري — الوصول الافتراضي للأدمن كامل إلا بسحب صريح،
  // وبدون وصول لغيره إلا بمنح صريح من صفحة الصلاحيات
  MODULES.forEach(m=>{const el=$('nav_'+m.key);if(el)el.style.display=hasPerm(m.key,'view')?'flex':'none'});
+ // "الصلاحيات" وحدها مستقلة عن MODULES ومقصورة على من مُنحت له صراحة (حتى لو أدمن)
+ if($('nav_permissions'))$('nav_permissions').style.display=hasPerm('permissions','view')?'flex':'none';
  if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true)}
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view'))renderPaymentsAdmin();
@@ -2464,6 +2466,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  const activeId=(document.querySelector('#app .page.on')||{}).id||'';
  const activeModule=activeId.replace('page-','');
  if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
+ if(activeId==='page-permissions'&&!hasPerm('permissions','view'))go('dashboard');
  renderPermissionsPage();
 }
 function renderPaymentsAdmin(){
@@ -2491,12 +2494,16 @@ const MODULES=[
  {key:'paymentsAdmin',label:'طلبات الصرف'},
  {key:'deductionsHR',label:'مراجعة طلبات الخصم'},
 ];
+/* وحدة "الصلاحيات" نفسها لا تدخل ضمن قائمة MODULES القابلة للعرض بالجدول
+   (لا يجوز لأي أدمن يمنح نفسه أو غيره وصولاً إليها من الجدول نفسه) —
+   تُدار بمفتاح مستقل، افتراضياً بدون وصول حتى للأدمن، وتحتاج منحاً صريحاً فقط. */
 let permsMap={}; // {employeeId: {moduleKey: 'view'|'full'}} — غياب المفتاح = بدون صلاحية صريحة
 function permLevel(empId,module){
  const explicit=permsMap[empId]&&permsMap[empId][module];
  if(explicit)return explicit; // صلاحية محفوظة صراحة (منح أو سحب) تطغى دائماً على الافتراضي
  const emp=empById[empId];
  if(!emp)return 'none';
+ if(module==='permissions')return 'none'; // استثناء: صفحة الصلاحيات نفسها تحتاج منحاً صريحاً دائماً، حتى للأدمن
  if(emp.role==='admin')return 'full'; // الافتراضي للأدمن: كامل، إلا إذا سُحبت صراحة
  if(emp.role==='accountant'&&['payroll','custody','paymentsAdmin'].includes(module))return 'full';
  return 'none'; // الموظف/رئيس القسم: بدون وصول افتراضياً، إلا بمنح صريح
@@ -2522,6 +2529,10 @@ async function savePermission(empId,module,level){
 }
 function renderPermissionsPage(){
  if(!$('permMatrixHead'))return;
+ if(!hasPerm('permissions','view')){
+  $('permissionsTbody').innerHTML='<tr><td colspan="14" class="empty">هذه الصفحة تحتاج صلاحية خاصة — تحتاج منح صريح من مدير النظام</td></tr>';
+  return;
+ }
  $('permMatrixHead').innerHTML='<tr><th>الموظف</th><th>الدور</th>'+MODULES.map(m=>`<th>${m.label}</th>`).join('')+'</tr>';
  const q=($('permSearchName')?$('permSearchName').value:'').trim();
  const rows=employees.filter(e=>e.role!=='admin'||true).filter(e=>!q||e.name.includes(q));
@@ -3002,7 +3013,7 @@ async function generatePayroll(isAdmin){
    await loadAll();run=payrollRuns.find(r=>r.month===month&&r.year===year);
   }
   const existingIds=new Set(payrollItems.filter(i=>i.runId===run.id).map(i=>i.employee_id));
-  const missing=employees.filter(e=>e.role!=='admin'&&e.status==='نشط'&&!existingIds.has(e.id));
+  const missing=employees.filter(e=>e.status==='نشط'&&!existingIds.has(e.id));
   if(missing.length){
    const rows=missing.map(e=>({run_id:run.id,employee_id:e.id,base_salary:e.salary||0,additions:0,deductions:0,net_pay:e.salary||0}));
    const {error}=await sb.from('payroll_items').insert(rows);
