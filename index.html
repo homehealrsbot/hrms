@@ -75,7 +75,9 @@ nav{padding:14px 12px;flex:1}
 .nav-group.open .nav-group-head .chev{transform:rotate(90deg)}
 .nav-group-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
 .nav-group.open .nav-group-body{max-height:600px}
-.nav-item{display:flex;align-items:center;gap:11px;width:100%;padding:9.5px 12px;border-radius:10px;color:rgba(255,255,255,.82);font-size:13.5px;font-weight:500;margin-bottom:2px;text-align:right;transition:.13s;position:relative}
+.nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:10.5px 14px;border-radius:10px;color:rgba(255,255,255,.75);font-size:13.5px;font-weight:400;margin-bottom:1px;text-align:right;transition:.13s;position:relative}
+.nav-item .ic{opacity:.8;font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-divider{height:1px;background:rgba(255,255,255,.08);margin:12px 16px}
 .nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
 .nav-item.active{background:rgba(255,255,255,.13);color:#fff;font-weight:700}
 .nav-item.active::before{content:"";position:absolute;inset-inline-start:-12px;top:20%;bottom:20%;width:3.5px;border-radius:3px;background:var(--sand)}
@@ -251,52 +253,34 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <nav>
     <button class="nav-item active" data-page="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
-    <button class="nav-item" data-page="alerts"><span class="ic">🔔</span> التنبيهات / الإشعارات <span class="nav-badge" id="alertCount">0</span></button>
+    <button class="nav-item" data-page="alerts"><span class="ic">🔔</span> التنبيهات <span class="nav-badge" id="alertCount">0</span></button>
     <button class="nav-item" data-page="approvals"><span class="ic">✅</span> الاعتمادات <span class="nav-badge" id="approvalsCount">0</span></button>
 
-    <div class="nav-group open">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>👥 الموارد البشرية</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
-        <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
-        <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
-        <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
-        <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-        <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
-        <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
-        <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
+    <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
+    <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
+    <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
+    <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
+    <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+    <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+    <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
 
-    <div class="nav-group">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>💰 المالية</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
-        <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
-        <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
+    <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
+    <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
 
-    <div class="nav-group">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>⚙️ النظام</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
-        <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
-        <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
+    <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
+    <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
 
-    <div class="nav-group">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>🪪 حسابي الشخصي</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
-        <button class="nav-item" onclick="adminOpenSelfEdit()"><span class="ic">✎</span> تعديل بياناتي</button>
-        <button class="nav-item" onclick="adminOpenDocs()"><span class="ic">📎</span> مستنداتي</button>
-        <button class="nav-item" onclick="adminNewLeave()"><span class="ic">🌴</span> طلب إجازة لي</button>
-        <button class="nav-item" onclick="adminNewPermit()"><span class="ic">🚪</span> طلب استئذان لي</button>
-        <button class="nav-item" data-page="mySalaryAdmin"><span class="ic">🧾</span> راتبي</button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
+    <button class="nav-item" onclick="adminNewLeave()"><span class="ic">🌴</span> طلب إجازة لي</button>
+    <button class="nav-item" onclick="adminNewPermit()"><span class="ic">🚪</span> طلب استئذان لي</button>
+    <button class="nav-item" data-page="mySalaryAdmin"><span class="ic">🧾</span> راتبي</button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -679,45 +663,27 @@ tbody tr:hover{background:#FAFCFB}
   <nav>
     <button class="nav-item active" data-ep="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
     <button class="nav-item" data-ep="alerts"><span class="ic">🔔</span> الإشعارات <span class="nav-badge" id="epAlertCount">0</span></button>
+    <button class="nav-item" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
 
-    <div class="nav-group open">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>👤 حسابي</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
-        <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
-        <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> الاجازات</button>
+    <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
+    <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
+    <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
 
-    <div class="nav-group open">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>📋 طلباتي</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> الاجازات</button>
-        <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
-        <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
-      </div>
-    </div>
+    <div class="nav-divider"></div>
+    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> الحضور</button>
+    <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+    <button class="nav-item" data-ep="forms"><span class="ic">📄</span> النماذج</button>
 
-    <div class="nav-group">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>📚 عام</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> الحضور</button>
-        <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
-        <button class="nav-item" data-ep="forms"><span class="ic">📄</span> النماذج</button>
-      </div>
-    </div>
-
-    <div class="nav-group open">
-      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span>🛠 الإدارة</span><span class="chev">›</span></button>
-      <div class="nav-group-body">
-        <button class="nav-item" data-ep="myTeam" id="mgrTeamNavBtn" style="display:none"><span class="ic">👥</span> موظفي قسمي</button>
-        <button class="nav-item" data-ep="approvals" id="mgrNavBtn" style="display:none"><span class="ic">✅</span> اعتمادات القسم <span class="nav-badge" id="mgrBadge">0</span></button>
-        <button class="nav-item" data-ep="deductions" id="dedNavBtn" style="display:none"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="dedNavBadge" style="display:none">0</span></button>
-        <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
-        <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
-        <button class="nav-item" data-ep="payApprovals" id="acctPayApprovalsNavBtn" style="display:none"><span class="ic">✅</span> اعتماد الصرف <span class="nav-badge" id="acctPayBadge">0</span></button>
-      </div>
-    </div>
+    <div class="nav-divider" id="mgrDivider" style="display:none"></div>
+    <button class="nav-item" data-ep="myTeam" id="mgrTeamNavBtn" style="display:none"><span class="ic">👥</span> موظفي قسمي</button>
+    <button class="nav-item" data-ep="approvals" id="mgrNavBtn" style="display:none"><span class="ic">✅</span> اعتمادات القسم <span class="nav-badge" id="mgrBadge">0</span></button>
+    <button class="nav-item" data-ep="deductions" id="dedNavBtn" style="display:none"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="dedNavBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
+    <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
+    <button class="nav-item" data-ep="payApprovals" id="acctPayApprovalsNavBtn" style="display:none"><span class="ic">✅</span> اعتماد الصرف <span class="nav-badge" id="acctPayBadge">0</span></button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -3196,6 +3162,7 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
  }
  if(currentEmp.role==='manager')mgrRenderApprovals();
  if(currentEmp.role==='accountant'){
+  if($('mgrDivider'))$('mgrDivider').style.display='block';
   $('acctPayrollNavBtn').style.display='flex';$('acctCustodyNavBtn').style.display='flex';$('acctPayApprovalsNavBtn').style.display='flex';
   fillMonthSelect('prollMonth');renderPayrollTable(false);
   renderCustodyInto('custodyTbody','custEmp');
@@ -3204,6 +3171,7 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
  renderDeductionsPage();
 }
 function mgrRenderApprovals(){
+ if($('mgrDivider'))$('mgrDivider').style.display='block';
  $('mgrNavBtn').style.display='flex';
  $('mgrTeamNavBtn').style.display='flex';
  const team=employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
