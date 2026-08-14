@@ -245,24 +245,30 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <nav>
     <button class="nav-item active" data-page="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
-    <div class="nav-label">القوائم الرئيسية</div>
     <button class="nav-item" data-page="alerts"><span class="ic">🔔</span> التنبيهات / الإشعارات <span class="nav-badge" id="alertCount">0</span></button>
     <button class="nav-item" data-page="approvals"><span class="ic">✅</span> الاعتمادات <span class="nav-badge" id="approvalsCount">0</span></button>
-    <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+
+    <div class="nav-label">الموارد البشرية</div>
     <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
     <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
     <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
     <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
     <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-    <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
-    <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
+    <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+    <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
     <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
+
+    <div class="nav-label">المالية</div>
     <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
-    <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+
+    <div class="nav-label">النظام</div>
+    <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
+    <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
     <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
-    <div class="nav-sep" style="border-top:1px solid rgba(255,255,255,.12);margin:10px 14px"></div>
+
+    <div class="nav-label">حسابي الشخصي</div>
     <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
     <button class="nav-item" onclick="adminOpenSelfEdit()"><span class="ic">✎</span> تعديل بياناتي</button>
     <button class="nav-item" onclick="adminOpenDocs()"><span class="ic">📎</span> مستنداتي</button>
@@ -650,23 +656,30 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <nav>
     <button class="nav-item active" data-ep="dashboard"><span class="ic">▦</span> لوحة التحكم</button>
-    <button class="nav-item" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
-    <div class="nav-label">خدماتي</div>
     <button class="nav-item" data-ep="alerts"><span class="ic">🔔</span> الإشعارات <span class="nav-badge" id="epAlertCount">0</span></button>
+
+    <div class="nav-label">حسابي</div>
+    <button class="nav-item" data-ep="profile"><span class="ic">👤</span> الملف الشخصي</button>
     <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
+    <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
+
+    <div class="nav-label">طلباتي</div>
     <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> الاجازات</button>
-    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> الحضور</button>
     <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
+    <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
+
+    <div class="nav-label">عام</div>
+    <button class="nav-item" data-ep="attendance"><span class="ic">🕐</span> الحضور</button>
     <button class="nav-item" data-ep="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
     <button class="nav-item" data-ep="forms"><span class="ic">📄</span> النماذج</button>
-    <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
-    <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
+
+    <div class="nav-label">الإدارة</div>
     <button class="nav-item" data-ep="myTeam" id="mgrTeamNavBtn" style="display:none"><span class="ic">👥</span> موظفي قسمي</button>
     <button class="nav-item" data-ep="approvals" id="mgrNavBtn" style="display:none"><span class="ic">✅</span> اعتمادات القسم <span class="nav-badge" id="mgrBadge">0</span></button>
+    <button class="nav-item" data-ep="deductions" id="dedNavBtn" style="display:none"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="dedNavBadge" style="display:none">0</span></button>
     <button class="nav-item" data-ep="payroll" id="acctPayrollNavBtn" style="display:none"><span class="ic">📑</span> الرواتب</button>
     <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" data-ep="payApprovals" id="acctPayApprovalsNavBtn" style="display:none"><span class="ic">✅</span> اعتماد الصرف <span class="nav-badge" id="acctPayBadge">0</span></button>
-    <button class="nav-item" data-ep="deductions" id="dedNavBtn" style="display:none"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="dedNavBadge" style="display:none">0</span></button>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
