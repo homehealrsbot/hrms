@@ -1897,14 +1897,21 @@ function renderContracts(){
 }
 function showVersions(eid){const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
  alert('نسخ عقد '+c.emp+':\n'+c.history.map(h=>`النسخة ${h.version}: من ${h.start_date} إلى ${h.end_date}${h.is_current?' (الحالية)':''}`).join('\n'))}
+let renewingContractIds=new Set(); // يمنع تكرار الإرسال لو ضُغط الزر مرتين بسرعة
 async function renewContract(eid){
- const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
- const len=new Date(c.end)-new Date(c.start);
- const ns=new Date(Math.max(new Date(c.end),today));const ne=new Date(ns.getTime()+len);
- const {error}=await sb.from('contracts').insert({employee_id:eid,start_date:ns.toISOString().slice(0,10),end_date:ne.toISOString().slice(0,10),duration:c.dur,version:c.versions+1,is_current:true});
- if(error){err(error);return}
- await sb.from('contracts').update({is_current:false}).eq('id',c.id);
- await refresh();toast('تم إنشاء نسخة جديدة بنفس المدة مع حفظ النسخ السابقة');
+ if(renewingContractIds.has(eid))return; // طلب تجديد لنفس الموظف قيد التنفيذ فعلاً
+ renewingContractIds.add(eid);
+ try{
+  const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
+  const len=new Date(c.end)-new Date(c.start);
+  const ns=new Date(Math.max(new Date(c.end),today));const ne=new Date(ns.getTime()+len);
+  const {error}=await sb.from('contracts').insert({employee_id:eid,start_date:ns.toISOString().slice(0,10),end_date:ne.toISOString().slice(0,10),duration:c.dur,version:c.versions+1,is_current:true});
+  if(error){err(error);return}
+  await sb.from('contracts').update({is_current:false}).eq('id',c.id);
+  await refresh();toast('تم إنشاء نسخة جديدة بنفس المدة مع حفظ النسخ السابقة');
+ }finally{
+  renewingContractIds.delete(eid);
+ }
 }
 async function addContract(){
  if(!$('cStart').value||!$('cEnd').value){toast('حدد تاريخ البداية والنهاية');return}
