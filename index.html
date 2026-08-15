@@ -1410,7 +1410,8 @@ async function loadAll(){
  const byEmp={};
  (C.data||[]).forEach(r=>{(byEmp[r.employee_id]=byEmp[r.employee_id]||[]).push(r)});
  contracts=Object.entries(byEmp).map(([eid,rows])=>{rows.sort((a,b)=>a.version-b.version);const cur=rows[rows.length-1];
-  return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,file:cur.pdf_url,history:rows}});
+  const maxVersion=Math.max(...rows.map(r=>+r.version||0),0);
+  return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,maxVersion,file:cur.pdf_url,history:rows}});
  contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
  leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,notes:r.notes}));
  meetAtt=[];meetAbs=[];
@@ -1905,7 +1906,7 @@ async function renewContract(eid){
   const c=contracts.find(x=>x.employee_id===eid);if(!c)return;
   const len=new Date(c.end)-new Date(c.start);
   const ns=new Date(Math.max(new Date(c.end),today));const ne=new Date(ns.getTime()+len);
-  const {error}=await sb.from('contracts').insert({employee_id:eid,start_date:ns.toISOString().slice(0,10),end_date:ne.toISOString().slice(0,10),duration:c.dur,version:c.versions+1,is_current:true});
+  const {error}=await sb.from('contracts').insert({employee_id:eid,start_date:ns.toISOString().slice(0,10),end_date:ne.toISOString().slice(0,10),duration:c.dur,version:(c.maxVersion||c.versions)+1,is_current:true});
   if(error){err(error);return}
   await sb.from('contracts').update({is_current:false}).eq('id',c.id);
   await refresh();toast('تم إنشاء نسخة جديدة بنفس المدة مع حفظ النسخ السابقة');
