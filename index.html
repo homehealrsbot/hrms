@@ -294,8 +294,8 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="top-user">
     <button class="bell" onclick="go('alerts')">🔔<span class="dot" id="bellDot" style="display:none"></span></button>
-    <div class="avatar">أ</div>
-    <div style="line-height:1.3"><b style="font-size:13px">مدير النظام</b><br><small style="color:var(--muted);font-size:11px">صلاحية كاملة</small></div>
+    <div class="avatar" id="topUserAvatar">أ</div>
+    <div style="line-height:1.3"><b style="font-size:13px" id="topUserName">مدير النظام</b><br><small style="color:var(--muted);font-size:11px" id="topUserRole">صلاحية كاملة</small></div>
   </div>
 </div>
 
@@ -2673,7 +2673,12 @@ function renderPermissionsPage(){
   return `<tr><td><b>${e.name}</b><br><small style="color:var(--muted)">${e.num}</small></td><td><span class="tag info">${roleLabel(e.role)}</span></td>${cells}</tr>`;
  }).join(''):'<tr><td colspan="14" class="empty">لا يوجد موظفون</td></tr>';
 }
-function initAll(){fillDeptFilter();renderAll()}
+function initAll(){
+ if($('topUserName'))$('topUserName').textContent=me.name||'مدير النظام';
+ if($('topUserRole'))$('topUserRole').textContent=me.job||(hasPerm('permissions','view')?'صلاحية كاملة':'أدمن');
+ if($('topUserAvatar'))$('topUserAvatar').textContent=(me.name||'أ').trim()[0]||'أ';
+ fillDeptFilter();renderAll();
+}
 
 
 /* ================= مستندات الموظفين ================= */
