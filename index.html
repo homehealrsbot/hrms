@@ -330,6 +330,10 @@ tbody tr:hover{background:#FAFCFB}
 <!-- ===== التنبيهات ===== -->
 <section class="page" id="page-alerts">
   <div class="page-head"><div><h1>التنبيهات والإشعارات</h1><p>تنبيهات تلقائية يولدها النظام حسب الآلية المعتمدة</p></div></div>
+  <div class="tabs">
+    <button class="active" onclick="alertTabSwitch('task',this)">✅ المهام <span class="nav-badge" id="alertTaskCount">0</span></button>
+    <button onclick="alertTabSwitch('alert',this)">🔔 التنبيهات <span class="nav-badge" id="alertInfoCount">0</span></button>
+  </div>
   <div class="card" id="alertsList"></div>
 </section>
 
@@ -735,6 +739,10 @@ tbody tr:hover{background:#FAFCFB}
 
 <section class="page" id="ep-alerts">
   <div class="page-head"><div><h1>إشعاراتي</h1><p>التنبيهات الخاصة بك فقط</p></div></div>
+  <div class="tabs">
+    <button class="active" onclick="epAlertTabSwitch('task',this)">✅ المهام <span class="nav-badge" id="epAlertTaskCount">0</span></button>
+    <button onclick="epAlertTabSwitch('alert',this)">🔔 التنبيهات <span class="nav-badge" id="epAlertInfoCount">0</span></button>
+  </div>
   <div class="card" id="epAlertsList"></div>
 </section>
 
@@ -1532,41 +1540,42 @@ function alertItem(a,i){
 /* ================= التنبيهات التلقائية ================= */
 function buildAlerts(){
  const A=[];
+ const TASK='task',INFO='alert';
  contracts.forEach(c=>{const n=daysTo(c.end);
-  if(n>=0&&n<=30)A.push({sid:'ct-'+c.employee_id,t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍',nav:{p:'contracts',f:'exp30'}})});
+  if(n>=0&&n<=30)A.push({sid:'ct-'+c.employee_id,t:'انتهاء عقد',d:`عقد الموظف ${c.emp} ينتهي خلال ${n} يوم (${fmt(c.end)})`,k:n<=7?'danger':'sand',ic:'✍',nav:{p:'contracts',f:'exp30'},kind:TASK})});
  employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
-  if(n>=0&&n<=14)A.push({sid:'prob-'+e.num,t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num}})});
+  if(n>=0&&n<=14)A.push({sid:'prob-'+e.num,t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num},kind:TASK})});
  leaves.forEach(l=>{
-  if(l.status==='تمت الموافقة'&&daysTo(l.start)===0)A.push({sid:'lvstart-'+l.id,t:'بداية إجازة',d:`تبدأ اليوم إجازة الموظف ${l.emp}`,k:'sand',ic:'🏖️',nav:{p:'leaves',detail:l.emp}});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.emp}});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp}});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp}});
-  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1}});
-  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2}})});
+  if(l.status==='تمت الموافقة'&&daysTo(l.start)===0)A.push({sid:'lvstart-'+l.id,t:'بداية إجازة',d:`تبدأ اليوم إجازة الموظف ${l.emp}`,k:'sand',ic:'🏖️',nav:{p:'leaves',detail:l.emp},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.emp},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp},kind:INFO});
+  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1},kind:TASK});
+  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK})});
  permits.forEach(p=>{
-  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp}});
-  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp}});
+  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK});
+  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK});
  });
  employees.forEach(e=>{const b=balance(e.name);
-  if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name}});
-  if(b.sickLeft<=5&&b.sickLeft>0)A.push({sid:'balS-'+e.num,t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name}});
-  if(b.annualUsed>0&&b.annualLeft<=0)A.push({sid:'balZ-'+e.num,t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name}})});
+  if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name},kind:INFO});
+  if(b.sickLeft<=5&&b.sickLeft>0)A.push({sid:'balS-'+e.num,t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name},kind:INFO});
+  if(b.annualUsed>0&&b.annualLeft<=0)A.push({sid:'balZ-'+e.num,t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name},kind:INFO})});
  const monthAbs={};const mNow=D(0).slice(0,7);
  siteAbs.filter(a=>String(a.date).startsWith(mNow)).forEach(a=>monthAbs[a.emp]=(monthAbs[a.emp]||0)+1);
- Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({sid:'abs-'+emp+'-'+mNow,t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'}})});
- policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'}})});
+ Object.entries(monthAbs).forEach(([emp,n])=>{if(n>3)A.push({sid:'abs-'+emp+'-'+mNow,t:'تجاوز الغيابات',d:`تجاوز الموظف ${emp} ثلاث غيابات هذا الشهر (${n} غيابات)`,k:'danger',ic:'🚫',nav:{p:'attendance',tab:'siteAbs'},kind:INFO})});
+ policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'},kind:INFO})});
  formSubs.forEach(s=>{
   const fm=formsData.find(x=>x.id===s.form_id)||{};
-  if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'}});
-  if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'}});
+  if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'},kind:TASK});
+  if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'},kind:TASK});
  });
  paymentRequests.forEach(p=>{
-  if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'}});
-  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'}});
+  if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'},kind:TASK});
+  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'},kind:TASK});
  });
  deductionRequests.forEach(d=>{
-  if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'}});
-  if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'}});
+  if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'},kind:TASK});
+  if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'},kind:TASK});
  });
  return A;
 }
@@ -1578,21 +1587,28 @@ function sortAlerts(A){
   return (SEV[a.k]??9)-(SEV[b.k]??9);            // ثم الأشد أهمية
  });
 }
+let alertTabActive='task';
+function alertTabSwitch(kind,btn){alertTabActive=kind;document.querySelectorAll('#page-alerts .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAlerts()}
 function renderAlerts(){
- const A=sortAlerts(buildAlerts().filter(a=>{
+ const Afull=sortAlerts(buildAlerts().filter(a=>{
   if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-'))&&!hasPerm('paymentsAdmin','view'))return false;
   if(a.sid&&a.sid.startsWith('ded1-')&&!hasPerm('deductionsHR','view'))return false;
   if(a.sid&&a.sid.startsWith('ded2-')&&!hasPerm('paymentsAdmin','full'))return false;
   return true;
  }));
- const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
+ const taskCount=Afull.filter(a=>a.kind==='task').length;
+ const infoCount=Afull.filter(a=>a.kind!=='task').length;
+ if($('alertTaskCount'))$('alertTaskCount').textContent=taskCount;
+ if($('alertInfoCount'))$('alertInfoCount').textContent=infoCount;
+ const A=Afull.filter(a=>(alertTabActive==='task')===(a.kind==='task'));
+ const unreadCount=Afull.filter(a=>!readKeys.has(alertKey(a))).length;
  $('alertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
  _alertsList=A;
  if($('bellDot'))$('bellDot').style.display=unreadCount?'block':'none';
- $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
-  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد تنبيهات حالياً</div>');
- $('dashAlerts').innerHTML=A.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد تنبيهات</div>';
+ $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${A.filter(a=>!readKeys.has(alertKey(a))).length}</b>${allKeys.length?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
+  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):`<div class="empty">${alertTabActive==='task'?'لا توجد مهام معلّقة 🎉':'لا توجد تنبيهات حالياً'}</div>`);
+ $('dashAlerts').innerHTML=Afull.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد تنبيهات</div>';
 }
 
 /* ================= لوحة التحكم ================= */
@@ -3248,26 +3264,33 @@ async function mgrDecideForm(id,approve){
  await refresh();toast(approve?'تم اعتماد النموذج ورُفع للإدارة للاعتماد النهائي':'تم رفض النموذج');
 }
 
+let epAlertTabActive='task';
+function epAlertTabSwitch(kind,btn){epAlertTabActive=kind;document.querySelectorAll('#ep-alerts .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');epRenderAlerts()}
 function epRenderAlerts(){
- const A=buildAlerts().filter(a=>{
+ const Afull=buildAlerts().filter(a=>{
   if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')||a.sid.startsWith('ded1-')||a.sid.startsWith('ded2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
- if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>A.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'}}));
- if(currentEmp.role==='manager')formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'mgrfm-'+s.id,t:'نموذج بانتظار اعتمادك',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'📄',nav:{p:'approvals'}})});
- if(currentEmp.role==='manager')permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id).forEach(p=>A.push({sid:'mgrpr-'+p.id,t:'استئذان بانتظار اعتمادك',d:`${p.emp} قدّم استئذان (${p.type}) بتاريخ ${fmt(p.date)} — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'🚪',nav:{p:'approvals'}}));
- if(currentEmp.role==='accountant'&&hasPerm('paymentsAdmin','full'))deductionRequests.filter(d=>d.status===DED_P2).forEach(d=>A.push({sid:'acctded-'+d.id,t:'طلب خصم بانتظار اعتمادك النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك`,k:'info',ic:'⚠️',nav:{p:'deductions'}}));
- leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>A.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'}}));
- permits.filter(p=>p.employee_id===currentEmp.id&&(p.status==='معتمد'||p.status==='مرفوض')).forEach(p=>A.push({sid:'prst-'+p.id+'-'+(p.status==='معتمد'?'a':'r'),t:'تحديث حالة طلب استئذان',d:`طلبك للاستئذان (${p.type}) بتاريخ ${fmt(p.date)}: ${p.status}`,k:p.status==='معتمد'?'ok':'danger',ic:'🚪',nav:{p:'permits'}}));
- formSubs.filter(s=>s.employee_id===currentEmp.id&&(s.status==='تمت الموافقة'||s.status==='تم الرفض')).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};A.push({sid:'fmst-'+s.id,t:'تحديث حالة نموذج',d:`نموذجك «${fm.name||''}»: ${s.status}`,k:s.status==='تمت الموافقة'?'ok':'danger',ic:'📄',nav:{p:'forms'}})});
- sortAlerts(A);
- const unreadCount=A.filter(a=>!readKeys.has(alertKey(a))).length;
+ if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>Afull.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'},kind:'task'}));
+ if(currentEmp.role==='manager')formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};Afull.push({sid:'mgrfm-'+s.id,t:'نموذج بانتظار اعتمادك',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'📄',nav:{p:'approvals'},kind:'task'})});
+ if(currentEmp.role==='manager')permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id).forEach(p=>Afull.push({sid:'mgrpr-'+p.id,t:'استئذان بانتظار اعتمادك',d:`${p.emp} قدّم استئذان (${p.type}) بتاريخ ${fmt(p.date)} — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'🚪',nav:{p:'approvals'},kind:'task'}));
+ if(currentEmp.role==='accountant'&&hasPerm('paymentsAdmin','full'))deductionRequests.filter(d=>d.status===DED_P2).forEach(d=>Afull.push({sid:'acctded-'+d.id,t:'طلب خصم بانتظار اعتمادك النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك`,k:'info',ic:'⚠️',nav:{p:'deductions'},kind:'task'}));
+ leaves.filter(l=>l.emp===currentEmp.name&&(l.status==='تمت الموافقة'||l.status==='تم الرفض')).forEach(l=>Afull.push({sid:'lvst-'+l.id+'-'+(l.status==='تمت الموافقة'?'a':'r'),t:'تحديث حالة طلب إجازة',d:`طلبك لإجازة ${l.type} (${fmt(l.start)}): ${l.status}`,k:l.status==='تمت الموافقة'?'ok':'danger',ic:'🌴',nav:{p:'leaves'},kind:'alert'}));
+ permits.filter(p=>p.employee_id===currentEmp.id&&(p.status==='معتمد'||p.status==='مرفوض')).forEach(p=>Afull.push({sid:'prst-'+p.id+'-'+(p.status==='معتمد'?'a':'r'),t:'تحديث حالة طلب استئذان',d:`طلبك للاستئذان (${p.type}) بتاريخ ${fmt(p.date)}: ${p.status}`,k:p.status==='معتمد'?'ok':'danger',ic:'🚪',nav:{p:'permits'},kind:'alert'}));
+ formSubs.filter(s=>s.employee_id===currentEmp.id&&(s.status==='تمت الموافقة'||s.status==='تم الرفض')).forEach(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};Afull.push({sid:'fmst-'+s.id,t:'تحديث حالة نموذج',d:`نموذجك «${fm.name||''}»: ${s.status}`,k:s.status==='تمت الموافقة'?'ok':'danger',ic:'📄',nav:{p:'forms'},kind:'alert'})});
+ sortAlerts(Afull);
+ const taskCount=Afull.filter(a=>a.kind==='task').length;
+ const infoCount=Afull.filter(a=>a.kind!=='task').length;
+ if($('epAlertTaskCount'))$('epAlertTaskCount').textContent=taskCount;
+ if($('epAlertInfoCount'))$('epAlertInfoCount').textContent=infoCount;
+ const A=Afull.filter(a=>(epAlertTabActive==='task')===(a.kind==='task'));
+ const unreadCount=Afull.filter(a=>!readKeys.has(alertKey(a))).length;
  $('epAlertCount').textContent=unreadCount;
  const allKeys=A.map(alertKey).filter(k=>!readKeys.has(k));
  _alertsList=A;
  if($('epBellDot'))$('epBellDot').style.display=unreadCount?'block':'none';
- $('epAlertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${unreadCount}</b>${unreadCount?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
-  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):'<div class="empty">لا توجد إشعارات خاصة بك حالياً</div>');
+ $('epAlertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${A.filter(a=>!readKeys.has(alertKey(a))).length}</b>${allKeys.length?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
+  (A.length?A.map((a,i)=>alertItem(a,i)).join(''):`<div class="empty">${epAlertTabActive==='task'?'لا توجد مهام معلّقة 🎉':'لا توجد إشعارات خاصة بك حالياً'}</div>`);
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
