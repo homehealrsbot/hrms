@@ -1426,7 +1426,7 @@ async function loadAll(){
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
- permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,head:r.dept_head,notes:r.notes}));
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
@@ -1538,6 +1538,26 @@ function alertItem(a,i){
  </div>`}
 
 /* ================= التنبيهات التلقائية ================= */
+/* ================= مواعيد اتخاذ الإجراء (SLA) — 3 أيام عمل، بدون الجمعة والسبت ================= */
+const SLA_BUSINESS_DAYS=3;
+function addBusinessDays(dateStr,n){
+ const d=new Date(dateStr);
+ let added=0;
+ while(added<n){
+  d.setDate(d.getDate()+1);
+  const dow=d.getDay(); // 5=الجمعة، 6=السبت (عطلة نهاية الأسبوع السعودية)
+  if(dow!==5&&dow!==6)added++;
+ }
+ return d;
+}
+function slaInfo(createdAt){
+ if(!createdAt)return null;
+ const due=addBusinessDays(createdAt,SLA_BUSINESS_DAYS);
+ const now=new Date();
+ const overdue=now>due;
+ const dueStr=due.toISOString().slice(0,10);
+ return {due,dueStr,overdue,label:overdue?`⚠️ متأخر عن الموعد النهائي (${fmt(dueStr)})`:`الموعد النهائي للإجراء: ${fmt(dueStr)}`};
+}
 function buildAlerts(){
  const A=[];
  const TASK='task',INFO='alert';
@@ -1550,11 +1570,11 @@ function buildAlerts(){
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.emp},kind:INFO});
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp},kind:INFO});
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp},kind:INFO});
-  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1},kind:TASK});
-  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK})});
+  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1},kind:TASK,createdAt:l.req});
+  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK,createdAt:l.req})});
  permits.forEach(p=>{
-  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK});
-  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK});
+  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
+  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
  });
  employees.forEach(e=>{const b=balance(e.name);
   if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name},kind:INFO});
@@ -1566,17 +1586,29 @@ function buildAlerts(){
  policies.forEach(p=>{if(daysTo(p.updated)>=-7)A.push({sid:'pol-'+p.id+'-v'+p.ver,t:p.ver>1?'تحديث سياسة':'إضافة سياسة جديدة',d:`${p.name} — آخر تحديث ${fmt(p.updated)} (الإصدار ${p.ver})`,k:'info',ic:'§',nav:{p:'policies'},kind:INFO})});
  formSubs.forEach(s=>{
   const fm=formsData.find(x=>x.id===s.form_id)||{};
-  if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'},kind:TASK});
-  if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'},kind:TASK});
+  if(s.status===LV_P1)A.push({sid:'fm1-'+s.id,t:'نموذج بانتظار موافقة رئيس القسم',d:`${s.emp} قدّم نموذج «${fm.name||''}» — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'📄',nav:{p:'forms'},kind:TASK,createdAt:s.created_at});
+  if(s.status===LV_P2)A.push({sid:'fm2-'+s.id,t:'نموذج بانتظار الاعتماد النهائي',d:`نموذج «${fm.name||''}» من ${s.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'forms'},kind:TASK,createdAt:s.created_at});
  });
  paymentRequests.forEach(p=>{
-  if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'},kind:TASK});
-  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'},kind:TASK});
+  if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
+  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
  });
  deductionRequests.forEach(d=>{
-  if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'},kind:TASK});
-  if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'},kind:TASK});
+  if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'},kind:TASK,createdAt:d.createdAt});
+  if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'},kind:TASK,createdAt:d.createdAt});
  });
+ // === إثراء كل مهمة بموعد اتخاذ الإجراء (SLA) + بناء تنبيهات تصعيد للمتأخرات ===
+ A.forEach(a=>{
+  if(a.kind===TASK&&a.createdAt){
+   const sla=slaInfo(a.createdAt);
+   if(sla){a.sla=sla;a.d+=' — '+sla.label;if(sla.overdue)a.k='danger'}
+  }
+ });
+ if(me&&me.role==='admin'){
+  A.filter(a=>a.kind===TASK&&a.sla&&a.sla.overdue).forEach(a=>{
+   A.push({sid:'esc-'+a.sid,t:'🚨 طلب متأخر عن الموعد المحدد',d:`تصعيد: "${a.t}" — ${a.d.split(' — ')[0]} — متأخر ولم يُتخذ فيه إجراء حتى الآن`,k:'danger',ic:'🚨',nav:a.nav,kind:TASK});
+  });
+ }
  return A;
 }
 const SEV={danger:0,sand:1,info:2,ok:3};
