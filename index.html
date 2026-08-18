@@ -3500,13 +3500,14 @@ function renderExtraModuleBody(key,full){
 }
 function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();epRenderPayments();epRenderMySalary();renderExtraModulesNav();
  if(extraModuleOpenKey&&document.getElementById('ep-extraModule').classList.contains('on'))renderExtraModuleBody(extraModuleOpenKey,hasPerm(extraModuleOpenKey,'full'));
- // إخفاء النظام المالي عن الموظف العادي أثناء التجربة الداخلية (راجع المفتاح أعلى الملف)
+ // إخفاء طلبات الصرف تحديداً عن الموظف العادي أثناء التجربة الداخلية (راجع المفتاح أعلى الملف)
+ // "راتبي" ليست جزءاً من هذا الاستثناء — أساسية ولازم تظهر لأي موظف دائماً
  const financeVisible=FINANCE_ENABLED_FOR_EMPLOYEES||currentEmp.role!=='employee';
  if($('empPaymentsNavBtn'))$('empPaymentsNavBtn').style.display=financeVisible?'flex':'none';
- if($('empSalaryNavBtn'))$('empSalaryNavBtn').style.display=financeVisible?'flex':'none';
+ if($('empSalaryNavBtn'))$('empSalaryNavBtn').style.display='flex';
  if(!financeVisible){
   const activeId=(document.querySelector('#empApp .page.on')||{}).id||'';
-  if(activeId==='ep-payments'||activeId==='ep-mysalary')epGo('dashboard');
+  if(activeId==='ep-payments')epGo('dashboard');
  }
  if(currentEmp.role==='manager')mgrRenderApprovals();
  if(currentEmp.role==='accountant'){
