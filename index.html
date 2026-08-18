@@ -682,15 +682,13 @@ tbody tr:hover{background:#FAFCFB}
     <div class="card">
       <div class="filters">
         <input id="auditSearchName" placeholder="بحث باسم الشخص" oninput="loadAuditLog()">
-        <select id="auditTableFilter" onchange="loadAuditLog()"><option value="">الجدول: الكل</option></select>
-        <select id="auditActionFilter" onchange="loadAuditLog()">
-          <option value="">النوع: الكل</option><option value="INSERT">إضافة</option><option value="UPDATE">تعديل</option><option value="DELETE">حذف</option>
-        </select>
+        <select id="auditMoveFilter" onchange="auditMoveFilterChanged()"><option value="">نوع الحركة: الكل</option></select>
         <input id="auditDateFrom" type="date" onchange="loadAuditLog()">
         <input id="auditDateTo" type="date" onchange="loadAuditLog()">
+        <button class="btn btn-ghost btn-sm" onclick="auditShowAllDates()">كل الفترات</button>
       </div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>الوقت</th><th>مين</th><th>النوع</th><th>القسم</th><th>التفاصيل</th></tr></thead>
+        <thead><tr><th>الوقت</th><th>مين</th><th>الحركة</th><th>التفاصيل</th></tr></thead>
         <tbody id="auditLogTbody"></tbody></table></div>
       <div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" id="auditLoadMoreBtn" onclick="loadAuditLog(true)">تحميل المزيد</button></div>
     </div>
@@ -2783,6 +2781,27 @@ async function savePermission(empId,module,level){
 /* ================= سجل النشاط (Audit Log) — محصور بمدير النظام ================= */
 const AUDIT_TABLE_LABELS={employees:'الموظفين',contracts:'العقود',leaves:'الإجازات',permits:'الاستئذانات',site_attendance:'الحضور بالمقر',meeting_records:'حضور الاجتماعات',policies:'السياسات',forms:'النماذج',form_submissions:'تقديمات النماذج',files_registry:'الملفات',payroll_runs:'كشوف الرواتب',payroll_items:'بنود الرواتب',custody_records:'العهد',payment_requests:'طلبات الصرف',deduction_requests:'طلبات الخصم',permissions:'الصلاحيات'};
 const AUDIT_ACTION_LABELS={INSERT:{t:'إضافة',k:'ok'},UPDATE:{t:'تعديل',k:'sand'},DELETE:{t:'حذف',k:'danger'}};
+/* أسماء حركات مفهومة بدل "جدول + نوع" التقني — تُستخدم بفلتر "نوع الحركة" وبعمود "الحركة" */
+const AUDIT_MOVE_LABELS={
+ employees:{INSERT:'إضافة موظف',UPDATE:'تعديل بيانات موظف',DELETE:'حذف موظف'},
+ contracts:{INSERT:'إضافة عقد',UPDATE:'تجديد/تعديل عقد',DELETE:'حذف عقد'},
+ leaves:{INSERT:'تقديم طلب إجازة',UPDATE:'تعديل حالة إجازة',DELETE:'حذف إجازة'},
+ permits:{INSERT:'تقديم طلب استئذان',UPDATE:'تعديل حالة استئذان',DELETE:'حذف استئذان'},
+ site_attendance:{INSERT:'تسجيل حضور/غياب بالمقر',UPDATE:'تعديل سجل حضور',DELETE:'حذف سجل حضور'},
+ meeting_records:{INSERT:'تسجيل حضور اجتماع',UPDATE:'تعديل حضور اجتماع',DELETE:'حذف حضور اجتماع'},
+ policies:{INSERT:'إضافة سياسة',UPDATE:'تعديل سياسة',DELETE:'حذف سياسة'},
+ forms:{INSERT:'إضافة نموذج',UPDATE:'تعديل نموذج',DELETE:'حذف نموذج'},
+ form_submissions:{INSERT:'تقديم نموذج',UPDATE:'تعديل حالة نموذج',DELETE:'حذف تقديم نموذج'},
+ files_registry:{INSERT:'رفع ملف',UPDATE:'تعديل ملف',DELETE:'حذف ملف'},
+ payroll_runs:{INSERT:'فتح كشف رواتب',UPDATE:'تعديل/قفل كشف رواتب',DELETE:'حذف كشف رواتب'},
+ payroll_items:{INSERT:'إضافة بند راتب',UPDATE:'تعديل بند راتب (إضافة/خصم)',DELETE:'حذف بند راتب'},
+ custody_records:{INSERT:'تسليم عهدة',UPDATE:'تعديل/استرجاع عهدة',DELETE:'حذف عهدة'},
+ payment_requests:{INSERT:'تقديم طلب صرف',UPDATE:'تعديل حالة طلب صرف',DELETE:'حذف طلب صرف'},
+ deduction_requests:{INSERT:'تقديم طلب خصم',UPDATE:'تعديل حالة طلب خصم',DELETE:'حذف طلب خصم'},
+ permissions:{INSERT:'منح صلاحية',UPDATE:'تعديل صلاحية',DELETE:'سحب صلاحية'},
+};
+/* ترجمة أسماء حقول القاعدة الخام لعربي مفهوم بعمود التفاصيل */
+const AUDIT_FIELD_LABELS={status:'الحالة',additions:'الإضافات',deductions:'الخصومات',additions_note:'سبب الإضافة',deductions_note:'سبب الخصم',net_pay:'الصافي',base_salary:'الراتب الأساسي',amount:'المبلغ',reason:'السبب',category:'الفئة',level:'المستوى',module:'الوحدة',full_name:'الاسم',phone:'الجوال',email:'البريد',department:'القسم',job_title:'المسمى الوظيفي',start_date:'تاريخ البداية',end_date:'تاريخ النهاية',version:'رقم النسخة',is_current:'الحالة الحالية',payment_ref:'مرجع الصرف',paid_at:'تاريخ الصرف',notes:'ملاحظات'};
 let auditOffset=0;const AUDIT_PAGE_SIZE=50;
 function auditTabSwitch(tab,btn){
  document.querySelectorAll('#page-auditLog .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
@@ -2798,16 +2817,21 @@ function auditDiffSummary(r){
  Object.keys(r.new_data).forEach(k=>{
   if(['id','created_at','updated_at'].includes(k))return;
   const ov=r.old_data[k],nv=r.new_data[k];
-  if(JSON.stringify(ov)!==JSON.stringify(nv))changes.push(`${k}: ${ov??'—'} ← ${nv??'—'}`);
+  if(JSON.stringify(ov)!==JSON.stringify(nv)){
+   const label=AUDIT_FIELD_LABELS[k]||k;
+   changes.push(`${label}: ${ov??'—'} ← ${nv??'—'}`);
+  }
  });
  return changes.length?changes.slice(0,3).join('، ')+(changes.length>3?' ...':''):'لا تغيير بالبيانات';
 }
+function auditMoveFilterChanged(){loadAuditLog()}
+function auditShowAllDates(){$('auditDateFrom').value='';$('auditDateTo').value='';loadAuditLog()}
 async function loadAuditLog(append){
  if(!append){auditOffset=0;$('auditLogTbody').innerHTML=''}
  let q=sb.from('audit_log').select('*').order('created_at',{ascending:false}).range(auditOffset,auditOffset+AUDIT_PAGE_SIZE-1);
  const name=$('auditSearchName').value.trim();if(name)q=q.ilike('changed_by_name','%'+name+'%');
- const table=$('auditTableFilter').value;if(table)q=q.eq('table_name',table);
- const action=$('auditActionFilter').value;if(action)q=q.eq('action',action);
+ const move=$('auditMoveFilter').value; // بصيغة "table:ACTION"
+ if(move){const [table,action]=move.split(':');q=q.eq('table_name',table);q=q.eq('action',action)}
  const from=$('auditDateFrom').value;if(from)q=q.gte('created_at',from);
  const to=$('auditDateTo').value;if(to)q=q.lte('created_at',to+'T23:59:59');
  const {data,error}=await q;
@@ -2815,10 +2839,11 @@ async function loadAuditLog(append){
  auditOffset+=data.length;
  const rowsHtml=data.map(r=>{
   const lbl=AUDIT_ACTION_LABELS[r.action]||{t:r.action,k:'info'};
-  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td><b>${r.changed_by_name||'غير معروف'}</b></td><td><span class="tag ${lbl.k}">${lbl.t}</span></td><td>${AUDIT_TABLE_LABELS[r.table_name]||r.table_name}</td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
+  const moveLabel=(AUDIT_MOVE_LABELS[r.table_name]||{})[r.action]||(AUDIT_TABLE_LABELS[r.table_name]||r.table_name);
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td><b>${r.changed_by_name||'غير معروف'}</b></td><td><span class="tag ${lbl.k}">${moveLabel}</span></td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
  }).join('');
  if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
- else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="5" class="empty">لا توجد سجلات مطابقة</td></tr>';
+ else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="4" class="empty">لا توجد سجلات مطابقة</td></tr>';
  $('auditLoadMoreBtn').style.display=data.length<AUDIT_PAGE_SIZE?'none':'inline-block';
 }
 async function loadLoginLog(){
@@ -2827,8 +2852,15 @@ async function loadLoginLog(){
  $('loginLogTbody').innerHTML=(data||[]).map(r=>`<tr><td><b>${r.employee_name||'—'}</b></td><td><span class="tag ${r.event_type==='login'?'ok':'gray'}">${r.event_type==='login'?'دخول':'خروج'}</span></td><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد سجلات دخول بعد</td></tr>';
 }
 function initAuditLogPage(){
- if($('auditTableFilter').options.length<=1){
-  $('auditTableFilter').innerHTML='<option value="">الجدول: الكل</option>'+Object.entries(AUDIT_TABLE_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+ if($('auditMoveFilter').options.length<=1){
+  $('auditMoveFilter').innerHTML='<option value="">نوع الحركة: الكل</option>'+
+   Object.entries(AUDIT_MOVE_LABELS).map(([table,acts])=>
+    `<optgroup label="${AUDIT_TABLE_LABELS[table]||table}">`+
+    Object.entries(acts).map(([act,label])=>`<option value="${table}:${act}">${label}</option>`).join('')+
+    `</optgroup>`
+   ).join('');
+  // الفترة الافتراضية: اليوم فقط، تقليلاً للزحمة الأولى — يقدر يوسّعها بزر "كل الفترات"
+  $('auditDateFrom').value=D(0);$('auditDateTo').value=D(0);
  }
  loadAuditLog();
 }
