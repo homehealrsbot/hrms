@@ -2014,7 +2014,7 @@ function renderContracts(){
  };
  $('contractTbody').innerHTML=list.length?list.map(c=>`<tr>
   <td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td>
-  <td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td>
+  <td>${contractTag(c)}</td><td><span class="tag info">نسخة رقم ${c.maxVersion||c.versions}</span></td>
   <td style="white-space:nowrap">${renewBtn(c)}
    <button class="btn btn-ghost btn-sm" onclick="showVersions('${c.employee_id}')">النسخ السابقة</button>
    <button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقد ${c.emp}')">📎 المرفق</button></td></tr>`).join(''):`<tr><td colspan="7" class="empty">${contractsFilter?'لا توجد عقود مطابقة للفلتر':'لا توجد عقود'}</td></tr>`;
@@ -3590,7 +3590,7 @@ function epRenderAlerts(){
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
- $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">${c.versions} نسخة</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${contractTag(c)}</td><td><span class="tag info">نسخة رقم ${c.maxVersion||c.versions}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
 }
 function epRenderLeaves(){
  const b=balance(currentEmp.name);
