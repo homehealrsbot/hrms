@@ -3287,6 +3287,7 @@ function renderExtraModulesNav(){
  nav.innerHTML=granted.map(m=>`<button class="nav-item" data-ep="extraModule" onclick="openExtraModule('${m.key}','${m.label}')"><span class="ic">${EXTRA_MODULE_ICONS[m.key]||'📌'}</span> ${m.label}</button>`).join('');
 }
 function openExtraModule(key,label){
+ extraModuleOpenKey=key;
  $('extraModuleTitle').textContent=label;
  const full=hasPerm(key,'full');
  $('ep-extraModule').querySelector('p').textContent='وصول ممنوح لك من مدير النظام ('+(full?'تحكم كامل':'عرض فقط')+')';
@@ -3295,23 +3296,38 @@ function openExtraModule(key,label){
  $('epTopTitle').textContent=label;
  document.querySelectorAll('#empApp .nav-item[data-ep="extraModule"]').forEach(b=>b.classList.toggle('active',b.textContent.includes(label)));
 }
+let extraModuleOpenKey=null;
 function renderExtraModuleBody(key,full){
  const body=$('extraModuleBody');if(!body)return;
  const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
  if(key==='policies'){
-  body.innerHTML=T(['السياسة','القسم','آخر تحديث','الإصدار'],policies.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.dept||'عام'}</td><td>${fmt(p.updated)}</td><td>${p.ver}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سياسات</td></tr>');
+  const head=full?['السياسة','القسم','آخر تحديث','الإصدار','إجراء']:['السياسة','القسم','آخر تحديث','الإصدار'];
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="addNewPolicy()">+ سياسة جديدة</button></div>`:'')+
+   T(head,policies.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.dept||'عام'}</td><td>${fmt(p.updated)}</td><td>${p.ver}</td>${full?`<td><button class="btn btn-ghost btn-sm" onclick="policyNewVer('${p.id}')">إصدار جديد</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد سياسات</td></tr>`);
  }else if(key==='employees'){
-  body.innerHTML=T(['الاسم','الرقم','القسم','المسمى','الحالة'],employees.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا يوجد موظفون</td></tr>');
+  const head=['الاسم','الرقم','القسم','المسمى','الحالة'];
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="openEmpModal()">+ إضافة موظف</button></div>`:'')+
+   T(head,employees.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td></tr>`).join('')||`<tr><td colspan="${head.length}" class="empty">لا يوجد موظفون</td></tr>`);
  }else if(key==='contracts'){
-  body.innerHTML=T(['الموظف','البداية','النهاية','المدة','عدد النسخ'],contracts.map(c=>`<tr><td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${c.versions}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد عقود</td></tr>');
+  const head=full?['الموظف','البداية','النهاية','المدة','عدد النسخ','إجراء']:['الموظف','البداية','النهاية','المدة','عدد النسخ'];
+  body.innerHTML=T(head,contracts.map(c=>{const n=daysTo(c.end);const canRenew=n>=7&&n<=30;
+   return `<tr><td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${c.versions}</td>${full?`<td>${canRenew?`<button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد</button>`:'<span class="tag gray">غير متاح الآن</span>'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد عقود</td></tr>`);
  }else if(key==='attendance'){
   body.innerHTML=T(['الموظف','التاريخ','دخول','خروج'],siteAtt.slice(0,100).map(a=>`<tr><td><b>${a.emp}</b></td><td>${fmt(a.date)}</td><td dir="ltr">${a.in||'—'}</td><td dir="ltr">${a.out||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>');
  }else if(key==='leaves'){
-  body.innerHTML=T(['الموظف','النوع','من','إلى','الأيام','الحالة'],leaves.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد إجازات</td></tr>');
+  const head=full?['الموظف','النوع','من','إلى','الأيام','الحالة','إجراء']:['الموظف','النوع','من','إلى','الأيام','الحالة'];
+  body.innerHTML=T(head,leaves.map(l=>{const canAct=full&&(l.status===LV_P1||l.status===LV_P2);
+   return `<tr><td><b>${l.emp}</b></td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد إجازات</td></tr>`);
  }else if(key==='permits'){
-  body.innerHTML=T(['الموظف','النوع','التاريخ','الوقت','الحالة'],permits.map(p=>`<tr><td><b>${p.emp}</b></td><td>${p.type}</td><td>${fmt(p.date)}</td><td dir="ltr">${p.time||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>');
+  const head=full?['الموظف','النوع','التاريخ','الوقت','الحالة','إجراء']:['الموظف','النوع','التاريخ','الوقت','الحالة'];
+  body.innerHTML=T(head,permits.map(p=>{const canAct=full&&(p.status===LV_P1||p.status===LV_P2);
+   return `<tr><td><b>${p.emp}</b></td><td>${p.type}</td><td>${fmt(p.date)}</td><td dir="ltr">${p.time||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد استئذانات</td></tr>`);
  }else if(key==='files'){
-  body.innerHTML=T(['اسم الملف','الفئة','رفعه','التاريخ','عرض'],filesData.map(f=>`<tr><td>${f.name}</td><td>${f.cat||'—'}</td><td>${f.by||'—'}</td><td>${fmt(f.up)}</td><td><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${(f.name||'').replace(/'/g,'')}')">📎 عرض</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد ملفات</td></tr>');
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="go('files')">إدارة الملفات الكاملة</button></div>`:'')+
+   T(['اسم الملف','الفئة','رفعه','التاريخ','عرض'],filesData.map(f=>`<tr><td>${f.name}</td><td>${f.cat||'—'}</td><td>${f.by||'—'}</td><td>${fmt(f.up)}</td><td><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${(f.name||'').replace(/'/g,'')}')">📎 عرض</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد ملفات</td></tr>');
  }else if(key==='reports'){
   const activeCount=employees.filter(e=>e.status==='نشط').length;
   const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
@@ -3323,20 +3339,33 @@ function renderExtraModuleBody(key,full){
    <div class="stat sand"><span class="num">${pendingPr}</span><span class="lbl">استئذانات معلّقة</span></div>
   </div>`;
  }else if(key==='forms'){
-  body.innerHTML=T(['الموظف','النموذج','الحالة','التاريخ'],formSubs.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr><td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td><span class="tag ${lvTag(s.status)}">${s.status}</span></td><td>${fmt(s.created_at)}</td></tr>`}).join('')||'<tr><td colspan="4" class="empty">لا توجد نماذج مُقدَّمة</td></tr>');
+  const head=full?['الموظف','النموذج','الحالة','التاريخ','إجراء']:['الموظف','النموذج','الحالة','التاريخ'];
+  body.innerHTML=T(head,formSubs.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};const canAct=full&&(s.status===LV_P1||s.status===LV_P2);
+   return `<tr><td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td><span class="tag ${lvTag(s.status)}">${s.status}</span></td><td>${fmt(s.created_at)}</td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="decideFormSub('${s.id}',true)">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="decideFormSub('${s.id}',false)">رفض</button>`:'—'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد نماذج مُقدَّمة</td></tr>`);
  }else if(key==='payroll'){
-  body.innerHTML=T(['الموظف','القسم','الأساسي','الصافي','الشهر'],payrollItems.map(it=>{const e=empById[it.employee_id]||{};const run=payrollRuns.find(r=>r.id===it.runId)||{};return `<tr><td><b>${e.name||'—'}</b></td><td>${e.dept||'—'}</td><td>${money(it.base,it.employee_id)}</td><td><b>${money(it.net,it.employee_id)}</b></td><td>${MONTH_NAMES[(run.month||1)-1]||''} ${run.year||''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">لا توجد كشوف رواتب</td></tr>');
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="go('payroll')">فتح كشف الرواتب الكامل للتعديل</button></div>`:'')+
+   T(['الموظف','القسم','الأساسي','الصافي','الشهر'],payrollItems.map(it=>{const e=empById[it.employee_id]||{};const run=payrollRuns.find(r=>r.id===it.runId)||{};return `<tr><td><b>${e.name||'—'}</b></td><td>${e.dept||'—'}</td><td>${money(it.base,it.employee_id)}</td><td><b>${money(it.net,it.employee_id)}</b></td><td>${MONTH_NAMES[(run.month||1)-1]||''} ${run.year||''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">لا توجد كشوف رواتب</td></tr>');
  }else if(key==='custody'){
-  body.innerHTML=T(['الموظف','النوع','الوصف','المبلغ','الحالة'],custodyRecords.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?money(c.amount,c.employee_id):'—'}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد عهد</td></tr>');
+  const head=full?['الموظف','النوع','الوصف','المبلغ','الحالة','إجراء']:['الموظف','النوع','الوصف','المبلغ','الحالة'];
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="openModal('custodyModal')">+ إضافة عهدة</button></div>`:'')+
+   T(head,custodyRecords.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?money(c.amount,c.employee_id):'—'}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td>${full?`<td>${c.status!=='مُرجعة'?`<button class="btn btn-ok btn-sm" onclick="returnCustody('${c.id}')">تسجيل استرجاع</button>`:'—'}</td>`:''}</tr>`).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد عهد</td></tr>`);
  }else if(key==='paymentsAdmin'){
-  body.innerHTML=T(['الموظف','المبلغ','الفئة','السبب','الحالة'],paymentRequests.map(p=>`<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد طلبات صرف</td></tr>');
+  const head=full?['الموظف','المبلغ','الفئة','السبب','الحالة','إجراء']:['الموظف','المبلغ','الفئة','السبب','الحالة'];
+  body.innerHTML=T(head,paymentRequests.map(p=>{const canAct=full&&(p.status===LV_P1||p.status===LV_P2);
+   return `<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`:'—'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد طلبات صرف</td></tr>`);
  }else if(key==='deductionsHR'){
-  body.innerHTML=T(['الموظف','المبلغ','السبب','الطالب','الحالة'],deductionRequests.map(d=>`<tr><td><b>${d.emp}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد طلبات خصم</td></tr>');
+  const head=full?['الموظف','المبلغ','السبب','الطالب','الحالة','إجراء']:['الموظف','المبلغ','السبب','الطالب','الحالة'];
+  body.innerHTML=T(head,deductionRequests.map(d=>{const canAct=full&&d.status===DED_P1;
+   return `<tr><td><b>${d.emp}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="hrDecideDeduction('${d.id}',true)">مراجعة واعتماد</button> <button class="btn btn-danger btn-sm" onclick="hrDecideDeduction('${d.id}',false)">رفض</button>`:'—'}</td>`:''}</tr>`;
+  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد طلبات خصم</td></tr>`);
  }else{
   body.innerHTML='<div class="empty">لا يوجد محتوى لعرضه</div>';
  }
 }
 function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();epRenderPayments();epRenderMySalary();renderExtraModulesNav();
+ if(extraModuleOpenKey&&document.getElementById('ep-extraModule').classList.contains('on'))renderExtraModuleBody(extraModuleOpenKey,hasPerm(extraModuleOpenKey,'full'));
  // إخفاء النظام المالي عن الموظف العادي أثناء التجربة الداخلية (راجع المفتاح أعلى الملف)
  const financeVisible=FINANCE_ENABLED_FOR_EMPLOYEES||currentEmp.role!=='employee';
  if($('empPaymentsNavBtn'))$('empPaymentsNavBtn').style.display=financeVisible?'flex':'none';
