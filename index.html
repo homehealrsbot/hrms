@@ -697,6 +697,8 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="custody" id="acctCustodyNavBtn" style="display:none"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" data-ep="payApprovals" id="acctPayApprovalsNavBtn" style="display:none"><span class="ic">✅</span> اعتماد الصرف <span class="nav-badge" id="acctPayBadge">0</span></button>
     <button class="nav-item" data-ep="paymentFiles" id="acctPayFilesNavBtn" style="display:none"><span class="ic">📁</span> ملفات الصرف</button>
+    <div class="nav-divider" id="extraModulesDivider" style="display:none"></div>
+    <div id="extraModulesNav"></div>
   </nav>
   <div class="side-foot"><span>الإصدار 1.0</span><button class="btn-sm btn btn-danger" onclick="logout()">خروج</button></div>
 </aside>
@@ -913,6 +915,11 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>اسم الملف</th><th>الموظف</th><th>تاريخ الإصدار</th><th>رفعه</th><th>إجراء</th></tr></thead>
     <tbody id="epPaymentFilesTbody"></tbody></table></div></div>
+</section>
+
+<section class="page" id="ep-extraModule">
+  <div class="page-head"><div><h1 id="extraModuleTitle">—</h1><p>وصول ممنوح لك من مدير النظام (عرض{{full}})</p></div></div>
+  <div class="card" id="extraModuleBody"></div>
 </section>
 
 <section class="page" id="ep-deductions">
@@ -3270,7 +3277,66 @@ function renderMySalaryAdmin(){
  }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
 }
 
-function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();epRenderPayments();epRenderMySalary();
+/* ================= وحدات إضافية ممنوحة لأي موظف عبر مصفوفة الصلاحيات ================= */
+const EXTRA_MODULE_ICONS={policies:'§',employees:'👥',contracts:'✍',attendance:'🕐',leaves:'🌴',permits:'🚪',files:'🗂',reports:'📊',forms:'📄',payroll:'📑',custody:'📦',paymentsAdmin:'💵',deductionsHR:'⚠️'};
+function renderExtraModulesNav(){
+ const granted=MODULES.filter(m=>hasPerm(m.key,'view'));
+ const nav=$('extraModulesNav');if(!nav)return;
+ if(!granted.length){nav.innerHTML='';if($('extraModulesDivider'))$('extraModulesDivider').style.display='none';return}
+ if($('extraModulesDivider'))$('extraModulesDivider').style.display='block';
+ nav.innerHTML=granted.map(m=>`<button class="nav-item" data-ep="extraModule" onclick="openExtraModule('${m.key}','${m.label}')"><span class="ic">${EXTRA_MODULE_ICONS[m.key]||'📌'}</span> ${m.label}</button>`).join('');
+}
+function openExtraModule(key,label){
+ $('extraModuleTitle').textContent=label;
+ const full=hasPerm(key,'full');
+ $('ep-extraModule').querySelector('p').textContent='وصول ممنوح لك من مدير النظام ('+(full?'تحكم كامل':'عرض فقط')+')';
+ renderExtraModuleBody(key,full);
+ epGo('extraModule');
+ $('epTopTitle').textContent=label;
+ document.querySelectorAll('#empApp .nav-item[data-ep="extraModule"]').forEach(b=>b.classList.toggle('active',b.textContent.includes(label)));
+}
+function renderExtraModuleBody(key,full){
+ const body=$('extraModuleBody');if(!body)return;
+ const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+ if(key==='policies'){
+  body.innerHTML=T(['السياسة','القسم','آخر تحديث','الإصدار'],policies.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.dept||'عام'}</td><td>${fmt(p.updated)}</td><td>${p.ver}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سياسات</td></tr>');
+ }else if(key==='employees'){
+  body.innerHTML=T(['الاسم','الرقم','القسم','المسمى','الحالة'],employees.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.num}</td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا يوجد موظفون</td></tr>');
+ }else if(key==='contracts'){
+  body.innerHTML=T(['الموظف','البداية','النهاية','المدة','عدد النسخ'],contracts.map(c=>`<tr><td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${c.versions}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد عقود</td></tr>');
+ }else if(key==='attendance'){
+  body.innerHTML=T(['الموظف','التاريخ','دخول','خروج'],siteAtt.slice(0,100).map(a=>`<tr><td><b>${a.emp}</b></td><td>${fmt(a.date)}</td><td dir="ltr">${a.in||'—'}</td><td dir="ltr">${a.out||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>');
+ }else if(key==='leaves'){
+  body.innerHTML=T(['الموظف','النوع','من','إلى','الأيام','الحالة'],leaves.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد إجازات</td></tr>');
+ }else if(key==='permits'){
+  body.innerHTML=T(['الموظف','النوع','التاريخ','الوقت','الحالة'],permits.map(p=>`<tr><td><b>${p.emp}</b></td><td>${p.type}</td><td>${fmt(p.date)}</td><td dir="ltr">${p.time||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد استئذانات</td></tr>');
+ }else if(key==='files'){
+  body.innerHTML=T(['اسم الملف','الفئة','رفعه','التاريخ','عرض'],filesData.map(f=>`<tr><td>${f.name}</td><td>${f.cat||'—'}</td><td>${f.by||'—'}</td><td>${fmt(f.up)}</td><td><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${(f.name||'').replace(/'/g,'')}')">📎 عرض</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد ملفات</td></tr>');
+ }else if(key==='reports'){
+  const activeCount=employees.filter(e=>e.status==='نشط').length;
+  const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
+  const pendingPr=permits.filter(p=>p.status===LV_P1||p.status===LV_P2).length;
+  body.innerHTML=`<div class="kpi-row" style="display:flex;gap:14px;flex-wrap:wrap">
+   <div class="stat"><span class="num">${employees.length}</span><span class="lbl">إجمالي الموظفين</span></div>
+   <div class="stat ok"><span class="num">${activeCount}</span><span class="lbl">نشط</span></div>
+   <div class="stat sand"><span class="num">${pendingLv}</span><span class="lbl">إجازات معلّقة</span></div>
+   <div class="stat sand"><span class="num">${pendingPr}</span><span class="lbl">استئذانات معلّقة</span></div>
+  </div>`;
+ }else if(key==='forms'){
+  body.innerHTML=T(['الموظف','النموذج','الحالة','التاريخ'],formSubs.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr><td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td><span class="tag ${lvTag(s.status)}">${s.status}</span></td><td>${fmt(s.created_at)}</td></tr>`}).join('')||'<tr><td colspan="4" class="empty">لا توجد نماذج مُقدَّمة</td></tr>');
+ }else if(key==='payroll'){
+  body.innerHTML=T(['الموظف','القسم','الأساسي','الصافي','الشهر'],payrollItems.map(it=>{const e=empById[it.employee_id]||{};const run=payrollRuns.find(r=>r.id===it.runId)||{};return `<tr><td><b>${e.name||'—'}</b></td><td>${e.dept||'—'}</td><td>${money(it.base,it.employee_id)}</td><td><b>${money(it.net,it.employee_id)}</b></td><td>${MONTH_NAMES[(run.month||1)-1]||''} ${run.year||''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">لا توجد كشوف رواتب</td></tr>');
+ }else if(key==='custody'){
+  body.innerHTML=T(['الموظف','النوع','الوصف','المبلغ','الحالة'],custodyRecords.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?money(c.amount,c.employee_id):'—'}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد عهد</td></tr>');
+ }else if(key==='paymentsAdmin'){
+  body.innerHTML=T(['الموظف','المبلغ','الفئة','السبب','الحالة'],paymentRequests.map(p=>`<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد طلبات صرف</td></tr>');
+ }else if(key==='deductionsHR'){
+  body.innerHTML=T(['الموظف','المبلغ','السبب','الطالب','الحالة'],deductionRequests.map(d=>`<tr><td><b>${d.emp}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد طلبات خصم</td></tr>');
+ }else{
+  body.innerHTML='<div class="empty">لا يوجد محتوى لعرضه</div>';
+ }
+}
+function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();epRenderLeaves();epRenderAttendance();epRenderPermits();epRenderPolicies();epRenderForms();epRenderPayments();epRenderMySalary();renderExtraModulesNav();
  // إخفاء النظام المالي عن الموظف العادي أثناء التجربة الداخلية (راجع المفتاح أعلى الملف)
  const financeVisible=FINANCE_ENABLED_FOR_EMPLOYEES||currentEmp.role!=='employee';
  if($('empPaymentsNavBtn'))$('empPaymentsNavBtn').style.display=financeVisible?'flex':'none';
