@@ -1003,6 +1003,16 @@ tbody tr:hover{background:#FAFCFB}
 </div></div>
 
 <!-- إضافة عهدة (محاسب) -->
+<div class="modal-back" id="extraAddLeaveModal"><div class="modal sm">
+  <div class="modal-head"><h3>إضافة إجازة لموظف</h3><button class="x-btn" onclick="closeModal('extraAddLeaveModal')">✕</button></div>
+  <div class="field"><label>الموظف</label><select id="xlvEmp"></select></div>
+  <div class="field"><label>نوع الإجازة</label><select id="xlvType"><option>سنوية</option><option>مرضية</option><option>خاصة</option><option>بدون راتب</option></select></div>
+  <div class="field"><label>من</label><input id="xlvStart" type="date"></div>
+  <div class="field"><label>إلى</label><input id="xlvEnd" type="date"></div>
+  <div class="field"><label>السبب</label><input id="xlvReason" placeholder="اختياري إلا للإجازة الخاصة"></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="extraAddLeave()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('extraAddLeaveModal')">إلغاء</button></div>
+</div></div>
+
 <div class="modal-back" id="custodyModal"><div class="modal sm">
   <div class="modal-head"><h3>إضافة عهدة</h3><button class="x-btn" onclick="closeModal('custodyModal')">✕</button></div>
   <div class="field"><label>الموظف</label><select id="custEmp"></select></div>
@@ -3296,7 +3306,24 @@ function openExtraModule(key,label){
  $('epTopTitle').textContent=label;
  document.querySelectorAll('#empApp .nav-item[data-ep="extraModule"]').forEach(b=>b.classList.toggle('active',b.textContent.includes(label)));
 }
-let extraModuleOpenKey=null;
+function openExtraAddLeave(){
+ $('xlvEmp').innerHTML=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('');
+ $('xlvStart').value='';$('xlvEnd').value='';$('xlvReason').value='';
+ openModal('extraAddLeaveModal');
+}
+async function extraAddLeave(){
+ if(!$('xlvEmp').value){toast('اختر الموظف');return}
+ if(!$('xlvStart').value||!$('xlvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
+ if($('xlvEnd').value<$('xlvStart').value){toast('تاريخ النهاية لا يمكن أن يسبق البداية');return}
+ const days=Math.round((new Date($('xlvEnd').value)-new Date($('xlvStart').value))/864e5)+1;
+ const empName=(empById[$('xlvEmp').value]||{}).name||'';
+ const balErr=checkLeaveBalance(empName,$('xlvType').value,days);
+ if(balErr){toast(balErr);return}
+ const {error}=await sb.from('leaves').insert({employee_id:$('xlvEmp').value,leave_type:$('xlvType').value,start_date:$('xlvStart').value,end_date:$('xlvEnd').value,days,reason:$('xlvReason').value,status:LV_P1});
+ if(error){err(error);return}
+ closeModal('extraAddLeaveModal');await refresh();toast('تم حفظ طلب الإجازة');
+}
+let extraModuleOpenKey=null,extraAttTab='meetAtt';
 function renderExtraModuleBody(key,full){
  const body=$('extraModuleBody');if(!body)return;
  const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -3314,10 +3341,19 @@ function renderExtraModuleBody(key,full){
    return `<tr><td><b>${c.emp}</b></td><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${c.dur||'—'}</td><td>${c.versions}</td>${full?`<td>${canRenew?`<button class="btn btn-ok btn-sm" onclick="renewContract('${c.employee_id}')">تجديد</button>`:'<span class="tag gray">غير متاح الآن</span>'}</td>`:''}</tr>`;
   }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد عقود</td></tr>`);
  }else if(key==='attendance'){
-  body.innerHTML=T(['الموظف','التاريخ','دخول','خروج'],siteAtt.slice(0,100).map(a=>`<tr><td><b>${a.emp}</b></td><td>${fmt(a.date)}</td><td dir="ltr">${a.in||'—'}</td><td dir="ltr">${a.out||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>');
+  const tab=extraAttTab||'meetAtt';
+  const tabs=[['meetAtt','حضور الاجتماعات'],['siteAtt','الحضور في المقر'],['meetAbs','غياب الاجتماعات'],['siteAbs','الغياب في المقر']];
+  const tabsHtml=`<div class="tabs">${tabs.map(([k,l])=>`<button class="${tab===k?'active':''}" onclick="extraAttTab='${k}';renderExtraModuleBody('attendance',${full})">${l}</button>`).join('')}</div>`;
+  let rows='',head=[],addBtn='';
+  if(tab==='meetAtt'){head=['الاجتماع','القسم','التاريخ','الوقت','الموظف'];rows=meetAtt.map(a=>`<tr><td>${a.title||'—'}</td><td>${a.dept||'—'}</td><td>${fmt(a.date)}</td><td dir="ltr">${a.time||'—'}</td><td><b>${a.emp}</b></td></tr>`).join('');addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('meetAttModal')">+ تسجيل حضور اجتماع</button>`:'';}
+  else if(tab==='siteAtt'){head=['التاريخ','دخول','خروج','الموظف','القسم'];rows=siteAtt.map(a=>`<tr><td>${fmt(a.date)}</td><td dir="ltr">${a.in||'—'}</td><td dir="ltr">${a.out||'—'}</td><td><b>${a.emp}</b></td><td>${a.dept||'—'}</td></tr>`).join('');addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('siteAttModal')">+ تسجيل حضور</button>`:'';}
+  else if(tab==='meetAbs'){head=['الاجتماع','القسم','التاريخ','الموظف'];rows=meetAbs.map(a=>`<tr><td>${a.title||'—'}</td><td>${a.dept||'—'}</td><td>${fmt(a.date)}</td><td><b>${a.emp}</b></td></tr>`).join('');addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('meetAbsModal')">+ تسجيل غياب اجتماع</button>`:'';}
+  else{head=['التاريخ','السبب','الموظف','القسم'];rows=siteAbs.map(a=>`<tr><td>${fmt(a.date)}</td><td>${a.reason||'—'}</td><td><b>${a.emp}</b></td><td>${a.dept||'—'}</td></tr>`).join('');addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('siteAbsModal')">+ تسجيل غياب</button>`:'';}
+  body.innerHTML=tabsHtml+(addBtn?`<div style="margin:12px 0">${addBtn}</div>`:'')+T(head,rows||`<tr><td colspan="${head.length}" class="empty">لا توجد سجلات</td></tr>`);
  }else if(key==='leaves'){
   const head=full?['الموظف','النوع','من','إلى','الأيام','الحالة','إجراء']:['الموظف','النوع','من','إلى','الأيام','الحالة'];
-  body.innerHTML=T(head,leaves.map(l=>{const canAct=full&&(l.status===LV_P1||l.status===LV_P2);
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="openExtraAddLeave()">+ إضافة إجازة لموظف</button></div>`:'')+
+   T(head,leaves.map(l=>{const canAct=full&&(l.status===LV_P1||l.status===LV_P2);
    return `<tr><td><b>${l.emp}</b></td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td>`:''}</tr>`;
   }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد إجازات</td></tr>`);
  }else if(key==='permits'){
@@ -3326,8 +3362,8 @@ function renderExtraModuleBody(key,full){
    return `<tr><td><b>${p.emp}</b></td><td>${p.type}</td><td>${fmt(p.date)}</td><td dir="ltr">${p.time||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—'}</td>`:''}</tr>`;
   }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد استئذانات</td></tr>`);
  }else if(key==='files'){
-  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="go('files')">إدارة الملفات الكاملة</button></div>`:'')+
-   T(['اسم الملف','الفئة','رفعه','التاريخ','عرض'],filesData.map(f=>`<tr><td>${f.name}</td><td>${f.cat||'—'}</td><td>${f.by||'—'}</td><td>${fmt(f.up)}</td><td><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${(f.name||'').replace(/'/g,'')}')">📎 عرض</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد ملفات</td></tr>');
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="uploadGeneralFile()">⬆ رفع ملف</button></div>`:'')+
+   T(['اسم الملف','النوع','الحجم','تاريخ الرفع','رافع الملف','الجهة','عرض'],filesData.map(f=>`<tr><td>${f.name}</td><td>${f.type||'—'}</td><td>${f.size||'—'}</td><td>${fmt(f.up)}</td><td>${f.by||'—'}</td><td>${f.cat||'—'}</td><td><button class="btn btn-ghost btn-sm" onclick="viewFileInline('${f.path}','${(f.name||'').replace(/'/g,'')}')">📎 عرض</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد ملفات</td></tr>');
  }else if(key==='reports'){
   const activeCount=employees.filter(e=>e.status==='نشط').length;
   const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
