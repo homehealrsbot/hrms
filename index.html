@@ -276,6 +276,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
     <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
     <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
+    <button class="nav-item" id="nav_auditLog" data-page="auditLog"><span class="ic">📋</span> سجل النشاط</button>
 
     <div class="nav-divider"></div>
     <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
@@ -654,6 +655,36 @@ tbody tr:hover{background:#FAFCFB}
     <div class="tbl-wrap" style="overflow-x:auto"><table id="permMatrixTable">
       <thead id="permMatrixHead"></thead>
       <tbody id="permissionsTbody"></tbody></table></div>
+  </div>
+</section>
+
+<section class="page" id="page-auditLog">
+  <div class="page-head"><div><h1>سجل النشاط</h1><p>سجل تلقائي بكل إضافة أو تعديل أو حذف في النظام، مع تتبع الدخول والخروج — محصور بمدير النظام</p></div></div>
+  <div class="tabs">
+    <button class="active" onclick="auditTabSwitch('actions',this)">الإجراءات</button>
+    <button onclick="auditTabSwitch('logins',this)">الدخول والخروج</button>
+  </div>
+  <div id="audit-actions">
+    <div class="card">
+      <div class="filters">
+        <input id="auditSearchName" placeholder="بحث باسم الشخص" oninput="loadAuditLog()">
+        <select id="auditTableFilter" onchange="loadAuditLog()"><option value="">الجدول: الكل</option></select>
+        <select id="auditActionFilter" onchange="loadAuditLog()">
+          <option value="">النوع: الكل</option><option value="INSERT">إضافة</option><option value="UPDATE">تعديل</option><option value="DELETE">حذف</option>
+        </select>
+        <input id="auditDateFrom" type="date" onchange="loadAuditLog()">
+        <input id="auditDateTo" type="date" onchange="loadAuditLog()">
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>الوقت</th><th>مين</th><th>النوع</th><th>القسم</th><th>التفاصيل</th></tr></thead>
+        <tbody id="auditLogTbody"></tbody></table></div>
+      <div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" id="auditLoadMoreBtn" onclick="loadAuditLog(true)">تحميل المزيد</button></div>
+    </div>
+  </div>
+  <div id="audit-logins" style="display:none">
+    <div class="card"><div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>الحدث</th><th>الوقت</th></tr></thead>
+      <tbody id="loginLogTbody"></tbody></table></div></div>
   </div>
 </section>
 
@@ -1313,6 +1344,7 @@ function todayFullStr(){
 }
 const fmtGreg=d=>d? new Date(d).toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'}):'';
 const fmt=d=>d? `${fmtHijri(d)} (${fmtGreg(d)}م)` : '—';
+const fmtDateTime=d=>{if(!d)return '—';const dt=new Date(d);return fmtGreg(d)+' '+dt.toTimeString().slice(0,5)};
 const tfmt=t=>t?String(t).slice(0,5):'—';
 const daysTo=d=>Math.ceil((new Date(d)-today)/864e5);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200)}
@@ -1364,6 +1396,7 @@ async function enterApp(){
  if(error){err(error);return}
  if(!profile){toast('لا يوجد ملف موظف مرتبط بهذا البريد — تواصل مع الإدارة لإضافتك أولاً');await sb.auth.signOut();return}
  me=mapEmp(profile);
+ try{await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'login'})}catch(e){}
  $('loginScreen').style.display='none';
  await loadAll();await loadMeetings();
  if(me.role==='admin'){$('app').classList.add('on');initAll();renderMeetings()}
@@ -1371,7 +1404,10 @@ async function enterApp(){
  runCheckin();
  initRealtime();
 }
-async function logout(){await sb.auth.signOut();location.reload()}
+async function logout(){
+ try{if(me)await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'logout'})}catch(e){}
+ await sb.auth.signOut();location.reload()
+}
 /* البث اللحظي: التحديث الفوري بدون تحديث الصفحة */
 let rtTimer=null,rtStarted=false;
 function initRealtime(){
@@ -1539,7 +1575,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -2613,6 +2649,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  MODULES.forEach(m=>{const el=$('nav_'+m.key);if(el)el.style.display=hasPerm(m.key,'view')?'flex':'none'});
  // "الصلاحيات" وحدها مستقلة عن MODULES ومقصورة على من مُنحت له صراحة (حتى لو أدمن)
  if($('nav_permissions'))$('nav_permissions').style.display=hasPerm('permissions','view')?'flex':'none';
+ if($('nav_auditLog'))$('nav_auditLog').style.display=hasPerm('permissions','view')?'flex':'none';
  if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true)}
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view')){renderPaymentsAdmin();renderPaymentFiles('paymentFilesTbody');if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='flex'}else if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='none';
@@ -2621,6 +2658,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  const activeModule=activeId.replace('page-','');
  if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
  if(activeId==='page-permissions'&&!hasPerm('permissions','view'))go('dashboard');
+ if(activeId==='page-auditLog'){if(!hasPerm('permissions','view'))go('dashboard');else initAuditLogPage()}
  renderPermissionsPage();
  renderMySalaryAdmin();
 }
@@ -2687,6 +2725,58 @@ async function savePermission(empId,module,level){
   }
   await refresh();toast('تم تحديث الصلاحية');
  }catch(e){err(e)}
+}
+/* ================= سجل النشاط (Audit Log) — محصور بمدير النظام ================= */
+const AUDIT_TABLE_LABELS={employees:'الموظفين',contracts:'العقود',leaves:'الإجازات',permits:'الاستئذانات',site_attendance:'الحضور بالمقر',meeting_records:'حضور الاجتماعات',policies:'السياسات',forms:'النماذج',form_submissions:'تقديمات النماذج',files_registry:'الملفات',payroll_runs:'كشوف الرواتب',payroll_items:'بنود الرواتب',custody_records:'العهد',payment_requests:'طلبات الصرف',deduction_requests:'طلبات الخصم',permissions:'الصلاحيات'};
+const AUDIT_ACTION_LABELS={INSERT:{t:'إضافة',k:'ok'},UPDATE:{t:'تعديل',k:'sand'},DELETE:{t:'حذف',k:'danger'}};
+let auditOffset=0;const AUDIT_PAGE_SIZE=50;
+function auditTabSwitch(tab,btn){
+ document.querySelectorAll('#page-auditLog .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+ $('audit-actions').style.display=tab==='actions'?'block':'none';
+ $('audit-logins').style.display=tab==='logins'?'block':'none';
+ if(tab==='logins')loadLoginLog();
+}
+function auditDiffSummary(r){
+ if(r.action==='INSERT')return 'إضافة سجل جديد';
+ if(r.action==='DELETE')return 'حذف سجل';
+ if(!r.old_data||!r.new_data)return 'تعديل';
+ const changes=[];
+ Object.keys(r.new_data).forEach(k=>{
+  if(['id','created_at','updated_at'].includes(k))return;
+  const ov=r.old_data[k],nv=r.new_data[k];
+  if(JSON.stringify(ov)!==JSON.stringify(nv))changes.push(`${k}: ${ov??'—'} ← ${nv??'—'}`);
+ });
+ return changes.length?changes.slice(0,3).join('، ')+(changes.length>3?' ...':''):'لا تغيير بالبيانات';
+}
+async function loadAuditLog(append){
+ if(!append){auditOffset=0;$('auditLogTbody').innerHTML=''}
+ let q=sb.from('audit_log').select('*').order('created_at',{ascending:false}).range(auditOffset,auditOffset+AUDIT_PAGE_SIZE-1);
+ const name=$('auditSearchName').value.trim();if(name)q=q.ilike('changed_by_name','%'+name+'%');
+ const table=$('auditTableFilter').value;if(table)q=q.eq('table_name',table);
+ const action=$('auditActionFilter').value;if(action)q=q.eq('action',action);
+ const from=$('auditDateFrom').value;if(from)q=q.gte('created_at',from);
+ const to=$('auditDateTo').value;if(to)q=q.lte('created_at',to+'T23:59:59');
+ const {data,error}=await q;
+ if(error){err(error);return}
+ auditOffset+=data.length;
+ const rowsHtml=data.map(r=>{
+  const lbl=AUDIT_ACTION_LABELS[r.action]||{t:r.action,k:'info'};
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td><b>${r.changed_by_name||'غير معروف'}</b></td><td><span class="tag ${lbl.k}">${lbl.t}</span></td><td>${AUDIT_TABLE_LABELS[r.table_name]||r.table_name}</td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
+ }).join('');
+ if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
+ else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="5" class="empty">لا توجد سجلات مطابقة</td></tr>';
+ $('auditLoadMoreBtn').style.display=data.length<AUDIT_PAGE_SIZE?'none':'inline-block';
+}
+async function loadLoginLog(){
+ const {data,error}=await sb.from('login_log').select('*').order('created_at',{ascending:false}).limit(200);
+ if(error){err(error);return}
+ $('loginLogTbody').innerHTML=(data||[]).map(r=>`<tr><td><b>${r.employee_name||'—'}</b></td><td><span class="tag ${r.event_type==='login'?'ok':'gray'}">${r.event_type==='login'?'دخول':'خروج'}</span></td><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد سجلات دخول بعد</td></tr>';
+}
+function initAuditLogPage(){
+ if($('auditTableFilter').options.length<=1){
+  $('auditTableFilter').innerHTML='<option value="">الجدول: الكل</option>'+Object.entries(AUDIT_TABLE_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+ }
+ loadAuditLog();
 }
 function renderPermissionsPage(){
  if(!$('permMatrixHead'))return;
