@@ -585,6 +585,20 @@ tbody tr:hover{background:#FAFCFB}
 <!-- ===== التقارير ===== -->
 <section class="page" id="page-reports">
   <div class="page-head"><div><h1>التقارير</h1><p>استخراج التقارير بصيغة PDF / Excel</p></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="section-note" style="margin-bottom:10px">فلتر الفترة الزمنية — يطبَّق على التقارير المرتبطة بأحداث بتاريخ (الحضور، الغياب، الإجازات، الاستئذانات، الصرف). تقارير الموظفين والعقود تبقى كاملة دائماً.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sand btn-sm" onclick="reportPreset('day')">اليوم</button>
+      <button class="btn btn-sand btn-sm" onclick="reportPreset('week')">هذا الأسبوع</button>
+      <button class="btn btn-sand btn-sm" onclick="reportPreset('month')">هذا الشهر</button>
+      <button class="btn btn-ghost btn-sm" onclick="reportPreset('all')">كل الفترات</button>
+      <span style="color:var(--muted);font-size:12px;margin-right:6px">أو مخصص:</span>
+      <input id="reportFromInput" type="date" onchange="reportCustomRange()" style="width:150px">
+      <span>إلى</span>
+      <input id="reportToInput" type="date" onchange="reportCustomRange()" style="width:150px">
+      <span id="reportRangeLabel" class="tag info" style="margin-right:auto"></span>
+    </div>
+  </div>
   <div class="grid-3" id="reportCards"></div>
 </section>
 
@@ -2394,6 +2408,35 @@ async function uploadGeneralFile(){
 }
 
 /* ================= التقارير ================= */
+/* ================= فلتر الفترة الزمنية للتقارير ================= */
+let reportFrom=null,reportTo=null;
+function reportPreset(kind){
+ const t=new Date();
+ if(kind==='all'){reportFrom=null;reportTo=null}
+ else if(kind==='day'){reportFrom=reportTo=D(0)}
+ else if(kind==='week'){
+  const day=t.getDay(); // الأحد=0 بداية الأسبوع بالسعودية
+  const start=new Date(t);start.setDate(t.getDate()-day);
+  const end=new Date(start);end.setDate(start.getDate()+6);
+  reportFrom=start.toISOString().slice(0,10);reportTo=end.toISOString().slice(0,10);
+ }else if(kind==='month'){
+  reportFrom=new Date(t.getFullYear(),t.getMonth(),1).toISOString().slice(0,10);
+  reportTo=new Date(t.getFullYear(),t.getMonth()+1,0).toISOString().slice(0,10);
+ }
+ $('reportFromInput').value=reportFrom||'';$('reportToInput').value=reportTo||'';
+ renderReports();
+}
+function reportCustomRange(){
+ reportFrom=$('reportFromInput').value||null;
+ reportTo=$('reportToInput').value||null;
+ renderReports();
+}
+function inReportRange(dateStr){
+ if(!dateStr)return !reportFrom&&!reportTo; // بلا تاريخ: يظهر فقط لو الفلتر "كل الفترات"
+ if(reportFrom&&dateStr<reportFrom)return false;
+ if(reportTo&&dateStr>reportTo)return false;
+ return true;
+}
 function printReport(i){
  const r=window.REPORTS[i];const d=r.data();
  const w=window.open('','_blank');
@@ -2410,19 +2453,22 @@ function printReport(i){
  w.document.close();
 }
 function renderReports(){
+ if($('reportRangeLabel')){
+  $('reportRangeLabel').textContent=(!reportFrom&&!reportTo)?'كل الفترات':`من ${fmt(reportFrom)} إلى ${fmt(reportTo)}`;
+ }
  const reps=[
   {t:'تقرير الموظفين',ic:'👥',data:()=>({headers:['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],rows:employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status])})},
   {t:'تقرير العقود',ic:'✍',data:()=>({headers:['الموظف','البداية','النهاية','المدة'],rows:contracts.map(c=>[c.emp,c.start,c.end,c.dur])})},
-  {t:'تقرير الحضور',ic:'🕐',data:()=>({headers:['الموظف','القسم','التاريخ','وقت الدخول','وقت الخروج'],rows:siteAtt.map(r=>[r.emp,r.dept,r.date,r.in,r.out])})},
-  {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.map(r=>[r.emp,r.dept,r.date,r.reason])})},
-  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
-  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
+  {t:'تقرير الحضور',ic:'🕐',data:()=>({headers:['الموظف','القسم','التاريخ','وقت الدخول','وقت الخروج'],rows:siteAtt.filter(r=>inReportRange(r.date)).map(r=>[r.emp,r.dept,r.date,r.in,r.out])})},
+  {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.filter(r=>inReportRange(r.date)).map(r=>[r.emp,r.dept,r.date,r.reason])})},
+  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.filter(l=>inReportRange(l.start)).map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
+  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.filter(p=>inReportRange(p.date)).map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
  ];
  if(hasPerm('payroll','view'))reps.push({t:'تقرير الرواتب',ic:'📑',data:()=>({headers:['الموظف','الشهر','السنة','الأساسي','الإضافات','الخصومات','الصافي'],
   rows:payrollItems.map(it=>{const run=payrollRuns.find(r=>r.id===it.runId)||{};const e=empById[it.employee_id]||{};
    return [e.name||'—',MONTH_NAMES[(run.month||1)-1],run.year||'—',it.base,it.additions,it.deductions,it.net]})})});
  if(hasPerm('paymentsAdmin','view'))reps.push({t:'تقرير طلبات وأوامر الصرف',ic:'💵',data:()=>({headers:['الموظف','القسم','المبلغ','الفئة','السبب','الحالة','مرجع الصرف','تاريخ الصرف'],
-  rows:paymentRequests.map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',p.status,p.paymentRef||'—',p.paidAt?fmt(p.paidAt):'—'])})});
+  rows:paymentRequests.filter(p=>inReportRange(p.paidAt)).map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',p.status,p.paymentRef||'—',p.paidAt?fmt(p.paidAt):'—'])})});
  if(hasPerm('custody','view'))reps.push({t:'تقرير العهد',ic:'📦',data:()=>({headers:['الموظف','النوع','الوصف','المبلغ/القيمة','تاريخ التسليم','تاريخ الاسترجاع','الحالة'],
   rows:custodyRecords.map(c=>[c.emp,c.type,c.desc,c.amount||'—',fmt(c.dateGiven),c.dateReturned?fmt(c.dateReturned):'—',c.status])})});
  const repsFinal=reps.map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
