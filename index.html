@@ -263,6 +263,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
     <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
     <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+    <button class="nav-item" id="nav_warnings" data-page="warningsHR"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="hrWrnBadge" style="display:none">0</span></button>
     <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
     <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
 
@@ -661,6 +662,19 @@ tbody tr:hover{background:#FAFCFB}
     <tbody id="hrDedLogTbody"></tbody></table></div></div>
 </section>
 
+<section class="page" id="page-warningsHR">
+  <div class="page-head"><div><h1>الإنذارات</h1><p>إنذارات مقدَّمة من رؤساء الأقسام أو الإدارة — مراجعة الموارد البشرية ثم الاعتماد النهائي</p></div></div>
+  <div class="card"><h3>بانتظار مراجعتك (الموارد البشرية)</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المستوى</th><th>السبب</th><th>الطالب</th><th>إجراء</th></tr></thead>
+    <tbody id="hrWrnPendingTbody"></tbody></table></div></div>
+  <div class="card"><h3>بانتظار الاعتماد النهائي</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المستوى</th><th>السبب</th><th>راجعها HR</th><th>إجراء</th></tr></thead>
+    <tbody id="finalWrnPendingTbody"></tbody></table></div></div>
+  <div class="card"><h3>سجل كل الإنذارات</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>القسم</th><th>المستوى</th><th>السبب</th><th>الطالب</th><th>الحالة</th><th>إقرار الموظف</th></tr></thead>
+    <tbody id="hrWrnLogTbody"></tbody></table></div></div>
+</section>
+
 <section class="page" id="page-permissions">
   <div class="page-head"><div><h1>الصلاحيات</h1><p>تحكّم دقيق بوصول كل موظف لكل قسم من أقسام النظام — مستقل تماماً عن دوره الأساسي</p></div></div>
   <div class="card">
@@ -724,6 +738,7 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="leaves"><span class="ic">🌴</span> الاجازات</button>
     <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
     <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-ep="warnings" id="wrnNavBtn"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="wrnAckNavBadge" style="display:none">0</span></button>
     <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
     <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
 
@@ -965,6 +980,23 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card" id="extraModuleBody"></div>
 </section>
 
+<section class="page" id="ep-warnings">
+  <div class="page-head"><div><h1>الإنذارات</h1><p>طلبات الإنذار المقدَّمة، والإنذارات الرسمية الصادرة بحقك</p></div></div>
+  <div class="card" id="wrnAckCard" style="display:none;border:2px solid var(--danger)">
+    <h3 style="color:var(--danger)">⚠️ إنذارات رسمية بحقك — تتطلب إقرارك بالعلم</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>المستوى</th><th>السبب</th><th>التفاصيل</th><th>التاريخ</th><th>الإجراء</th></tr></thead>
+      <tbody id="wrnAgainstTbody"></tbody></table></div>
+  </div>
+  <div class="card" id="wrnSubmitCard" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3>تقديم إنذار لموظف</h3>
+     <button class="btn btn-primary" onclick="openNewWarning()">+ طلب إنذار جديد</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>الموظف</th><th>المستوى</th><th>السبب</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
+      <tbody id="wrnMyRequestsTbody"></tbody></table></div>
+  </div>
+</section>
+
 <section class="page" id="ep-deductions">
   <div class="page-head"><div><h1>طلبات الخصم</h1><p>طلب خصم من راتب موظف — يمر على الموارد البشرية ثم الاعتماد المالي النهائي</p></div>
    <button class="btn btn-primary" onclick="openNewDeduction()">+ طلب خصم جديد</button></div>
@@ -1033,6 +1065,18 @@ tbody tr:hover{background:#FAFCFB}
   <div class="field"><label>السبب <b style="color:var(--danger)">*</b></label><textarea id="eppayReason" rows="2"></textarea></div>
   <div class="upload-box" id="eppayFileBox" onclick="stageFile('paymentReceipt','.pdf,.jpg,.jpeg,.png','eppayFileBox')">📎 إرفاق إيصال/مستند داعم (اختياري)</div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPayment()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingPaymentId=null;closeModal('epPaymentModal')">إلغاء</button></div>
+</div></div>
+
+<!-- طلب إنذار جديد (رئيس القسم أو الإدارة) -->
+<div class="modal-back" id="warningModal"><div class="modal sm">
+  <div class="modal-head"><h3>طلب إنذار جديد</h3><button class="x-btn" onclick="closeModal('warningModal')">✕</button></div>
+  <div class="field"><label>الموظف</label><select id="wrnEmp"></select></div>
+  <div class="field"><label>مستوى الإنذار <b style="color:var(--danger)">*</b></label><select id="wrnLevel"><option>إنذار</option><option>إنذار نهائي</option></select></div>
+  <div class="field"><label>السبب <b style="color:var(--danger)">*</b></label><input id="wrnReason" placeholder="مثال: تأخير متكرر، مخالفة سياسة الحضور..."></div>
+  <div class="field"><label>تفاصيل إضافية</label><textarea id="wrnDesc" rows="3" placeholder="وصف الواقعة بالتفصيل (اختياري لكن مستحسن)"></textarea></div>
+  <div class="upload-box" id="wrnFileBox" onclick="stageFile('warning','.pdf,.doc,.docx,.jpg,.png','wrnFileBox')">📎 إرفاق دليل (اختياري)</div>
+  <div class="section-note">سيمر الطلب على مراجعة الموارد البشرية أولاً، ثم الاعتماد النهائي من الإدارة — وعند الاعتماد يُصبح رسمياً ويُطلب من الموظف الإقرار الرقمي بالعلم.</div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="submitWarning()">إرسال الطلب</button><button class="btn btn-ghost" onclick="closeModal('warningModal')">إلغاء</button></div>
 </div></div>
 
 <!-- طلب خصم جديد (رئيس القسم أو المحاسب) -->
@@ -1325,8 +1369,9 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
 const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 
 let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[];
-let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[];
+let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
+const WARN_P1='بانتظار مراجعة الموارد البشرية', WARN_P2='بانتظار الاعتماد النهائي';
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 /* عملة الموظف الفعلية — لا نفترض الريال أبداً، كل موظف له عملة راتبه المسجّلة */
 function empCurrency(empId){return (empById[empId]&&empById[empId].currency)||'ريال سعودي'}
@@ -1532,6 +1577,8 @@ async function loadAll(){
  });
  const DED=await sb.from('deduction_requests').select('*').order('created_at',{ascending:false});
  deductionRequests=(DED.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:+r.amount||0,reason:r.reason,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,acctApprover:r.accountant_approver,createdAt:r.created_at}));
+ const WRN=await sb.from('warnings').select('*').order('created_at',{ascending:false});
+ warnings=(WRN.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),level:r.level,reason:r.reason,description:r.description,attachment:r.attachment_url,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,finalApprover:r.final_approver,acknowledged:r.acknowledged_by_employee,acknowledgedAt:r.acknowledged_at,createdAt:r.created_at}));
 }
 async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
 
@@ -1587,7 +1634,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -1678,6 +1725,11 @@ function buildAlerts(){
   if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'},kind:TASK,createdAt:d.createdAt});
   if(d.status===DED_P2)A.push({sid:'ded2-'+d.id,t:'طلب خصم بانتظار الاعتماد المالي النهائي',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'deductions'},kind:TASK,createdAt:d.createdAt});
  });
+ warnings.forEach(w=>{
+  if(w.status===WARN_P1)A.push({sid:'wrn1-'+w.id,t:'طلب إنذار بانتظار مراجعة الموارد البشرية',d:`طلب ${w.level} بحق ${w.emp} — مقدَّم من ${w.requestedBy}`,k:'sand',ic:'🚨',nav:{p:'warningsHR'},kind:TASK,createdAt:w.createdAt});
+  if(w.status===WARN_P2)A.push({sid:'wrn2-'+w.id,t:'طلب إنذار بانتظار الاعتماد النهائي',d:`طلب ${w.level} بحق ${w.emp} راجعته الموارد البشرية — بانتظار اعتمادك النهائي`,k:'danger',ic:'🚨',nav:{p:'warningsHR'},kind:TASK,createdAt:w.createdAt});
+  if(w.status==='معتمد'&&!w.acknowledged)A.push({sid:'wrnack-'+w.id,t:'⚠️ إنذار رسمي بحقك يتطلب إقرارك',d:`لديك ${w.level} معتمد رسمياً بتاريخ ${fmt(w.createdAt)} — يلزم إقرارك بالعلم عبر صفحة "الإنذارات"`,k:'danger',ic:'🚨',nav:{p:'warnings'},kind:TASK,empOnly:w.employee_id});
+ });
  // === إثراء كل مهمة بموعد اتخاذ الإجراء (SLA) + بناء تنبيهات تصعيد للمتأخرات ===
  A.forEach(a=>{
   if(a.kind===TASK&&a.createdAt){
@@ -1704,9 +1756,12 @@ let alertTabActive='task';
 function alertTabSwitch(kind,btn){alertTabActive=kind;document.querySelectorAll('#page-alerts .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAlerts()}
 function renderAlerts(){
  const Afull=sortAlerts(buildAlerts().filter(a=>{
+  if(a.empOnly)return false; // تنبيه شخصي للموظف المتأثر فقط، لا يظهر بقائمة مهام الإدارة العامة
   if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-'))&&!hasPerm('paymentsAdmin','view'))return false;
   if(a.sid&&a.sid.startsWith('ded1-')&&!hasPerm('deductionsHR','view'))return false;
   if(a.sid&&a.sid.startsWith('ded2-')&&!hasPerm('paymentsAdmin','full'))return false;
+  if(a.sid&&a.sid.startsWith('wrn1-')&&!hasPerm('warnings','view'))return false;
+  if(a.sid&&a.sid.startsWith('wrn2-')&&!hasPerm('warnings','full'))return false;
   return true;
  }));
  const taskCount=Afull.filter(a=>a.kind==='task').length;
@@ -2706,6 +2761,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view')){renderPaymentsAdmin();renderPaymentFiles('paymentFilesTbody');if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='flex'}else if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='none';
  if(hasPerm('deductionsHR','view'))renderDeductionsHR();
+ if(hasPerm('warnings','view'))renderWarningsHR();
  const activeId=(document.querySelector('#app .page.on')||{}).id||'';
  const activeModule=activeId.replace('page-','');
  if(MODULES.some(m=>m.key===activeModule)&&!hasPerm(activeModule,'view'))go('dashboard');
@@ -2744,6 +2800,7 @@ const MODULES=[
  {key:'custody',label:'العهد'},
  {key:'paymentsAdmin',label:'طلبات الصرف'},
  {key:'deductionsHR',label:'مراجعة طلبات الخصم'},
+ {key:'warnings',label:'الإنذارات'},
 ];
 /* وحدة "الصلاحيات" نفسها لا تدخل ضمن قائمة MODULES القابلة للعرض بالجدول
    (لا يجوز لأي أدمن يمنح نفسه أو غيره وصولاً إليها من الجدول نفسه) —
@@ -3009,7 +3066,7 @@ async function viewFileInline(path,title){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي',deductions:'طلبات الخصم',paymentFiles:'ملفات الصرف'};
+const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي',deductions:'طلبات الخصم',paymentFiles:'ملفات الصرف',warnings:'الإنذارات'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
@@ -3359,6 +3416,74 @@ function renderDeductionsHR(){
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="hrDecideDeduction('${d.id}',true)">مراجعة واعتماد</button> <button class="btn btn-danger btn-sm" onclick="hrDecideDeduction('${d.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات خصم بانتظار مراجعتك 🎉</td></tr>';
  $('hrDedLogTbody').innerHTML=deductionRequests.length?deductionRequests.map(d=>`<tr><td><b>${d.emp}</b></td><td>${d.dept||'—'}</td><td>${money(d.amount,d.employee_id)}</td><td>${d.reason||'—'}</td><td>${d.requestedBy}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات خصم بعد</td></tr>';
 }
+/* ================= الإنذارات (رئيس القسم/الإدارة ← HR ← اعتماد نهائي ← إقرار الموظف رقمياً) ================= */
+function openNewWarning(){
+ const pool=employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
+ $('wrnEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ $('wrnLevel').value='إنذار';$('wrnReason').value='';$('wrnDesc').value='';
+ openModal('warningModal');
+}
+async function submitWarning(){
+ if(!$('wrnEmp').value){toast('اختر الموظف');return}
+ if(!$('wrnReason').value.trim()){toast('سبب الإنذار إلزامي');return}
+ try{
+  let attUrl=null;const f=takeStaged('warning','wrnFileBox','📎 إرفاق دليل (اختياري)');
+  if(f){toast('جاري رفع المرفق...');attUrl=await uploadToStorage(f,'employees/'+$('wrnEmp').value+'/warnings')}
+  const {error}=await sb.from('warnings').insert({
+   employee_id:$('wrnEmp').value,level:$('wrnLevel').value,reason:$('wrnReason').value,description:$('wrnDesc').value,attachment_url:attUrl,
+   requested_by_name:currentEmp.name,requested_by_role:currentEmp.role,status:WARN_P1});
+  if(error)throw error;
+  closeModal('warningModal');await refresh();toast('تم إرسال طلب الإنذار — سيمر على مراجعة الموارد البشرية');
+ }catch(e){err(e)}
+}
+async function hrDecideWarning(id,approve){
+ const {error}=await sb.from('warnings').update({status:approve?WARN_P2:'مرفوض',hr_reviewer:me.name}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(approve?'تمت المراجعة ورُفع الطلب للاعتماد النهائي':'تم رفض طلب الإنذار');
+}
+async function finalDecideWarning(id,approve){
+ const {error}=await sb.from('warnings').update({status:approve?'معتمد':'مرفوض',final_approver:me.name}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(approve?'تم اعتماد الإنذار رسمياً — سيُخطر الموظف لإقراره':'تم رفض طلب الإنذار');
+}
+async function acknowledgeWarning(id){
+ if(!(await showConfirm('بالضغط على "تأكيد" أنت تقر رسمياً بأنك اطّلعت على هذا الإنذار. هل تريد المتابعة؟')))return;
+ const {error}=await sb.from('warnings').update({acknowledged_by_employee:true,acknowledged_at:new Date().toISOString()}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast('تم تسجيل إقرارك بالعلم');
+}
+function warningLevelTag(level){return level==='إنذار نهائي'?'danger':'sand'}
+function renderWarningsPage(){
+ if(!$('wrnSubmitCard'))return;
+ const canSubmit=currentEmp.role==='manager'||currentEmp.role==='admin';
+ $('wrnSubmitCard').style.display=canSubmit?'block':'none';
+ if(canSubmit){
+  const mine=warnings.filter(w=>w.requestedBy===currentEmp.name);
+  $('wrnMyRequestsTbody').innerHTML=mine.length?mine.map(w=>`<tr><td><b>${w.emp}</b></td><td><span class="tag ${warningLevelTag(w.level)}">${w.level}</span></td><td>${w.reason||'—'}</td><td>${fmt(w.createdAt)}</td><td><span class="tag ${w.status==='معتمد'?'ok':w.status==='مرفوض'?'danger':'sand'}">${w.status}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات إنذار قدّمتها بعد</td></tr>';
+ }
+ // إنذارات صادرة بحق الموظف نفسه — تظهر لأي موظف بغض النظر عن دوره
+ const against=warnings.filter(w=>w.employee_id===currentEmp.id&&w.status==='معتمد');
+ const needsAck=against.filter(w=>!w.acknowledged);
+ if($('wrnAckCard')){
+  $('wrnAckCard').style.display=against.length?'block':'none';
+  $('wrnAgainstTbody').innerHTML=against.length?against.map(w=>`<tr><td><span class="tag ${warningLevelTag(w.level)}">${w.level}</span></td><td>${w.reason||'—'}</td><td>${w.description||'—'}</td><td>${fmt(w.createdAt)}</td>
+   <td>${w.acknowledged?`<span class="tag ok">تم الإقرار (${fmt(w.acknowledgedAt)})</span>`:`<button class="btn btn-danger btn-sm" onclick="acknowledgeWarning('${w.id}')">⚠️ إقرار بالعلم إلزامي</button>`}</td></tr>`).join(''):'';
+  if($('wrnAckNavBadge')){$('wrnAckNavBadge').style.display=needsAck.length?'inline-block':'none';$('wrnAckNavBadge').textContent=needsAck.length}
+ }
+}
+function renderWarningsHR(){
+ if(!$('hrWrnPendingTbody'))return;
+ const pend1=warnings.filter(w=>w.status===WARN_P1);
+ const pend2=warnings.filter(w=>w.status===WARN_P2);
+ $('hrWrnBadge').style.display=(pend1.length+pend2.length)?'inline-block':'none';$('hrWrnBadge').textContent=pend1.length+pend2.length;
+ $('hrWrnPendingTbody').innerHTML=pend1.length?pend1.map(w=>`<tr><td><b>${w.emp}</b></td><td>${w.dept||'—'}</td><td><span class="tag ${warningLevelTag(w.level)}">${w.level}</span></td><td>${w.reason||'—'}</td><td>${w.requestedBy} (${w.requestedByRole==='manager'?'رئيس قسم':'إدارة'})</td>
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="hrDecideWarning('${w.id}',true)">مراجعة وإحالة</button> <button class="btn btn-danger btn-sm" onclick="hrDecideWarning('${w.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات إنذار بانتظار مراجعتك 🎉</td></tr>';
+ if($('finalWrnPendingTbody')){
+  $('finalWrnPendingTbody').innerHTML=pend2.length?pend2.map(w=>`<tr><td><b>${w.emp}</b></td><td>${w.dept||'—'}</td><td><span class="tag ${warningLevelTag(w.level)}">${w.level}</span></td><td>${w.reason||'—'}</td><td>${w.hrReviewer||'—'}</td>
+   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="finalDecideWarning('${w.id}',true)">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="finalDecideWarning('${w.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد إنذارات بانتظار اعتمادك النهائي 🎉</td></tr>';
+ }
+ $('hrWrnLogTbody').innerHTML=warnings.length?warnings.map(w=>`<tr><td><b>${w.emp}</b></td><td>${w.dept||'—'}</td><td><span class="tag ${warningLevelTag(w.level)}">${w.level}</span></td><td>${w.reason||'—'}</td><td>${w.requestedBy}</td><td><span class="tag ${w.status==='معتمد'?'ok':w.status==='مرفوض'?'danger':'sand'}">${w.status}</span></td><td>${w.status==='معتمد'?(w.acknowledged?'✅ أقرّ':'⏳ بانتظار الإقرار'):'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إنذارات بعد</td></tr>';
+}
 async function generatePayroll(isAdmin){
  const monthSel=isAdmin?'prollMonthAdmin':'prollMonth', yearSel=isAdmin?'prollYearAdmin':'prollYear';
  const month=+$(monthSel).value,year=+$(yearSel).value;
@@ -3597,6 +3722,7 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
   renderPaymentFiles('epPaymentFilesTbody');
  }
  renderDeductionsPage();
+ renderWarningsPage();
 }
 function mgrRenderApprovals(){
  if($('mgrDivider'))$('mgrDivider').style.display='block';
@@ -3651,7 +3777,8 @@ let epAlertTabActive='task';
 function epAlertTabSwitch(kind,btn){epAlertTabActive=kind;document.querySelectorAll('#ep-alerts .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');epRenderAlerts()}
 function epRenderAlerts(){
  const Afull=buildAlerts().filter(a=>{
-  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')||a.sid.startsWith('ded1-')||a.sid.startsWith('ded2-')))return false;
+  if(a.empOnly)return a.empOnly===currentEmp.id; // تنبيه شخصي حصري لصاحبه فقط، بغض النظر عن أي فلتر آخر
+  if(a.sid&&(a.sid.startsWith('lv1-')||a.sid.startsWith('lv2-')||a.sid.startsWith('pr1-')||a.sid.startsWith('pr2-')||a.sid.startsWith('fm1-')||a.sid.startsWith('fm2-')||a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')||a.sid.startsWith('ded1-')||a.sid.startsWith('ded2-')||a.sid.startsWith('wrn1-')||a.sid.startsWith('wrn2-')))return false;
   return a.d.includes(currentEmp.name)||a.t.includes('سياسة');
  });
  if(currentEmp.role==='manager')leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id).forEach(l=>Afull.push({sid:'mgr-'+l.id,t:'طلب إجازة بانتظار اعتمادك',d:`${l.emp} قدّم طلب إجازة ${l.type} (${fmt(l.start)} → ${fmt(l.end)}) — بانتظار قرارك كرئيس قسم`,k:'sand',ic:'✅',nav:{p:'approvals'},kind:'task'}));
