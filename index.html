@@ -2937,7 +2937,8 @@ async function loadAuditLog(append){
  const rowsHtml=data.map(r=>{
   const lbl=AUDIT_ACTION_LABELS[r.action]||{t:r.action,k:'info'};
   const moveLabel=(AUDIT_MOVE_LABELS[r.table_name]||{})[r.action]||(AUDIT_TABLE_LABELS[r.table_name]||r.table_name);
-  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td><b>${r.changed_by_name||'غير معروف'}</b></td><td><span class="tag ${lbl.k}">${moveLabel}</span></td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
+  const isDirectSQL=!r.changed_by_name||r.changed_by_name==='غير معروف';
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td>${!isDirectSQL?`<b>${r.changed_by_name}</b>`:'<span style="color:var(--muted)" title="نُفّذ هذا الإجراء عبر SQL Editor مباشرة، مو من داخل الموقع">🛠 تعديل مباشر (SQL)</span>'}</td><td><span class="tag ${lbl.k}">${moveLabel}</span></td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
  }).join('');
  if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
  else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="4" class="empty">لا توجد سجلات مطابقة</td></tr>';
