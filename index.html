@@ -3166,6 +3166,7 @@ async function epAddPayment(){
  const amt=+$('eppayAmount').value;
  if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
  if(!$('eppayReason').value.trim()){toast('سبب الطلب إلزامي');return}
+ if(!(await showConfirm('هل تريد إرسال طلب الصرف؟ سيمر على رئيس القسم ثم المحاسب.')))return;
  try{
   let path=null;const f=takeStaged('paymentReceipt','eppayFileBox','📎 إرفاق إيصال/مستند داعم (اختياري)');
   if(f){toast('جاري رفع المرفق...');path=await uploadToStorage(f,'employees/'+currentEmp.id+'/payments')}
@@ -3343,6 +3344,7 @@ async function submitDeduction(){
  const amt=+$('dedAmount').value;
  if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
  if(!$('dedReason').value.trim()){toast('سبب الخصم إلزامي');return}
+ if(!(await showConfirm('هل تريد إرسال طلب الخصم؟ سيمر على مراجعة الموارد البشرية ثم الاعتماد المالي النهائي.')))return;
  const {error}=await sb.from('deduction_requests').insert({
   employee_id:$('dedEmp').value,amount:amt,reason:$('dedReason').value,
   requested_by_name:currentEmp.name,requested_by_role:currentEmp.role,status:DED_P1});
@@ -3426,6 +3428,8 @@ function openNewWarning(){
 async function submitWarning(){
  if(!$('wrnEmp').value){toast('اختر الموظف');return}
  if(!$('wrnReason').value.trim()){toast('سبب الإنذار إلزامي');return}
+ const empName=(empById[$('wrnEmp').value]||{}).name||'الموظف';
+ if(!(await showConfirm(`هل تريد إرسال طلب "${$('wrnLevel').value}" بحق ${empName}؟ هذا إجراء تأديبي جدي وسيمر على مراجعة رسمية.`)))return;
  try{
   let attUrl=null;const f=takeStaged('warning','wrnFileBox','📎 إرفاق دليل (اختياري)');
   if(f){toast('جاري رفع المرفق...');attUrl=await uploadToStorage(f,'employees/'+$('wrnEmp').value+'/warnings')}
@@ -3442,6 +3446,7 @@ async function hrDecideWarning(id,approve){
  await refresh();toast(approve?'تمت المراجعة ورُفع الطلب للاعتماد النهائي':'تم رفض طلب الإنذار');
 }
 async function finalDecideWarning(id,approve){
+ if(approve&&!(await showConfirm('هل تريد اعتماد هذا الإنذار نهائياً؟ سيصبح رسمياً فوراً ويُخطر الموظف لإقراره بالعلم.')))return;
  const {error}=await sb.from('warnings').update({status:approve?'معتمد':'مرفوض',final_approver:me.name}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم اعتماد الإنذار رسمياً — سيُخطر الموظف لإقراره':'تم رفض طلب الإنذار');
@@ -3620,6 +3625,7 @@ async function extraAddLeave(){
  const empName=(empById[$('xlvEmp').value]||{}).name||'';
  const balErr=checkLeaveBalance(empName,$('xlvType').value,days);
  if(balErr){toast(balErr);return}
+ if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empName}؟`)))return;
  const {error}=await sb.from('leaves').insert({employee_id:$('xlvEmp').value,leave_type:$('xlvType').value,start_date:$('xlvStart').value,end_date:$('xlvEnd').value,days,reason:$('xlvReason').value,status:LV_P1});
  if(error){err(error);return}
  closeModal('extraAddLeaveModal');await refresh();toast('تم حفظ طلب الإجازة');
@@ -3859,6 +3865,8 @@ async function epAddLeave(){
  if(!$('eplCommit').checked){toast('لازم توافق على التعهد أولاً لإتمام الطلب');return}
  const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1,editingLeaveId);
  if(balErr){toast(balErr);return}
+ const confirmMsg=editingLeaveId?'هل تريد حفظ التعديل على طلب الإجازة؟':'هل تريد إرسال طلب الإجازة؟';
+ if(!(await showConfirm(confirmMsg)))return;
  try{
   const fs2=takeStaged('leaveEmpSick','eplSickBox','📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)');
   let sickPath=null;
@@ -3910,6 +3918,8 @@ function epEditPermit(id){
 }
 async function epAddPermit(){
  if(!$('eppDate').value){toast('حدد تاريخ الاستئذان');return}
+ const confirmMsg=editingPermitId?'هل تريد حفظ التعديل على طلب الاستئذان؟':'هل تريد إرسال طلب الاستئذان؟';
+ if(!(await showConfirm(confirmMsg)))return;
  const payload={permit_date:$('eppDate').value,permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value};
  let error;
  if(editingPermitId){
