@@ -264,6 +264,8 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
     <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
     <button class="nav-item" id="nav_warnings" data-page="warningsHR"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="hrWrnBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-page="employeeOfMonth"><span class="ic">🏆</span> موظف الشهر</button>
+    <button class="nav-item" data-page="medicalMembership"><span class="ic">🏥</span> العضوية الطبية</button>
     <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
     <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
 
@@ -675,6 +677,30 @@ tbody tr:hover{background:#FAFCFB}
     <tbody id="hrWrnLogTbody"></tbody></table></div></div>
 </section>
 
+<section class="page" id="page-employeeOfMonth">
+  <div class="page-head"><div><h1>🏆 موظف الشهر</h1><p>تخصيص جائزة مالية للموظف المتميز بناءً على معايير أداء واضحة</p></div></div>
+  <div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:56px;margin-bottom:12px">🏆</div>
+    <h3 style="margin-bottom:10px">هذه الميزة قيد التجهيز</h3>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 18px">
+      جائزة مالية بقيمة <b>500 ريال</b> تُمنح شهرياً للموظف المتميز بناءً على معايير أداء واضحة (مرتبطة بنظام مؤشرات الأداء KPIs قيد الإعداد)، مع عرض اسم الفائز هنا وبلوحة التحكم الرئيسية.
+    </p>
+    <span class="tag sand">سيتم تفعيلها قريباً</span>
+  </div>
+</section>
+
+<section class="page" id="page-medicalMembership">
+  <div class="page-head"><div><h1>🏥 العضوية الطبية</h1><p>خصومات طبية للموظفين المتميزين بمستشفيات متعاقد معها</p></div></div>
+  <div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:56px;margin-bottom:12px">🏥</div>
+    <h3 style="margin-bottom:10px">هذه الميزة قيد التجهيز</h3>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 18px">
+      أي موظف يحصل على تقييم <b>4 فأعلى</b> (من نظام مؤشرات الأداء القادم) يستفيد تلقائياً من عضوية خصومات تصل إلى <b>90%</b> بالمستشفيات المتعاقد معها.
+    </p>
+    <span class="tag sand">سيتم تفعيلها قريباً</span>
+  </div>
+</section>
+
 <section class="page" id="page-permissions">
   <div class="page-head"><div><h1>الصلاحيات</h1><p>تحكّم دقيق بوصول كل موظف لكل قسم من أقسام النظام — مستقل تماماً عن دوره الأساسي</p></div></div>
   <div class="card">
@@ -739,6 +765,8 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-ep="permits"><span class="ic">🚪</span> طلبات الاستئذان</button>
     <button class="nav-item" data-ep="payments" id="empPaymentsNavBtn"><span class="ic">💵</span> طلبات الصرف <span class="nav-badge" id="epPayBadge" style="display:none">0</span></button>
     <button class="nav-item" data-ep="warnings" id="wrnNavBtn"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="wrnAckNavBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-ep="employeeOfMonth"><span class="ic">🏆</span> موظف الشهر</button>
+    <button class="nav-item" data-ep="medicalMembership"><span class="ic">🏥</span> العضوية الطبية</button>
     <button class="nav-item" data-ep="contracts"><span class="ic">✍</span> عقود</button>
     <button class="nav-item" data-ep="mysalary" id="empSalaryNavBtn"><span class="ic">🧾</span> راتبي</button>
 
@@ -994,6 +1022,30 @@ tbody tr:hover{background:#FAFCFB}
     <div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>المستوى</th><th>السبب</th><th>تاريخ الطلب</th><th>الحالة</th></tr></thead>
       <tbody id="wrnMyRequestsTbody"></tbody></table></div>
+  </div>
+</section>
+
+<section class="page" id="ep-employeeOfMonth">
+  <div class="page-head"><div><h1>🏆 موظف الشهر</h1><p>جائزة تقدير للموظف المتميز</p></div></div>
+  <div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:56px;margin-bottom:12px">🏆</div>
+    <h3 style="margin-bottom:10px">هذه الميزة قيد التجهيز</h3>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 18px">
+      جائزة مالية بقيمة <b>500 ريال</b> تُمنح شهرياً للموظف المتميز بناءً على معايير أداء واضحة، مع عرض اسم الفائز هنا وبلوحة التحكم الرئيسية.
+    </p>
+    <span class="tag sand">سيتم تفعيلها قريباً</span>
+  </div>
+</section>
+
+<section class="page" id="ep-medicalMembership">
+  <div class="page-head"><div><h1>🏥 العضوية الطبية</h1><p>خصومات طبية للموظفين المتميزين</p></div></div>
+  <div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:56px;margin-bottom:12px">🏥</div>
+    <h3 style="margin-bottom:10px">هذه الميزة قيد التجهيز</h3>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 18px">
+      الموظف الذي يحصل على تقييم <b>4 فأعلى</b> يستفيد تلقائياً من عضوية خصومات تصل إلى <b>90%</b> بالمستشفيات المتعاقد معها.
+    </p>
+    <span class="tag sand">سيتم تفعيلها قريباً</span>
   </div>
 </section>
 
@@ -1634,7 +1686,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -3066,7 +3118,7 @@ async function viewFileInline(path,title){
 }
 
 /* ================= بوابة الموظف ================= */
-const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي',deductions:'طلبات الخصم',paymentFiles:'ملفات الصرف',warnings:'الإنذارات'};
+const EP_TITLES={dashboard:'لوحة التحكم',profile:'الملف الشخصي',alerts:'الإشعارات',contracts:'عقود',leaves:'الاجازات',attendance:'الحضور',permits:'طلبات الاستئذان',policies:'الأنظمة والسياسات',forms:'النماذج',approvals:'اعتمادات القسم',payments:'طلبات الصرف',mysalary:'راتبي',payroll:'الرواتب',custody:'العهد',payApprovals:'اعتماد الصرف',myTeam:'موظفي قسمي',deductions:'طلبات الخصم',paymentFiles:'ملفات الصرف',warnings:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية'};
 document.querySelectorAll('#empApp .nav-item').forEach(b=>b.addEventListener('click',()=>epGo(b.dataset.ep)));
 function epGo(p){
  document.querySelectorAll('#empApp .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.ep===p));
