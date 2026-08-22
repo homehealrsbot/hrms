@@ -416,14 +416,19 @@ tbody tr:hover{background:#FAFCFB}
   <div class="page-head"><div><h1>الحضور والغياب</h1><p>تصدير تلقائي للتقارير الشهرية بتاريخ 29 من كل شهر</p></div></div>
 
   <div class="card">
-    <h3 style="margin-bottom:10px">📍 موقع المقر (للحضور الذاتي بتحديد الموقع)</h3>
-    <div id="officeLocStatus" class="section-note" style="margin-bottom:10px">جاري التحميل...</div>
+    <h3 style="margin-bottom:10px">📍 مواقع الحضور الذاتي (يقدر تضيف أكثر من موقع/فرع)</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>اسم الموقع</th><th>نصف القطر</th><th>الحالة</th><th>أضافه</th><th>إجراء</th></tr></thead>
+      <tbody id="officeLocsTbody"></tbody></table></div>
+    <hr style="margin:16px 0;border-color:var(--border)">
+    <h4 style="margin-bottom:10px">+ إضافة موقع جديد</h4>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <label style="font-size:13px;color:var(--muted)">نصف قطر الدائرة المسموح (متر):</label>
-      <input id="officeRadius" type="number" value="150" style="width:100px">
-      <button class="btn btn-primary btn-sm" onclick="setOfficeLocationFromHere()">📍 استخدم موقعي الحالي كموقع المقر</button>
+      <input id="newLocName" placeholder="اسم الموقع (مثال: فرع جدة)" style="width:200px">
+      <label style="font-size:13px;color:var(--muted)">نصف القطر (متر):</label>
+      <input id="newLocRadius" type="number" value="150" style="width:100px">
+      <button class="btn btn-primary btn-sm" onclick="addOfficeLocationFromHere()">📍 استخدم موقعي الحالي لإضافته</button>
     </div>
-    <div class="section-note" style="margin-top:8px">⚠️ اضغط هذا الزر وأنت واقف فعلياً بمقر الشركة — يلتقط إحداثياتك كنقطة مرجعية لكل الموظفين.</div>
+    <div class="section-note" style="margin-top:8px">⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.</div>
   </div>
 
   <div class="tabs">
@@ -1216,6 +1221,7 @@ tbody tr:hover{background:#FAFCFB}
       <div><label>مدة العقد</label><input id="eContractDur" placeholder="مثال: سنة"></div>
       <div><label>حالة الموظف</label><select id="eStatus"><option>نشط</option><option>غير نشط</option></select></div>
       <div><label>الدور في النظام</label><select id="eRole"><option value="employee">موظف</option><option value="manager">رئيس قسم</option><option value="accountant">محاسب</option></select></div>
+      <div><label>موقع الحضور الذاتي (GPS)</label><select id="eLocation"><option value="">— بلا تخصيص —</option></select></div>
     </div>
   </fieldset>
   <fieldset><legend>المستندات المطلوبة</legend>
@@ -1441,7 +1447,8 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
    ============================================================ */
 const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 
-let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null,allAttendanceEvents=[];
+let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null,allAttendanceEvents=[],officeLocations=[];
+function empLocation(empId){const e=empById[empId];if(!e||!e.locationId)return null;return officeLocations.find(l=>l.id===e.locationId)||null}
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
 const WARN_P1='بانتظار مراجعة الموارد البشرية', WARN_P2='بانتظار الاعتماد النهائي';
@@ -1591,7 +1598,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
@@ -1626,8 +1633,9 @@ async function loadAll(){
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes,checkInLat:r.check_in_lat,checkInLng:r.check_in_lng,distM:r.check_in_distance_m};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
- const OL=await sb.from('office_location').select('*').eq('id',1).maybeSingle();
- officeLocation=OL.data||null;
+ const OLS=await sb.from('office_locations').select('*').order('created_at',{ascending:true});
+ officeLocations=(OLS.data||[]).map(r=>({id:r.id,name:r.name,lat:r.lat,lng:r.lng,radius_meters:r.radius_meters,active:r.active,createdBy:r.created_by,updatedAt:r.updated_at}));
+ officeLocation=officeLocations[0]||null; // للتوافق مع أي كود قديم يعتمد على موقع واحد (احتياط)
  if(me&&me.role!=='admin'){
   const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
   attendanceEvents=AE.data||[];
@@ -2122,16 +2130,21 @@ function fillEmpSelects(){
  Object.keys(DEPT_EMP_MAP).forEach(filterEmpByDept);
  syncLeaveEmp();
 }
+function fillLocationSelect(){
+ $('eLocation').innerHTML='<option value="">— بلا تخصيص —</option>'+officeLocations.map(l=>`<option value="${l.id}">${l.name}${l.active?'':' (معطَّل)'}</option>`).join('');
+}
 function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة موظف جديد';
  ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur'].forEach(id=>$(id).value='');
+ fillLocationSelect();$('eLocation').value='';
  $('empSaveBtn').disabled=false;
  openModal('empModal')}
 function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textContent='تعديل بيانات الموظف';
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
+ fillLocationSelect();$('eLocation').value=e.locationId||'';
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
-function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus','eRole'].map(id=>$(id).value).join('|')}
+function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus','eRole','eLocation'].map(id=>$(id).value).join('|')}
 let empSnapshot='';
 document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
@@ -2139,7 +2152,7 @@ async function saveEmployee(){
  if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم الرباعي والبريد الإلكتروني حقول إلزامية');return}
  if(!/^\S+@\S+\.\S+$/.test($('eEmail').value.trim())){toast('صيغة البريد الإلكتروني غير صحيحة');return}
  if($('eProbStart').value&&$('eProbEnd').value&&$('eProbEnd').value<$('eProbStart').value){toast('نهاية فترة التجربة لا يمكن أن تسبق بدايتها');return}
- const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value};
+ const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null};
  const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
  const {error}=await q;
  if(error){err(error);return}
@@ -2275,21 +2288,22 @@ function startLiveZoneMonitoring(){
  stopLiveZoneMonitoring();
  currentZoneStatus='داخل المقر';
  if(!navigator.geolocation)return;
+ const myLoc=empLocation(currentEmp.id);
+ if(!myLoc)return;
  liveWatchId=navigator.geolocation.watchPosition(async pos=>{
-  if(!officeLocation||!officeLocation.lat)return;
   const loc={lat:pos.coords.latitude,lng:pos.coords.longitude};
-  const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
-  const inside=dist<=officeLocation.radius_meters;
+  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
+  const inside=dist<=myLoc.radius_meters;
   if(inside&&currentZoneStatus!=='داخل المقر'){
    currentZoneStatus='داخل المقر';
    await logAttendanceEvent('return_zone',loc,dist,'داخل المقر');
    updateLiveStatusBadge('داخل المقر');
-   toast('🟢 رجعت لنطاق المقر — تم تسجيل عودتك');
+   toast('🟢 رجعت لنطاق موقعك — تم تسجيل عودتك');
   }else if(!inside&&currentZoneStatus!=='خارج المقر'){
    currentZoneStatus='خارج المقر';
    await logAttendanceEvent('exit_zone',loc,dist,'خارج المقر');
    updateLiveStatusBadge('خارج المقر',`تبعد ${Math.round(dist)} متر`);
-   toast('🔴 خرجت من نطاق المقر — تم تسجيل خروجك (حضورك ما زال قائماً)');
+   toast('🔴 خرجت من نطاق موقعك — تم تسجيل خروجك (حضورك ما زال قائماً)');
   }
  },err=>console.warn('تعذّر تتبع الموقع الحي',err),{enableHighAccuracy:true,maximumAge:60000,timeout:20000});
 }
@@ -2322,37 +2336,55 @@ function getCurrentLocation(){
   );
  });
 }
-async function setOfficeLocationFromHere(){
- if(!(await showConfirm('سيتم تسجيل موقعك الحالي كموقع المقر الرسمي. تأكد أنك واقف فعلياً بالمقر الآن. متابعة؟')))return;
+async function addOfficeLocationFromHere(){
+ const name=$('newLocName').value.trim();
+ if(!name){toast('اكتب اسماً للموقع (مثال: الفرع الرئيسي)');return}
+ if(!(await showConfirm(`سيتم تسجيل موقعك الحالي كموقع "${name}". تأكد أنك واقف فعلياً هناك الآن. متابعة؟`)))return;
  try{
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
-  const radius=+$('officeRadius').value||150;
-  const {error}=await sb.from('office_location').upsert({id:1,lat:loc.lat,lng:loc.lng,radius_meters:radius,updated_by:me.name,updated_at:new Date().toISOString()});
+  const radius=+$('newLocRadius').value||150;
+  const {error}=await sb.from('office_locations').insert({name,lat:loc.lat,lng:loc.lng,radius_meters:radius,active:true,created_by:me.name});
   if(error){err(error);return}
-  await refresh();toast('تم حفظ موقع المقر بنجاح ✅');
+  $('newLocName').value='';$('newLocRadius').value='150';
+  await refresh();toast(`تم إضافة موقع "${name}" بنجاح ✅`);
  }catch(e){toast(e.message)}
+}
+async function toggleLocationActive(id,active){
+ const {error}=await sb.from('office_locations').update({active,updated_at:new Date().toISOString()}).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast(active?'تم تفعيل الموقع ✅':'تم تعطيل الموقع — أي موظف مرتبط به لن يقدر يسجّل حضوره حتى تُفعّله');
+}
+async function deleteOfficeLocation(id,name){
+ if(!(await showConfirm(`حذف موقع "${name}" نهائياً؟ أي موظف مرتبط به سيحتاج تخصيص جديد.`)))return;
+ const {error}=await sb.from('office_locations').delete().eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast('تم حذف الموقع');
 }
 async function selfCheckIn(){
  try{
+  const myLoc=empLocation(currentEmp.id);
+  if(!myLoc){toast('لم يُخصَّص لك موقع بعد من الإدارة — تواصل مع الإدارة');return}
+  if(!myLoc.active){toast('الموقع المخصَّص لك معطَّل حالياً من الإدارة — تواصل مع الإدارة');return}
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
-  if(!officeLocation||!officeLocation.lat){toast('لم يُحدَّد موقع المقر بعد من الإدارة — تواصل مع الإدارة');return}
-  const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
-  if(dist>officeLocation.radius_meters){toast(`أنت بعيد عن المقر — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)`);return}
+  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
+  if(dist>myLoc.radius_meters){toast(`أنت بعيد عن موقعك (${myLoc.name}) — تبعد ${Math.round(dist)} متر (المسموح ${myLoc.radius_meters} متر)`);return}
   const today=D(0);
   const already=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
   if(already&&already.in){toast('سجّلت حضورك اليوم مسبقاً ✅');startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
   const timeStr=nowTimeStr();
-  const {error}=await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,check_in:timeStr,department:currentEmp.dept,check_in_lat:loc.lat,check_in_lng:loc.lng,notes:'تسجيل ذاتي بالموقع'});
-  if(error){toast(error.message.includes('خارج نطاق')||error.message.includes('بعيد')?error.message:'تعذّر تسجيل الحضور');return}
+  const {error}=await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,check_in:timeStr,department:currentEmp.dept,check_in_lat:loc.lat,check_in_lng:loc.lng,notes:'تسجيل ذاتي بالموقع — '+myLoc.name});
+  if(error){toast(error.message.includes('خارج نطاق')||error.message.includes('بعيد')||error.message.includes('معطَّل')?error.message:'تعذّر تسجيل الحضور');return}
   await logAttendanceEvent('check_in',loc,dist,'داخل المقر');
-  await refresh();toast(`✅ تم تسجيل حضورك بنجاح — الساعة ${timeStr}`);
+  await refresh();toast(`✅ تم تسجيل حضورك بنجاح بموقع "${myLoc.name}" — الساعة ${timeStr}`);
   startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');
  }catch(e){toast(e.message)}
 }
 async function selfCheckOut(){
  try{
+  const myLoc=empLocation(currentEmp.id);
+  if(!myLoc){toast('لم يُخصَّص لك موقع بعد من الإدارة — تواصل مع الإدارة');return}
   const today=D(0);
   const rec=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
   if(!rec){toast('لازم تسجّل حضورك أولاً قبل الانصراف');return}
@@ -2360,9 +2392,8 @@ async function selfCheckOut(){
   stopLiveZoneMonitoring(); // نوقف التتبع الحي أول لتفادي تعارض طلبات الموقع المتزامنة
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
-  if(!officeLocation||!officeLocation.lat){toast('لم يُحدَّد موقع المقر بعد من الإدارة — تواصل مع الإدارة');return}
-  const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
-  if(dist>officeLocation.radius_meters){toast(`أنت بعيد عن المقر — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
+  if(dist>myLoc.radius_meters){toast(`أنت بعيد عن موقعك (${myLoc.name}) — تبعد ${Math.round(dist)} متر (المسموح ${myLoc.radius_meters} متر)، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
   const timeStr=nowTimeStr();
   const {error}=await sb.from('site_attendance').update({check_out:timeStr,check_out_lat:loc.lat,check_out_lng:loc.lng}).eq('id',rec.id);
   if(error){err(error);return}
@@ -2965,13 +2996,17 @@ function renderApprovalsPage(){
  }
 }
 function renderOfficeLocationStatus(){
- if(!$('officeLocStatus'))return;
- if(officeLocation&&officeLocation.lat){
-  $('officeLocStatus').innerHTML=`✅ موقع المقر محدَّد — نصف القطر: <b>${officeLocation.radius_meters} متر</b> (آخر تحديث: ${officeLocation.updated_by||'—'}، ${fmt(officeLocation.updated_at)})`;
-  $('officeRadius').value=officeLocation.radius_meters;
- }else{
-  $('officeLocStatus').innerHTML=`<span style="color:var(--danger)">⚠️ ما تم تحديد موقع المقر بعد — الموظفون ما يقدرون يسجّلون حضورهم الذاتي حتى يُحدَّد</span>`;
- }
+ if(!$('officeLocsTbody'))return;
+ const empCountByLoc={};
+ employees.forEach(e=>{if(e.locationId)empCountByLoc[e.locationId]=(empCountByLoc[e.locationId]||0)+1});
+ $('officeLocsTbody').innerHTML=officeLocations.length?officeLocations.map(l=>`<tr>
+  <td><b>${l.name}</b></td><td>${l.radius_meters} متر</td>
+  <td><span class="tag ${l.active?'ok':'gray'}">${l.active?'✅ مفعّل':'⛔ معطَّل'}</span></td>
+  <td>${l.createdBy||'—'}</td>
+  <td style="white-space:nowrap">
+   <button class="btn ${l.active?'btn-ghost':'btn-ok'} btn-sm" onclick="toggleLocationActive('${l.id}',${!l.active})">${l.active?'تعطيل':'تفعيل'}</button>
+   <button class="btn btn-danger btn-sm" onclick="deleteOfficeLocation('${l.id}','${l.name.replace(/'/g,'')}')">حذف</button>
+  </td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد مواقع مضافة بعد — أضف أول موقع بالأسفل</td></tr>';
 }
 function renderAll(){renderEmployees();renderContracts();renderPolicies();renderAttendance();renderLeaveStats();renderLeaveLog();renderLeaveTypes();renderPermits();renderFiles();renderReports();renderForms();renderDashboard();renderAlerts();renderApprovalsPage();renderOfficeLocationStatus();
  // تطبيق الصلاحيات على كل قسم إداري — الوصول الافتراضي للأدمن كامل إلا بسحب صريح،
