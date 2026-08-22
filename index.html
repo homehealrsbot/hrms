@@ -427,10 +427,20 @@ tbody tr:hover{background:#FAFCFB}
   </div>
 
   <div class="tabs">
+    <button onclick="setAttTab('liveStatus',this)">🟢 الحالة الحية</button>
     <button class="active" onclick="setAttTab('meetAtt',this)">حضور الاجتماعات</button>
     <button onclick="setAttTab('siteAtt',this)">الحضور في المقر</button>
     <button onclick="setAttTab('meetAbs',this)">غياب الاجتماعات</button>
     <button onclick="setAttTab('siteAbs',this)">الغياب في المقر</button>
+  </div>
+
+  <div id="att-liveStatus" class="att-tab" style="display:none">
+    <div class="card">
+      <div class="section-note" style="margin-bottom:12px">آخر حالة معروفة لكل موظف اليوم — تعتمد على تتبع الموقع أثناء فتحه صفحة الحضور بجهازه</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>الموظف</th><th>القسم</th><th>الحالة الحالية</th><th>آخر تحديث</th></tr></thead>
+        <tbody id="liveStatusTbody"></tbody></table></div>
+    </div>
   </div>
 
   <div id="att-meetAtt" class="att-tab">
@@ -876,7 +886,8 @@ tbody tr:hover{background:#FAFCFB}
   <div id="epAtt-site">
     <div class="card" style="text-align:center;padding:24px">
       <h3 style="margin-bottom:14px">📍 تسجيل الحضور الذاتي</h3>
-      <p id="epCheckStatus" style="color:var(--muted);margin-bottom:14px">اضغط الزر المناسب — سيُطلب إذن الموقع، ولازم تكون داخل نطاق المقر (150 متر)</p>
+      <p id="epCheckStatus" style="color:var(--muted);margin-bottom:10px">اضغط الزر المناسب — سيُطلب إذن الموقع، ولازم تكون داخل نطاق المقر (150 متر)</p>
+      <div id="epLiveZoneStatus" style="margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-ok" onclick="selfCheckIn()">✅ تسجيل حضور</button>
         <button class="btn btn-danger" onclick="selfCheckOut()">🚪 تسجيل انصراف</button>
@@ -884,6 +895,8 @@ tbody tr:hover{background:#FAFCFB}
     </div>
     <div class="card"><h3>✅ حضوري في المقر</h3><div class="tbl-wrap"><table>
       <thead><tr><th>التاريخ</th><th>وقت الدخول</th><th>وقت الخروج</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAttTbody"></tbody></table></div></div>
+    <div class="card"><h3>📋 سجل حركات الدوام اليوم</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>الوقت</th><th>الحركة</th><th>الحالة بعدها</th><th>المسافة عن المقر</th></tr></thead><tbody id="epAttEventsTbody"></tbody></table></div></div>
     <div class="card"><h3>🚫 غيابي في المقر</h3><div class="tbl-wrap"><table>
       <thead><tr><th>التاريخ</th><th>سبب الغياب</th><th>تقرير مرضي</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAbsTbody"></tbody></table></div></div>
   </div>
@@ -1428,7 +1441,7 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
    ============================================================ */
 const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 
-let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null;
+let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null,allAttendanceEvents=[];
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
 const WARN_P1='بانتظار مراجعة الموارد البشرية', WARN_P2='بانتظار الاعتماد النهائي';
@@ -1522,6 +1535,7 @@ async function enterApp(){
  initRealtime();
 }
 async function logout(){
+ try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){}
  try{if(me)await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'logout'})}catch(e){}
  await sb.auth.signOut();location.reload()
 }
@@ -1614,6 +1628,13 @@ async function loadAll(){
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes,checkInLat:r.check_in_lat,checkInLng:r.check_in_lng,distM:r.check_in_distance_m};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
  const OL=await sb.from('office_location').select('*').eq('id',1).maybeSingle();
  officeLocation=OL.data||null;
+ if(me&&me.role!=='admin'){
+  const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
+  attendanceEvents=AE.data||[];
+ }else if(me&&me.role==='admin'){
+  const AEA=await sb.from('attendance_events').select('*').order('event_date',{ascending:false});
+  allAttendanceEvents=AEA.data||[]; // RLS نفسها تحدد ما يُرجَّع فعلياً حسب صلاحية الحضور
+ }
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
@@ -2203,8 +2224,21 @@ async function addContract(){
 
 /* ================= الحضور والغياب ================= */
 let attFilters={meetAtt:'',siteAtt:'',meetAbs:'',siteAbs:''};
+async function renderLiveStatusBoard(){
+ if(!$('liveStatusTbody'))return;
+ const {data,error}=await sb.from('attendance_events').select('*').eq('event_date',D(0)).order('created_at',{ascending:true});
+ if(error){$('liveStatusTbody').innerHTML='<tr><td colspan="4" class="empty">تعذّر تحميل البيانات</td></tr>';return}
+ const latest={};
+ (data||[]).forEach(e=>{latest[e.employee_id]=e}); // بترتيب تصاعدي، آخر تكرار = آخر حدث
+ const rows=Object.values(latest).filter(e=>e.status_after!=='منتهي');
+ $('liveStatusTbody').innerHTML=rows.length?rows.map(e=>{
+  const emp=empById[e.employee_id]||{};
+  return `<tr><td><b>${emp.name||'—'}</b></td><td>${emp.dept||'—'}</td><td><span class="tag ${e.status_after==='داخل المقر'?'ok':'danger'}">${e.status_after==='داخل المقر'?'🟢 داخل المقر':'🔴 خارج المقر'}</span></td><td dir="ltr" style="text-align:right">${e.event_time}</td></tr>`;
+ }).join(''):'<tr><td colspan="4" class="empty">لا يوجد موظفون نشطون بالمقر حالياً</td></tr>';
+}
 function setAttTab(t,btn){document.querySelectorAll('#page-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
- document.querySelectorAll('.att-tab').forEach(d=>d.style.display='none');$('att-'+t).style.display='block'}
+ document.querySelectorAll('.att-tab').forEach(d=>d.style.display='none');$('att-'+t).style.display='block';
+ if(t==='liveStatus')renderLiveStatusBoard();}
 function deptChips(cid,key){$(cid).innerHTML=['الكل',...DEPTS].map(d=>`<button class="${(attFilters[key]===(d==='الكل'?'':d))?'active':''}" onclick="attFilters['${key}']='${d==='الكل'?'':d}';renderAttendance()">${d}</button>`).join('')}
 function renderAttendance(){
  deptChips('meetAttFilter','meetAtt');deptChips('siteAttFilter','siteAtt');deptChips('meetAbsFilter','meetAbs');deptChips('siteAbsFilter','siteAbs');
@@ -2222,6 +2256,50 @@ async function addMeetRec(kind){
  closeModal(kind+'Modal');await refresh();toast('تم حفظ السجل');
 }
 /* ================= تسجيل الحضور الذاتي بالمقر عبر تحديد الموقع (Geofencing) ================= */
+/* ================= سجل أحداث الحضور الجغرافي + التتبع الحي أثناء الدوام ================= */
+let attendanceEvents=[],liveWatchId=null,currentZoneStatus=null;
+function nowTimeStr(){const n=new Date();return (n.getHours()+'').padStart(2,'0')+':'+(n.getMinutes()+'').padStart(2,'0')}
+async function logAttendanceEvent(type,loc,dist,statusAfter){
+ const {error}=await sb.from('attendance_events').insert({
+  employee_id:currentEmp.id,event_type:type,event_date:D(0),event_time:nowTimeStr(),
+  lat:loc?loc.lat:null,lng:loc?loc.lng:null,distance_m:dist!=null?Math.round(dist):null,status_after:statusAfter});
+ if(error)console.error('تعذّر تسجيل حدث الحضور',error);
+}
+function updateLiveStatusBadge(status,distText){
+ const el=$('epLiveZoneStatus');if(!el)return;
+ if(status==='داخل المقر')el.innerHTML='<span class="tag ok">🟢 نشط داخل المقر</span>';
+ else if(status==='خارج المقر')el.innerHTML=`<span class="tag danger">🔴 خارج المقر${distText?' — '+distText:''}</span>`;
+ else el.innerHTML='';
+}
+function startLiveZoneMonitoring(){
+ stopLiveZoneMonitoring();
+ currentZoneStatus='داخل المقر';
+ if(!navigator.geolocation)return;
+ liveWatchId=navigator.geolocation.watchPosition(async pos=>{
+  if(!officeLocation||!officeLocation.lat)return;
+  const loc={lat:pos.coords.latitude,lng:pos.coords.longitude};
+  const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
+  const inside=dist<=officeLocation.radius_meters;
+  if(inside&&currentZoneStatus!=='داخل المقر'){
+   currentZoneStatus='داخل المقر';
+   await logAttendanceEvent('return_zone',loc,dist,'داخل المقر');
+   updateLiveStatusBadge('داخل المقر');
+   toast('🟢 رجعت لنطاق المقر — تم تسجيل عودتك');
+  }else if(!inside&&currentZoneStatus!=='خارج المقر'){
+   currentZoneStatus='خارج المقر';
+   await logAttendanceEvent('exit_zone',loc,dist,'خارج المقر');
+   updateLiveStatusBadge('خارج المقر',`تبعد ${Math.round(dist)} متر`);
+   toast('🔴 خرجت من نطاق المقر — تم تسجيل خروجك (حضورك ما زال قائماً)');
+  }
+ },err=>console.warn('تعذّر تتبع الموقع الحي',err),{enableHighAccuracy:true,maximumAge:60000,timeout:20000});
+}
+function stopLiveZoneMonitoring(){
+ if(liveWatchId!=null&&navigator.geolocation){navigator.geolocation.clearWatch(liveWatchId);liveWatchId=null}
+ currentZoneStatus=null;
+ updateLiveStatusBadge(null);
+}
+window.addEventListener('beforeunload',()=>stopLiveZoneMonitoring());
+
 function haversineMeters(lat1,lng1,lat2,lng2){
  const R=6371000,toRad=d=>d*Math.PI/180;
  const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
@@ -2261,30 +2339,34 @@ async function selfCheckIn(){
   const loc=await getCurrentLocation();
   if(!officeLocation||!officeLocation.lat){toast('لم يُحدَّد موقع المقر بعد من الإدارة — تواصل مع الإدارة');return}
   const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
-  if(dist>officeLocation.radius_meters){toast(`أنت خارج نطاق المقر المسموح — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)`);return}
+  if(dist>officeLocation.radius_meters){toast(`أنت بعيد عن المقر — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)`);return}
   const today=D(0);
   const already=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
-  if(already&&already.in){toast('سجّلت حضورك اليوم مسبقاً ✅');return}
-  const now=new Date();const timeStr=(now.getHours()+'').padStart(2,'0')+':'+(now.getMinutes()+'').padStart(2,'0');
+  if(already&&already.in){toast('سجّلت حضورك اليوم مسبقاً ✅');startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  const timeStr=nowTimeStr();
   const {error}=await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,check_in:timeStr,department:currentEmp.dept,check_in_lat:loc.lat,check_in_lng:loc.lng,notes:'تسجيل ذاتي بالموقع'});
-  if(error){toast(error.message.includes('خارج نطاق')?error.message:'تعذّر تسجيل الحضور');return}
+  if(error){toast(error.message.includes('خارج نطاق')||error.message.includes('بعيد')?error.message:'تعذّر تسجيل الحضور');return}
+  await logAttendanceEvent('check_in',loc,dist,'داخل المقر');
   await refresh();toast(`✅ تم تسجيل حضورك بنجاح — الساعة ${timeStr}`);
+  startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');
  }catch(e){toast(e.message)}
 }
 async function selfCheckOut(){
  try{
+  const today=D(0);
+  const rec=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
+  if(!rec){toast('لازم تسجّل حضورك أولاً قبل الانصراف');return}
+  if(rec.out&&rec.out!=='—'){toast('سجّلت انصرافك اليوم مسبقاً ✅');return}
+  stopLiveZoneMonitoring(); // نوقف التتبع الحي أول لتفادي تعارض طلبات الموقع المتزامنة
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
   if(!officeLocation||!officeLocation.lat){toast('لم يُحدَّد موقع المقر بعد من الإدارة — تواصل مع الإدارة');return}
   const dist=haversineMeters(loc.lat,loc.lng,officeLocation.lat,officeLocation.lng);
-  if(dist>officeLocation.radius_meters){toast(`أنت خارج نطاق المقر المسموح — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)`);return}
-  const today=D(0);
-  const rec=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
-  if(!rec){toast('لازم تسجّل حضورك أولاً قبل الانصراف');return}
-  if(rec.out){toast('سجّلت انصرافك اليوم مسبقاً ✅');return}
-  const now=new Date();const timeStr=(now.getHours()+'').padStart(2,'0')+':'+(now.getMinutes()+'').padStart(2,'0');
+  if(dist>officeLocation.radius_meters){toast(`أنت بعيد عن المقر — تبعد ${Math.round(dist)} متر (المسموح ${officeLocation.radius_meters} متر)، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  const timeStr=nowTimeStr();
   const {error}=await sb.from('site_attendance').update({check_out:timeStr,check_out_lat:loc.lat,check_out_lng:loc.lng}).eq('id',rec.id);
   if(error){err(error);return}
+  await logAttendanceEvent('check_out',loc,dist,'منتهي');
   await refresh();toast(`✅ تم تسجيل انصرافك بنجاح — الساعة ${timeStr}`);
  }catch(e){toast(e.message)}
 }
@@ -2642,6 +2724,9 @@ function renderReports(){
   {t:'تقرير الموظفين',ic:'👥',data:()=>({headers:['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],rows:employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status])})},
   {t:'تقرير العقود',ic:'✍',data:()=>({headers:['الموظف','البداية','النهاية','المدة'],rows:contracts.map(c=>[c.emp,c.start,c.end,c.dur])})},
   {t:'تقرير الحضور',ic:'🕐',data:()=>({headers:['الموظف','القسم','التاريخ','وقت الدخول','وقت الخروج'],rows:siteAtt.filter(r=>inReportRange(r.date)).map(r=>[r.emp,r.dept,r.date,r.in,r.out])})},
+  {t:'تقرير حركات الدوام الجغرافي',ic:'📍',data:()=>({headers:['الموظف','التاريخ','الوقت','الحركة','الحالة بعدها','المسافة عن المقر'],
+   rows:allAttendanceEvents.filter(e=>inReportRange(e.event_date)).map(e=>{const emp=empById[e.employee_id]||{};
+    return [emp.name||'—',e.event_date,e.event_time,EVENT_TYPE_LABELS[e.event_type]||e.event_type,e.status_after,e.distance_m!=null?e.distance_m+' م':'—']})})},
   {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.filter(r=>inReportRange(r.date)).map(r=>[r.emp,r.dept,r.date,r.reason])})},
   {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.filter(l=>inReportRange(l.start)).map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
   {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.filter(p=>inReportRange(p.date)).map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
@@ -4028,6 +4113,7 @@ async function epAddLeave(){
   $('eplCommit').checked=false;
  }catch(e){err(e)}
 }
+const EVENT_TYPE_LABELS={check_in:'✅ تسجيل حضور',check_out:'🚪 تسجيل انصراف',exit_zone:'🔴 خروج من النطاق',return_zone:'🟢 عودة للنطاق'};
 function epRenderAttendance(){
  const eid=currentEmp.id;
  const today=D(0);
@@ -4036,6 +4122,12 @@ function epRenderAttendance(){
   if(todayRec&&todayRec.out)$('epCheckStatus').innerHTML=`<span style="color:var(--ok);font-weight:700">✅ سجّلت حضورك (${todayRec.in}) وانصرافك (${todayRec.out}) اليوم</span>`;
   else if(todayRec&&todayRec.in)$('epCheckStatus').innerHTML=`<span style="color:var(--ok);font-weight:700">✅ سجّلت حضورك اليوم الساعة ${todayRec.in} — لسا ما سجّلت انصرافك</span>`;
   else $('epCheckStatus').textContent='اضغط الزر المناسب — سيُطلب إذن الموقع، ولازم تكون داخل نطاق المقر (150 متر)';
+ }
+ // استئناف التتبع الحي تلقائياً لو سجّل حضوره ولسا ما سجّل انصرافه (مثلاً بعد إعادة فتح الصفحة)
+ if(todayRec&&todayRec.in&&(!todayRec.out||todayRec.out==='—')&&liveWatchId==null){startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر')}
+ if((!todayRec||!todayRec.in||(todayRec.out&&todayRec.out!=='—'))&&liveWatchId!=null)stopLiveZoneMonitoring();
+ if($('epAttEventsTbody')){
+  $('epAttEventsTbody').innerHTML=attendanceEvents.length?attendanceEvents.map(e=>`<tr><td dir="ltr" style="text-align:right">${e.event_time}</td><td>${EVENT_TYPE_LABELS[e.event_type]||e.event_type}</td><td><span class="tag ${e.status_after==='داخل المقر'?'ok':e.status_after==='خارج المقر'?'danger':'gray'}">${e.status_after}</span></td><td>${e.distance_m!=null?e.distance_m+' متر':'—'}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا توجد حركات مسجّلة اليوم</td></tr>';
  }
  $('epSiteAttTbody').innerHTML=siteAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>';
  $('epSiteAbsTbody').innerHTML=siteAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.reason||'—'}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
