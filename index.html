@@ -416,7 +416,18 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- ===== الحضور والغياب ===== -->
 <section class="page" id="page-attendance">
-  <div class="page-head"><div><h1>الحضور والغياب</h1><p>تصدير تلقائي للتقارير الشهرية بتاريخ 29 من كل شهر</p></div></div>
+  <div class="page-head"><div><h1>الحضور والغياب</h1><p>التقارير الشهرية تُرسل تلقائياً بتاريخ 29 من كل شهر لبريد كل موظف</p></div></div>
+
+  <div class="card">
+    <h3 style="margin-bottom:10px">📧 التقرير الشهري بالبريد</h3>
+    <div class="section-note" style="margin-bottom:12px">يرسل لكل موظف نشط له بريد مسجَّل ملخص حضوره وغيابه واستئذاناته بالشهر الميلادي الماضي كاملاً.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="reportTestOnly" placeholder="اختباري: اسم موظف واحد بس (اتركه فاضي للإرسال للجميع)" style="flex:1;min-width:260px">
+      <button class="btn btn-sand btn-sm" onclick="sendMonthlyReportNow(true)">🧪 اختبار لموظف واحد</button>
+      <button class="btn btn-primary btn-sm" onclick="sendMonthlyReportNow(false)">📤 إرسال للجميع الآن</button>
+    </div>
+    <div id="reportSendStatus" style="margin-top:10px"></div>
+  </div>
 
   <div class="card">
     <h3 style="margin-bottom:10px">📍 مواقع الحضور الذاتي (يقدر تضيف أكثر من موقع/فرع)</h3>
@@ -3090,6 +3101,26 @@ function renderApprovalsPage(){
   <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
   <td style="white-space:nowrap">${payBtn(p)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات صرف بانتظار اعتماد 🎉</td></tr>';
  }
+}
+async function sendMonthlyReportNow(testOnly){
+ const only=$('reportTestOnly').value.trim();
+ if(testOnly&&!only){toast('اكتب اسم موظف واحد بخانة الاختبار أول');return}
+ if(!testOnly){
+  if(!(await showConfirm(only?`إرسال التقرير الشهري لكل موظف اسمه يحتوي "${only}"؟`:'إرسال التقرير الشهري لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.')))return;
+ }
+ $('reportSendStatus').innerHTML='<span class="tag sand">⏳ جاري الإرسال... قد يستغرق دقيقة أو أكثر حسب عدد الموظفين</span>';
+ try{
+  const resp=await fetch(SUPABASE_URL+'/functions/v1/monthly-report',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
+   body:JSON.stringify({only:testOnly?only:only||''})
+  });
+  const data=await resp.json();
+  if(!data.ok){$('reportSendStatus').innerHTML=`<span class="tag danger">❌ فشل: ${data.error||'خطأ غير معروف'}</span>`;return}
+  const failList=data.errors&&data.errors.length?'<br><small style="color:var(--muted)">فشل الإرسال لـ: '+data.errors.map(e=>e.email).join('، ')+'</small>':'';
+  $('reportSendStatus').innerHTML=`<span class="tag ${data.failed?'sand':'ok'}">✅ تم — نجح الإرسال لـ ${data.sent} من ${data.total}${data.failed?` (فشل ${data.failed})`:''} — الفترة: ${data.period.startStr} إلى ${data.period.endStr}</span>${failList}`;
+  toast(`تم إرسال ${data.sent} تقرير بنجاح`);
+ }catch(e){$('reportSendStatus').innerHTML=`<span class="tag danger">❌ تعذّر الاتصال بالدالة: ${e.message}</span>`}
 }
 function renderOfficeLocationStatus(){
  if(!$('officeLocsTbody'))return;
