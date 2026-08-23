@@ -213,6 +213,8 @@ tbody tr:hover{background:#FAFCFB}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <!-- ================= شاشة تسجيل الدخول ================= -->
@@ -433,13 +435,22 @@ tbody tr:hover{background:#FAFCFB}
       <input id="newLocRadius" type="number" value="150" style="width:100px">
       <button class="btn btn-primary btn-sm" onclick="addOfficeLocationFromHere()">📍 استخدم موقعي الحالي لإضافته</button>
     </div>
-    <div id="newLocMethod-manual" style="display:none;flex-wrap:wrap;gap:10px;align-items:center">
-      <input id="newLocNameManual" placeholder="اسم الموقع (مثال: فرع جدة)" style="width:200px">
-      <input id="newLocLat" type="number" step="any" placeholder="خط العرض Latitude" style="width:150px">
-      <input id="newLocLng" type="number" step="any" placeholder="خط الطول Longitude" style="width:150px">
-      <label style="font-size:13px;color:var(--muted)">نصف القطر (متر):</label>
-      <input id="newLocRadiusManual" type="number" value="150" style="width:100px">
-      <button class="btn btn-primary btn-sm" onclick="addOfficeLocationManual()">🗺️ إضافة بالإحداثيات</button>
+    <div id="newLocMethod-manual" style="display:none;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="gmapsLink" placeholder="الصق رابط Google Maps هنا (رابط كامل، مو مختصر)" style="flex:1;min-width:280px">
+        <button class="btn btn-sand btn-sm" onclick="extractFromGmapsLink()">📎 استخراج الموقع من الرابط</button>
+      </div>
+      <div class="section-note">💡 لو الرابط مختصر (maps.app.goo.gl)، افتحه أول بالمتصفح وانسخ الرابط الكامل من شريط العنوان بعد ما يفتح الخريطة.</div>
+      <div id="locPickerMap" style="height:280px;border-radius:12px;border:1px solid var(--border)"></div>
+      <div class="section-note">🖱️ اضغط بأي مكان بالخريطة، أو اسحب الدبوس، لتحديد الموقع بدقة — الإحداثيات تتحدّث تلقائياً.</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="newLocNameManual" placeholder="اسم الموقع (مثال: فرع جدة)" style="width:200px">
+        <input id="newLocLat" type="number" step="any" placeholder="خط العرض Latitude" style="width:150px" oninput="syncMapFromInputs()">
+        <input id="newLocLng" type="number" step="any" placeholder="خط الطول Longitude" style="width:150px" oninput="syncMapFromInputs()">
+        <label style="font-size:13px;color:var(--muted)">نصف القطر (متر):</label>
+        <input id="newLocRadiusManual" type="number" value="150" style="width:100px">
+        <button class="btn btn-primary btn-sm" onclick="addOfficeLocationManual()">🗺️ إضافة بالإحداثيات</button>
+      </div>
     </div>
     <div class="section-note" style="margin-top:8px" id="newLocNote">⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.</div>
   </div>
@@ -2364,7 +2375,42 @@ function newLocMethodTab(tab,btn){
  $('newLocMethod-manual').style.display=tab==='manual'?'flex':'none';
  $('newLocNote').textContent=tab==='here'
   ?'⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.'
-  :'💡 تقدر تجيب الإحداثيات من خرائط جوجل: افتح الموقع بخرائط جوجل، اضغط مطولاً على النقطة، وانسخ الرقمين اللي يظهرون (خط العرض، خط الطول).';
+  :'💡 حدّد الموقع بالخريطة، أو الصق رابط خرائط جوجل، أو اكتب الإحداثيات يدوياً.';
+ if(tab==='manual')setTimeout(initLocPickerMap,50); // فاصل بسيط عشان الحاوية تصير ظاهرة قبل تهيئة الخريطة
+}
+let locPickerMapInstance=null,locPickerMarker=null;
+function initLocPickerMap(){
+ if(locPickerMapInstance){locPickerMapInstance.invalidateSize();return} // مهيّأة أصلاً، بس نصحح المقاس
+ const startLat=+$('newLocLat').value||24.7136,startLng=+$('newLocLng').value||46.6753; // افتراضي: الرياض
+ locPickerMapInstance=L.map('locPickerMap').setView([startLat,startLng],12);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(locPickerMapInstance);
+ locPickerMarker=L.marker([startLat,startLng],{draggable:true}).addTo(locPickerMapInstance);
+ const updateFields=(lat,lng)=>{$('newLocLat').value=lat.toFixed(6);$('newLocLng').value=lng.toFixed(6)};
+ locPickerMarker.on('dragend',()=>{const p=locPickerMarker.getLatLng();updateFields(p.lat,p.lng)});
+ locPickerMapInstance.on('click',e=>{locPickerMarker.setLatLng(e.latlng);updateFields(e.latlng.lat,e.latlng.lng)});
+}
+function syncMapFromInputs(){
+ const lat=+$('newLocLat').value,lng=+$('newLocLng').value;
+ if(!lat||!lng||!locPickerMapInstance)return;
+ locPickerMarker.setLatLng([lat,lng]);locPickerMapInstance.setView([lat,lng],locPickerMapInstance.getZoom());
+}
+function extractFromGmapsLink(){
+ const url=$('gmapsLink').value.trim();
+ if(!url){toast('الصق رابط خرائط جوجل أولاً');return}
+ if(/goo\.gl|maps\.app/.test(url)){toast('هذا رابط مختصر — افتحه بالمتصفح أول وانسخ الرابط الكامل من شريط العنوان بعد ما يفتح');return}
+ const patterns=[/@(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,/ll=(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]query=(-?\d+\.\d+),(-?\d+\.\d+)/];
+ for(const p of patterns){
+  const m=url.match(p);
+  if(m){
+   const lat=+m[1],lng=+m[2];
+   $('newLocLat').value=lat;$('newLocLng').value=lng;
+   if(!locPickerMapInstance)initLocPickerMap();
+   locPickerMarker.setLatLng([lat,lng]);locPickerMapInstance.setView([lat,lng],16);
+   toast('✅ تم استخراج الموقع من الرابط — تأكد من موضع الدبوس بالخريطة');
+   return;
+  }
+ }
+ toast('تعذّر إيجاد إحداثيات بهذا الرابط — جرّب تحدّد الموقع مباشرة بالخريطة تحت');
 }
 async function addOfficeLocationManual(){
  const name=$('newLocNameManual').value.trim();
@@ -2375,7 +2421,7 @@ async function addOfficeLocationManual(){
  const radius=+$('newLocRadiusManual').value||150;
  const {error}=await sb.from('office_locations').insert({name,lat,lng,radius_meters:radius,active:true,created_by:me.name});
  if(error){err(error);return}
- $('newLocNameManual').value='';$('newLocLat').value='';$('newLocLng').value='';$('newLocRadiusManual').value='150';
+ $('newLocNameManual').value='';$('newLocLat').value='';$('newLocLng').value='';$('newLocRadiusManual').value='150';if($('gmapsLink'))$('gmapsLink').value='';
  await refresh();toast(`تم إضافة موقع "${name}" بنجاح ✅`);
 }
 async function addOfficeLocationFromHere(){
