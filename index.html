@@ -423,13 +423,25 @@ tbody tr:hover{background:#FAFCFB}
       <tbody id="officeLocsTbody"></tbody></table></div>
     <hr style="margin:16px 0;border-color:var(--border)">
     <h4 style="margin-bottom:10px">+ إضافة موقع جديد</h4>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="tabs" id="newLocMethodTabs" style="margin-bottom:12px">
+      <button class="active" onclick="newLocMethodTab('here',this)">📍 أنا واقف بالموقع الآن</button>
+      <button onclick="newLocMethodTab('manual',this)">🗺️ إحداثيات يدوية (بدون التواجد فيه)</button>
+    </div>
+    <div id="newLocMethod-here" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input id="newLocName" placeholder="اسم الموقع (مثال: فرع جدة)" style="width:200px">
       <label style="font-size:13px;color:var(--muted)">نصف القطر (متر):</label>
       <input id="newLocRadius" type="number" value="150" style="width:100px">
       <button class="btn btn-primary btn-sm" onclick="addOfficeLocationFromHere()">📍 استخدم موقعي الحالي لإضافته</button>
     </div>
-    <div class="section-note" style="margin-top:8px">⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.</div>
+    <div id="newLocMethod-manual" style="display:none;flex-wrap:wrap;gap:10px;align-items:center">
+      <input id="newLocNameManual" placeholder="اسم الموقع (مثال: فرع جدة)" style="width:200px">
+      <input id="newLocLat" type="number" step="any" placeholder="خط العرض Latitude" style="width:150px">
+      <input id="newLocLng" type="number" step="any" placeholder="خط الطول Longitude" style="width:150px">
+      <label style="font-size:13px;color:var(--muted)">نصف القطر (متر):</label>
+      <input id="newLocRadiusManual" type="number" value="150" style="width:100px">
+      <button class="btn btn-primary btn-sm" onclick="addOfficeLocationManual()">🗺️ إضافة بالإحداثيات</button>
+    </div>
+    <div class="section-note" style="margin-top:8px" id="newLocNote">⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.</div>
   </div>
 
   <div class="tabs">
@@ -2345,6 +2357,26 @@ function getCurrentLocation(){
    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
   );
  });
+}
+function newLocMethodTab(tab,btn){
+ document.querySelectorAll('#newLocMethodTabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+ $('newLocMethod-here').style.display=tab==='here'?'flex':'none';
+ $('newLocMethod-manual').style.display=tab==='manual'?'flex':'none';
+ $('newLocNote').textContent=tab==='here'
+  ?'⚠️ اضغط الزر وأنت واقف فعلياً بالموقع المطلوب — يلتقط إحداثياتك كنقطة مرجعية له.'
+  :'💡 تقدر تجيب الإحداثيات من خرائط جوجل: افتح الموقع بخرائط جوجل، اضغط مطولاً على النقطة، وانسخ الرقمين اللي يظهرون (خط العرض، خط الطول).';
+}
+async function addOfficeLocationManual(){
+ const name=$('newLocNameManual').value.trim();
+ const lat=+$('newLocLat').value,lng=+$('newLocLng').value;
+ if(!name){toast('اكتب اسماً للموقع');return}
+ if(!lat||!lng||lat<-90||lat>90||lng<-180||lng>180){toast('أدخل خط عرض وخط طول صحيحين (مثال: 21.5433, 39.1728)');return}
+ if(!(await showConfirm(`إضافة موقع "${name}" بالإحداثيات (${lat}, ${lng})؟`)))return;
+ const radius=+$('newLocRadiusManual').value||150;
+ const {error}=await sb.from('office_locations').insert({name,lat,lng,radius_meters:radius,active:true,created_by:me.name});
+ if(error){err(error);return}
+ $('newLocNameManual').value='';$('newLocLat').value='';$('newLocLng').value='';$('newLocRadiusManual').value='150';
+ await refresh();toast(`تم إضافة موقع "${name}" بنجاح ✅`);
 }
 async function addOfficeLocationFromHere(){
  const name=$('newLocName').value.trim();
