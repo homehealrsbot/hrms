@@ -657,7 +657,14 @@ tbody tr:hover{background:#FAFCFB}
 
   <div class="card" style="margin-top:14px">
     <h3 style="margin-bottom:10px">📧 التقرير الشهري بالبريد</h3>
-    <div class="section-note" style="margin-bottom:12px">يرسل لكل موظف نشط له بريد مسجَّل ملخص حضوره وغيابه واستئذاناته بالشهر الميلادي الماضي كاملاً. يُرسل تلقائياً بتاريخ 29 من كل شهر، وتقدر تستخدم هذا كزر طوارئ للإرسال اليدوي.</div>
+    <div class="section-note" style="margin-bottom:12px">يرسل لكل موظف نشط له بريد مسجَّل ملخص حضوره وغيابه واستئذاناته. يُرسل تلقائياً بتاريخ 29 من كل شهر عن الشهر الماضي، وتقدر تستخدم هذا كزر طوارئ للإرسال اليدوي.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <label style="font-size:13px;color:var(--muted)">فترة مخصَّصة (اختياري):</label>
+      <input id="reportCustomFrom" type="date" style="width:150px">
+      <span>إلى</span>
+      <input id="reportCustomTo" type="date" style="width:150px">
+      <button class="btn btn-ghost btn-sm" onclick="$('reportCustomFrom').value='';$('reportCustomTo').value=''">مسح (استخدام الشهر الماضي تلقائياً)</button>
+    </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <select id="reportTestOnly" style="flex:1;min-width:220px"><option value="">— كل الموظفين —</option></select>
       <button class="btn btn-sand btn-sm" onclick="sendMonthlyReportNow(true)">🧪 اختبار للموظف المحدَّد بس</button>
@@ -3108,16 +3115,19 @@ function renderApprovalsPage(){
 }
 async function sendMonthlyReportNow(testOnly){
  const only=$('reportTestOnly').value.trim();
+ const customFrom=$('reportCustomFrom').value,customTo=$('reportCustomTo').value;
  if(testOnly&&!only){toast('اختر موظفاً من القائمة أول');return}
+ if(customFrom&&customTo&&customTo<customFrom){toast('تاريخ النهاية لا يمكن أن يسبق تاريخ البداية');return}
+ const periodTxt=customFrom&&customTo?`من ${fmt(customFrom)} إلى ${fmt(customTo)}`:'للشهر الميلادي الماضي';
  if(!testOnly){
-  if(!(await showConfirm(only?`إرسال التقرير الشهري لكل موظف اسمه يحتوي "${only}"؟`:'إرسال التقرير الشهري لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.')))return;
+  if(!(await showConfirm(only?`إرسال التقرير ${periodTxt} لكل موظف اسمه يحتوي "${only}"؟`:`إرسال التقرير ${periodTxt} لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.`)))return;
  }
  $('reportSendStatus').innerHTML='<span class="tag sand">⏳ جاري الإرسال... قد يستغرق دقيقة أو أكثر حسب عدد الموظفين</span>';
  try{
   const resp=await fetch(SUPABASE_URL+'/functions/v1/weekly-report',{
    method:'POST',
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
-   body:JSON.stringify({only:testOnly?only:only||''})
+   body:JSON.stringify({only:testOnly?only:only||'',from:customFrom||'',to:customTo||''})
   });
   const data=await resp.json();
   if(!data.ok){$('reportSendStatus').innerHTML=`<span class="tag danger">❌ فشل: ${data.error||'خطأ غير معروف'}</span>`;return}
