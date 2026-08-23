@@ -3114,7 +3114,7 @@ async function sendMonthlyReportNow(testOnly){
  }
  $('reportSendStatus').innerHTML='<span class="tag sand">⏳ جاري الإرسال... قد يستغرق دقيقة أو أكثر حسب عدد الموظفين</span>';
  try{
-  const resp=await fetch(SUPABASE_URL+'/functions/v1/monthly-report',{
+  const resp=await fetch(SUPABASE_URL+'/functions/v1/weekly-report',{
    method:'POST',
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
    body:JSON.stringify({only:testOnly?only:only||''})
