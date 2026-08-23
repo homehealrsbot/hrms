@@ -2366,10 +2366,18 @@ async function toggleLocationActive(id,active){
  await refresh();toast(active?'تم تفعيل الموقع ✅':'تم تعطيل الموقع — أي موظف مرتبط به لن يقدر يسجّل حضوره حتى تُفعّله');
 }
 async function deleteOfficeLocation(id,name){
- if(!(await showConfirm(`حذف موقع "${name}" نهائياً؟ أي موظف مرتبط به سيحتاج تخصيص جديد.`)))return;
+ const affected=employees.filter(e=>e.locationId===id);
+ const msg=affected.length
+  ?`حذف موقع "${name}" نهائياً؟ ⚠️ ${affected.length} موظف مرتبط به حالياً (${affected.map(e=>e.name).join('، ')}) — سيصيرون "بلا موقع مخصَّص" فوراً ولن يقدروا يسجّلون حضورهم حتى تخصّص لهم موقعاً جديداً.`
+  :`حذف موقع "${name}" نهائياً؟`;
+ if(!(await showConfirm(msg)))return;
  const {error}=await sb.from('office_locations').delete().eq('id',id);
- if(error){err(error);return}
- await refresh();toast('تم حذف الموقع');
+ if(error){
+  if(error.message&&error.message.includes('foreign key'))toast('تعذّر الحذف — نفّذ سكربت تحديث قاعدة البيانات المرفق أولاً (hrms_fix_location_delete_fk.sql) للسماح بفصل الموظفين تلقائياً');
+  else err(error);
+  return;
+ }
+ await refresh();toast('تم حذف الموقع'+(affected.length?` — تم فصل ${affected.length} موظف عنه تلقائياً`:''));
 }
 async function selfCheckIn(){
  try{
