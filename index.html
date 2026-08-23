@@ -419,17 +419,6 @@ tbody tr:hover{background:#FAFCFB}
   <div class="page-head"><div><h1>الحضور والغياب</h1><p>التقارير الشهرية تُرسل تلقائياً بتاريخ 29 من كل شهر لبريد كل موظف</p></div></div>
 
   <div class="card">
-    <h3 style="margin-bottom:10px">📧 التقرير الشهري بالبريد</h3>
-    <div class="section-note" style="margin-bottom:12px">يرسل لكل موظف نشط له بريد مسجَّل ملخص حضوره وغيابه واستئذاناته بالشهر الميلادي الماضي كاملاً.</div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input id="reportTestOnly" placeholder="اختباري: اسم موظف واحد بس (اتركه فاضي للإرسال للجميع)" style="flex:1;min-width:260px">
-      <button class="btn btn-sand btn-sm" onclick="sendMonthlyReportNow(true)">🧪 اختبار لموظف واحد</button>
-      <button class="btn btn-primary btn-sm" onclick="sendMonthlyReportNow(false)">📤 إرسال للجميع الآن</button>
-    </div>
-    <div id="reportSendStatus" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card">
     <h3 style="margin-bottom:10px">📍 مواقع الحضور الذاتي (يقدر تضيف أكثر من موقع/فرع)</h3>
     <div class="tbl-wrap"><table>
       <thead><tr><th>اسم الموقع</th><th>نصف القطر</th><th>الحالة</th><th>أضافه</th><th>إجراء</th></tr></thead>
@@ -665,6 +654,17 @@ tbody tr:hover{background:#FAFCFB}
     </div>
   </div>
   <div class="grid-3" id="reportCards"></div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-bottom:10px">📧 التقرير الشهري بالبريد</h3>
+    <div class="section-note" style="margin-bottom:12px">يرسل لكل موظف نشط له بريد مسجَّل ملخص حضوره وغيابه واستئذاناته بالشهر الميلادي الماضي كاملاً. يُرسل تلقائياً بتاريخ 29 من كل شهر، وتقدر تستخدم هذا كزر طوارئ للإرسال اليدوي.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select id="reportTestOnly" style="flex:1;min-width:220px"><option value="">— كل الموظفين —</option></select>
+      <button class="btn btn-sand btn-sm" onclick="sendMonthlyReportNow(true)">🧪 اختبار للموظف المحدَّد بس</button>
+      <button class="btn btn-primary btn-sm" onclick="sendMonthlyReportNow(false)">📤 إرسال للجميع الآن</button>
+    </div>
+    <div id="reportSendStatus" style="margin-top:10px"></div>
+  </div>
 </section>
 
 <!-- ===== النماذج ===== -->
@@ -2858,6 +2858,10 @@ function renderReports(){
  if($('reportRangeLabel')){
   $('reportRangeLabel').textContent=(!reportFrom&&!reportTo)?'كل الفترات':`من ${fmt(reportFrom)} إلى ${fmt(reportTo)}`;
  }
+ if($('reportTestOnly')&&$('reportTestOnly').options.length<=1){
+  $('reportTestOnly').innerHTML='<option value="">— كل الموظفين —</option>'+
+   employees.filter(e=>e.status==='نشط'&&e.email).map(e=>`<option value="${e.name}">${e.name} — ${e.dept||''}</option>`).join('');
+ }
  const reps=[
   {t:'تقرير الموظفين',ic:'👥',data:()=>({headers:['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],rows:employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status])})},
   {t:'تقرير العقود',ic:'✍',data:()=>({headers:['الموظف','البداية','النهاية','المدة'],rows:contracts.map(c=>[c.emp,c.start,c.end,c.dur])})},
@@ -3104,7 +3108,7 @@ function renderApprovalsPage(){
 }
 async function sendMonthlyReportNow(testOnly){
  const only=$('reportTestOnly').value.trim();
- if(testOnly&&!only){toast('اكتب اسم موظف واحد بخانة الاختبار أول');return}
+ if(testOnly&&!only){toast('اختر موظفاً من القائمة أول');return}
  if(!testOnly){
   if(!(await showConfirm(only?`إرسال التقرير الشهري لكل موظف اسمه يحتوي "${only}"؟`:'إرسال التقرير الشهري لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.')))return;
  }
