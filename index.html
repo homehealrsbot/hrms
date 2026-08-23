@@ -271,6 +271,7 @@ tbody tr:hover{background:#FAFCFB}
 
     <div class="nav-divider"></div>
     <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
+    <button class="nav-item" id="nav_payrollStatements" data-page="payrollStatements"><span class="ic">📄</span> كشوفات الرواتب</button>
     <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
     <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
     <button class="nav-item" id="nav_paymentFiles" data-page="paymentFiles"><span class="ic">📁</span> ملفات الصرف</button>
@@ -656,6 +657,15 @@ tbody tr:hover{background:#FAFCFB}
       <button class="btn btn-ok" onclick="savePayrollChanges(true)">💾 حفظ التعديلات</button>
       <button class="btn btn-sand" onclick="lockPayroll(true)">🔒 قفل الكشف نهائياً</button>
     </div>
+  </div>
+</section>
+
+<section class="page" id="page-payrollStatements">
+  <div class="page-head"><div><h1>كشوفات الرواتب</h1><p>الكشوف المقفلة نهائياً — سجل رسمي دائم لكل شهر تم إغلاقه</p></div></div>
+  <div class="card">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>الشهر</th><th>السنة</th><th>عدد الموظفين</th><th>إجمالي الصافي</th><th>الحالة</th><th>إجراء</th></tr></thead>
+      <tbody id="payrollStatementsTbody"></tbody></table></div>
   </div>
 </section>
 
@@ -1725,7 +1735,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية',payrollStatements:'كشوفات الرواتب'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -3015,7 +3025,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  // "الصلاحيات" وحدها مستقلة عن MODULES ومقصورة على من مُنحت له صراحة (حتى لو أدمن)
  if($('nav_permissions'))$('nav_permissions').style.display=hasPerm('permissions','view')?'flex':'none';
  if($('nav_auditLog'))$('nav_auditLog').style.display=hasPerm('permissions','view')?'flex':'none';
- if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true)}
+ if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderPayrollStatements();if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='flex'}else if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='none';
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view')){renderPaymentsAdmin();renderPaymentFiles('paymentFilesTbody');if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='flex'}else if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='none';
  if(hasPerm('deductionsHR','view'))renderDeductionsHR();
@@ -3832,6 +3842,40 @@ async function lockPayroll(isAdmin){
  const {error}=await sb.from('payroll_runs').update({status:'مقفل'}).eq('id',run.id);
  if(error){err(error);return}
  await refresh();renderPayrollTable(isAdmin);toast('تم قفل كشف الرواتب نهائياً');
+}
+function renderPayrollStatements(){
+ if(!$('payrollStatementsTbody'))return;
+ const locked=payrollRuns.filter(r=>r.status==='مقفل');
+ $('payrollStatementsTbody').innerHTML=locked.length?locked.map(r=>{
+  const items=payrollItems.filter(it=>it.runId===r.id);
+  const byCur={};
+  items.forEach(it=>{const cur=empCurrency(it.employee_id);byCur[cur]=(byCur[cur]||0)+it.net});
+  const totalTxt=Object.entries(byCur).map(([c,v])=>v.toLocaleString('en-US')+' '+c).join(' + ')||'—';
+  return `<tr><td><b>${MONTH_NAMES[(r.month||1)-1]}</b></td><td>${r.year}</td><td>${items.length}</td><td>${totalTxt}</td>
+   <td><span class="tag ok">🔒 مقفل نهائياً</span></td>
+   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="viewPayrollStatement('${r.id}')">عرض التفاصيل</button>
+    <button class="btn btn-danger btn-sm" onclick="deletePayrollStatement('${r.id}','${MONTH_NAMES[(r.month||1)-1]} ${r.year}')">حذف نهائياً</button></td></tr>`;
+ }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف مقفلة بعد</td></tr>';
+}
+function viewPayrollStatement(runId){
+ const items=payrollItems.filter(it=>it.runId===runId);
+ const run=payrollRuns.find(r=>r.id===runId)||{};
+ const w=window.open('','_blank');
+ w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف راتب ${MONTH_NAMES[(run.month||1)-1]} ${run.year}</title>
+ <style>body{font-family:Tahoma,Arial;padding:30px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border:1px solid #ddd;text-align:center}th{background:#0F4C3F;color:#fff}</style></head><body>
+ <h2>كشف رواتب ${MONTH_NAMES[(run.month||1)-1]} ${run.year} — مقفل نهائياً</h2>
+ <table><tr><th>الموظف</th><th>الأساسي</th><th>الإضافات</th><th>الخصومات</th><th>الصافي</th></tr>
+ ${items.map(it=>{const e=empById[it.employee_id]||{};return `<tr><td>${e.name||'—'}</td><td>${money(it.base,it.employee_id)}</td><td>${money(it.additions,it.employee_id)}</td><td>${money(it.deductions,it.employee_id)}</td><td><b>${money(it.net,it.employee_id)}</b></td></tr>`}).join('')}
+ </table></body></html>`);
+ w.document.close();
+}
+async function deletePayrollStatement(runId,label){
+ if(!(await showConfirm(`حذف كشف "${label}" نهائياً بكل بياناته؟ سيختفي فوراً من كشوفات الإدارة ومن "راتبي" عند كل موظف كان مشمولاً فيه. هذا الإجراء لا يمكن التراجع عنه.`)))return;
+ const {error:e1}=await sb.from('payroll_items').delete().eq('run_id',runId);
+ if(e1){err(e1);return}
+ const {error:e2}=await sb.from('payroll_runs').delete().eq('id',runId);
+ if(e2){err(e2);return}
+ await refresh();toast(`تم حذف كشف "${label}" نهائياً`);
 }
 function epRenderMySalary(){
  const mine=payrollItems.filter(i=>i.employee_id===currentEmp.id);
