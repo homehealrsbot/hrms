@@ -215,6 +215,7 @@ tbody tr:hover{background:#FAFCFB}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <!-- ================= شاشة تسجيل الدخول ================= -->
@@ -684,6 +685,18 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 <section class="page" id="page-payroll">
   <div class="page-head"><div><h1>الرواتب</h1><p>كشف رواتب شهري — يتولّد تلقائياً من الراتب الأساسي، وتُعدَّل الاستثناءات فقط</p></div></div>
+
+  <div class="card">
+    <h3 style="margin-bottom:10px">🏦 بيانات المنشأة الثابتة (لتصدير ملف حماية الأجور WPS)</h3>
+    <div class="grid-4">
+      <div><label>رمز بنك الشركة</label><input id="csBankCode" placeholder="مثال: RJHI" style="direction:ltr;text-align:left"></div>
+      <div><label>رقم المنشأة لدى البنك</label><input id="csEstablishmentId" style="direction:ltr;text-align:left"></div>
+      <div><label>رقم حساب الشركة (IBAN)</label><input id="csBankAccount" style="direction:ltr;text-align:left"></div>
+      <div><label>رقم المنشأة بوزارة الموارد البشرية</label><input id="csMolId" style="direction:ltr;text-align:left"></div>
+    </div>
+    <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveCompanySettings()">💾 حفظ بيانات المنشأة</button></div>
+  </div>
+
   <div class="card">
     <div class="grid-3" style="align-items:end;margin-bottom:14px">
       <div><label>الشهر</label><select id="prollMonthAdmin"></select></div>
@@ -692,11 +705,13 @@ tbody tr:hover{background:#FAFCFB}
     </div>
     <div id="prollStatusBadgeAdmin"></div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>الموظف</th><th>القسم</th><th>الأساسي</th><th>الإضافات</th><th>سبب الإضافة</th><th>الخصومات</th><th>سبب الخصم</th><th>الصافي</th></tr></thead>
+      <thead><tr><th><input type="checkbox" id="prollSelectAll" onchange="togglePayrollSelectAll(this)"></th><th>الموظف</th><th>القسم</th><th>الأساسي</th><th>الإضافات</th><th>سبب الإضافة</th><th>الخصومات</th><th>سبب الخصم</th><th>الصافي</th></tr></thead>
       <tbody id="prollTbodyAdmin"></tbody></table></div>
-    <div class="modal-foot" style="justify-content:flex-start;margin-top:14px">
+    <div class="modal-foot" style="justify-content:flex-start;margin-top:14px;flex-wrap:wrap">
       <button class="btn btn-ok" onclick="savePayrollChanges(true)">💾 حفظ التعديلات</button>
       <button class="btn btn-sand" onclick="lockPayroll(true)">🔒 قفل الكشف نهائياً</button>
+      <button class="btn btn-primary" onclick="exportPayrollWPS()">🏦 تصدير WPS للمحدَّدين</button>
+      <button class="btn btn-ghost" onclick="exportPayrollCSV()">📄 تصدير CSV للمحدَّدين</button>
     </div>
   </div>
 </section>
@@ -1273,6 +1288,8 @@ tbody tr:hover{background:#FAFCFB}
       <div><label>حالة الموظف</label><select id="eStatus"><option>نشط</option><option>غير نشط</option></select></div>
       <div><label>الدور في النظام</label><select id="eRole"><option value="employee">موظف</option><option value="manager">رئيس قسم</option><option value="accountant">محاسب</option></select></div>
       <div><label>موقع الحضور الذاتي (GPS)</label><select id="eLocation"><option value="">— بلا تخصيص —</option></select></div>
+      <div><label>رقم الحساب البنكي (IBAN)</label><input id="eIban" placeholder="SA0000000000000000000000" style="direction:ltr;text-align:left"></div>
+      <div><label>رمز البنك</label><input id="eBankCode" placeholder="مثال: RJHI" style="direction:ltr;text-align:left"></div>
     </div>
   </fieldset>
   <fieldset><legend>المستندات المطلوبة</legend>
@@ -1498,7 +1515,7 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
    ============================================================ */
 const FINANCE_ENABLED_FOR_EMPLOYEES = false;
 
-let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null,allAttendanceEvents=[],officeLocations=[];
+let employees=[],contracts=[],leaves=[],meetAtt=[],meetAbs=[],siteAtt=[],siteAbs=[],permits=[],policies=[],filesData=[],formsData=[],formSubs=[],officeLocation=null,allAttendanceEvents=[],officeLocations=[],companySettings=null;
 function empLocation(empId){const e=empById[empId];if(!e||!e.locationId)return null;return officeLocations.find(l=>l.id===e.locationId)||null}
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
@@ -1649,7 +1666,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
@@ -1687,6 +1704,8 @@ async function loadAll(){
  const OLS=await sb.from('office_locations').select('*').order('created_at',{ascending:true});
  officeLocations=(OLS.data||[]).map(r=>({id:r.id,name:r.name,lat:r.lat,lng:r.lng,radius_meters:r.radius_meters,active:r.active,createdBy:r.created_by,updatedAt:r.updated_at}));
  officeLocation=officeLocations[0]||null; // للتوافق مع أي كود قديم يعتمد على موقع واحد (احتياط)
+ const CS=await sb.from('company_settings').select('*').eq('id',1).maybeSingle();
+ companySettings=CS.data||null;
  if(me&&me.role!=='admin'){
   const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
   attendanceEvents=AE.data||[];
@@ -2185,7 +2204,7 @@ function fillLocationSelect(){
  $('eLocation').innerHTML='<option value="">— بلا تخصيص —</option>'+officeLocations.map(l=>`<option value="${l.id}">${l.name}${l.active?'':' (معطَّل)'}</option>`).join('');
 }
 function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة موظف جديد';
- ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur'].forEach(id=>$(id).value='');
+ ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur','eIban','eBankCode'].forEach(id=>$(id).value='');
  fillLocationSelect();$('eLocation').value='';
  $('empSaveBtn').disabled=false;
  openModal('empModal')}
@@ -2193,9 +2212,10 @@ function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textConten
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
  fillLocationSelect();$('eLocation').value=e.locationId||'';
+ $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
-function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus','eRole','eLocation'].map(id=>$(id).value).join('|')}
+function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus','eRole','eLocation','eIban','eBankCode'].map(id=>$(id).value).join('|')}
 let empSnapshot='';
 document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#empModal')&&editId){$('empSaveBtn').disabled=(empFormSnapshot()===empSnapshot)}});
@@ -2203,7 +2223,7 @@ async function saveEmployee(){
  if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم الرباعي والبريد الإلكتروني حقول إلزامية');return}
  if(!/^\S+@\S+\.\S+$/.test($('eEmail').value.trim())){toast('صيغة البريد الإلكتروني غير صحيحة');return}
  if($('eProbStart').value&&$('eProbEnd').value&&$('eProbEnd').value<$('eProbStart').value){toast('نهاية فترة التجربة لا يمكن أن تسبق بدايتها');return}
- const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null};
+ const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null,bank_iban:$('eIban').value.trim().toUpperCase()||null,bank_code:$('eBankCode').value.trim().toUpperCase()||null};
  const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
  const {error}=await q;
  if(error){err(error);return}
@@ -3156,7 +3176,7 @@ function renderAll(){renderEmployees();renderContracts();renderPolicies();render
  // "الصلاحيات" وحدها مستقلة عن MODULES ومقصورة على من مُنحت له صراحة (حتى لو أدمن)
  if($('nav_permissions'))$('nav_permissions').style.display=hasPerm('permissions','view')?'flex':'none';
  if($('nav_auditLog'))$('nav_auditLog').style.display=hasPerm('permissions','view')?'flex':'none';
- if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderPayrollStatements();if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='flex'}else if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='none';
+ if(hasPerm('payroll','view')){fillMonthSelect('prollMonthAdmin');renderPayrollTable(true);renderPayrollStatements();fillCompanySettingsForm();if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='flex'}else if($('nav_payrollStatements'))$('nav_payrollStatements').style.display='none';
  if(hasPerm('custody','view'))renderCustodyInto('custodyTbodyAdmin','custEmp');
  if(hasPerm('paymentsAdmin','view')){renderPaymentsAdmin();renderPaymentFiles('paymentFilesTbody');if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='flex'}else if($('nav_paymentFiles'))$('nav_paymentFiles').style.display='none';
  if(hasPerm('deductionsHR','view'))renderDeductionsHR();
@@ -3939,14 +3959,93 @@ function renderPayrollTable(isAdmin){
  $(tbodyId).innerHTML=items.length?items.map(it=>{
   const e=empById[it.employee_id]||{};
   const net=it.base+(+it.additions||0)-(+it.deductions||0);
+  const checkboxCell=isAdmin?`<td><input type="checkbox" class="proll-select" data-emp="${it.employee_id}"></td>`:'';
   return `<tr data-item="${it.id}" data-base="${it.base}">
-   <td><b>${e.name||'—'}</b><br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
+   ${checkboxCell}<td><b>${e.name||'—'}</b><br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
    <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-addnote" data-id="${it.id}" value="${it.addNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
    <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-dednote" data-id="${it.id}" value="${it.dedNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
    <td class="proll-net"><b>${net.toLocaleString('en-US')}</b></td></tr>`;
- }).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون في هذا الكشف</td></tr>';
+ }).join(''):`<tr><td colspan="${isAdmin?9:8}" class="empty">لا يوجد موظفون في هذا الكشف</td></tr>`;
+}
+function togglePayrollSelectAll(cb){
+ document.querySelectorAll('#prollTbodyAdmin .proll-select').forEach(c=>c.checked=cb.checked);
+}
+function fillCompanySettingsForm(){
+ if(!$('csBankCode'))return;
+ const cs=companySettings||{};
+ $('csBankCode').value=cs.bank_code||'';
+ $('csEstablishmentId').value=cs.establishment_id||'';
+ $('csBankAccount').value=cs.bank_account_number||'';
+ $('csMolId').value=cs.mol_establishment_id||'';
+}
+async function saveCompanySettings(){
+ const row={id:1,bank_code:$('csBankCode').value.trim().toUpperCase(),establishment_id:$('csEstablishmentId').value.trim(),bank_account_number:$('csBankAccount').value.trim(),mol_establishment_id:$('csMolId').value.trim(),updated_by:me.name,updated_at:new Date().toISOString()};
+ const {error}=await sb.from('company_settings').upsert(row);
+ if(error){err(error);return}
+ await refresh();toast('تم حفظ بيانات المنشأة ✅');
+}
+function getSelectedPayrollEmployees(){
+ const boxes=[...document.querySelectorAll('#prollTbodyAdmin .proll-select:checked')];
+ return boxes.map(b=>b.dataset.emp);
+}
+function downloadBlob(content,filename,mime){
+ const blob=new Blob([content],{type:mime});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+ setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},100);
+}
+function getSelectedPayrollRows(){
+ const empIds=getSelectedPayrollEmployees();
+ if(!empIds.length){toast('حدد موظفاً واحداً على الأقل من الجدول أولاً (خانة الاختيار بأول عمود)');return null}
+ const monthSel='prollMonthAdmin',yearSel='prollYearAdmin';
+ const month=+$(monthSel).value,year=+$(yearSel).value;
+ const run=payrollRuns.find(r=>r.month===month&&r.year===year);
+ if(!run){toast('ولّد كشف الشهر أولاً');return null}
+ const items=payrollItems.filter(i=>i.runId===run.id&&empIds.includes(i.employee_id));
+ const missingBank=items.filter(it=>{const e=empById[it.employee_id]||{};return !e.iban||!e.bankCode});
+ if(missingBank.length){toast('⚠️ الموظفون التالية أسماؤهم بلا رقم حساب بنكي/رمز بنك مسجَّل: '+missingBank.map(it=>(empById[it.employee_id]||{}).name).join('، ')+' — أكمل بياناتهم أولاً من ملفهم الشخصي');return null}
+ return items;
+}
+function exportPayrollCSV(){
+ const items=getSelectedPayrollRows();if(!items)return;
+ const headers=['رقم الموظف','الاسم','رقم الحساب البنكي','رمز البنك','الأساسي','الإضافات','الخصومات','الصافي','العملة'];
+ const rows=items.map(it=>{const e=empById[it.employee_id]||{};return [e.num,e.name,e.iban,e.bankCode,it.base,it.additions,it.deductions,it.net,empCurrency(it.employee_id)]});
+ const csvContent='\uFEFF'+[headers,...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+ downloadBlob(csvContent,`كشف_رواتب_${D(0)}.csv`,'text/csv;charset=utf-8;');
+ toast(`تم تصدير CSV لـ ${items.length} موظف`);
+}
+function exportPayrollWPS(){
+ const items=getSelectedPayrollRows();if(!items)return;
+ if(!companySettings||!companySettings.bank_code||!companySettings.establishment_id||!companySettings.bank_account_number){
+  toast('أكمل بيانات المنشأة الثابتة أول (رمز البنك، رقم المنشأة، رقم الحساب) بأعلى صفحة الرواتب');return;
+ }
+ const today=D(0);
+ const totalAmount=items.reduce((s,it)=>s+it.net,0);
+ const rows=[
+  ['Upload Details','','','','','','','','','','','',''],
+  ['Establishment Name','','','Upload File Name','','','Uploaded By','','','Uploaded On','','',''],
+  ['مؤسسة هوم هيلرز','','',`WPS_${today}.txt`,'','',me.name,'','',new Date().toISOString(),'','',''],
+  ['Header Section','','','','','','','','','','','',''],
+  ['Row No','Fields','','','','','','','','','','',''],
+  ['','Establishment\'s Bank',"Establishment's Id",'Establishments Bank Account Number','Currency Code','Value Date','Total Amount','Debit Date','File Reference','File Rejection Code','MOL Establishment Id','',''],
+  ['(Optional)','(Optional)','(Optional)','(Mandatory)','(Optional)','(Mandatory)','(Mandatory)','(Optional)','(Optional)','(Optional)','(Mandatory)','',''],
+  [1,companySettings.bank_code,companySettings.establishment_id,companySettings.bank_account_number,'SAR',today,totalAmount,today,`WPS-${today}`,'',companySettings.mol_establishment_id,'',''],
+  ['Content/Repeating Group (laborer records)','','','','','','','','','','','',''],
+  ['Row No','Fields','','','','','','','','','','',''],
+  ['','Net amount to be paid to the individual laborer',"Beneficiary's account number",'Beneficiary customer\'s name','Bank Code where the Beneficiary\'s account is held','Payment Description','Return Code','Laborer Basic Salary for the current month','Laborer Housing Allowance for the current month','Laborer Other Earnings for the current month','Laborer Deductions for the current month','Laborer (Government) ID','Transaction Reference number'],
+  ['(Mandatory)','(Mandatory)','(Mandatory)','(Mandatory)','(Optional)','(Mandatory)','(Optional)','(Mandatory)','(Mandatory)','(Mandatory)','(Mandatory)','(Mandatory)','(Mandatory)'],
+ ];
+ items.forEach((it,i)=>{
+  const e=empById[it.employee_id]||{};
+  rows.push([i+2,it.net,e.iban,e.name,e.bankCode,'Salary','',it.base,0,it.additions||0,it.deductions||0,e.natId||'',`${today.replace(/-/g,'')}${String(i+1).padStart(4,'0')}`]);
+ });
+ const ws=XLSX.utils.aoa_to_sheet(rows);
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'WPS');
+ XLSX.writeFile(wb,`WPS_${today}.xls`);
+ toast(`تم تصدير ملف WPS لـ ${items.length} موظف — راجعه قبل رفعه للبنك`);
 }
 async function savePayrollChanges(isAdmin){
  const tbodyId=isAdmin?'prollTbodyAdmin':'prollTbody';
