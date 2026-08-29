@@ -4132,7 +4132,7 @@ function renderMySalaryAdmin(){
 /* ================= وحدات إضافية ممنوحة لأي موظف عبر مصفوفة الصلاحيات ================= */
 const EXTRA_MODULE_ICONS={policies:'§',employees:'👥',contracts:'✍',attendance:'🕐',leaves:'🌴',permits:'🚪',files:'🗂',reports:'📊',forms:'📄',payroll:'📑',custody:'📦',paymentsAdmin:'💵',deductionsHR:'⚠️'};
 function renderExtraModulesNav(){
- const granted=MODULES.filter(m=>hasPerm(m.key,'view'));
+ const granted=MODULES.filter(m=>m.key!=='warnings'&&hasPerm(m.key,'view')); // 'warnings' مستثناة: لها زر وصفحة مخصَّصان بالفعل (submit + إقرار رقمي)، عرضها هنا كمان يسبب تعارضاً وزراً مكرراً بلا وظيفة
  const nav=$('extraModulesNav');if(!nav)return;
  if(!granted.length){nav.innerHTML='';if($('extraModulesDivider'))$('extraModulesDivider').style.display='none';return}
  if($('extraModulesDivider'))$('extraModulesDivider').style.display='block';
