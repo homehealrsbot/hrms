@@ -3840,7 +3840,10 @@ function renderDeductionsHR(){
 }
 /* ================= الإنذارات (رئيس القسم/الإدارة ← HR ← اعتماد نهائي ← إقرار الموظف رقمياً) ================= */
 function openNewWarning(){
- const pool=employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
+ const broadAccess=currentEmp.role==='admin'||hasPerm('warnings','full');
+ const pool=broadAccess
+  ?employees.filter(e=>e.id!==currentEmp.id&&e.role!=='admin')
+  :employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
  $('wrnEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
  $('wrnLevel').value='إنذار';$('wrnReason').value='';$('wrnDesc').value='';
  openModal('warningModal');
@@ -3880,7 +3883,7 @@ async function acknowledgeWarning(id){
 function warningLevelTag(level){return level==='إنذار نهائي'?'danger':'sand'}
 function renderWarningsPage(){
  if(!$('wrnSubmitCard'))return;
- const canSubmit=currentEmp.role==='manager'||currentEmp.role==='admin';
+ const canSubmit=currentEmp.role==='manager'||currentEmp.role==='admin'||hasPerm('warnings','full');
  $('wrnSubmitCard').style.display=canSubmit?'block':'none';
  if(canSubmit){
   const mine=warnings.filter(w=>w.requestedBy===currentEmp.name);
