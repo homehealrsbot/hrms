@@ -259,33 +259,64 @@ tbody tr:hover{background:#FAFCFB}
     <button class="nav-item" data-page="alerts"><span class="ic">🔔</span> التنبيهات <span class="nav-badge" id="alertCount">0</span></button>
     <button class="nav-item" data-page="approvals"><span class="ic">✅</span> الاعتمادات <span class="nav-badge" id="approvalsCount">0</span></button>
 
-    <div class="nav-divider"></div>
-    <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
-    <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
-    <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
-    <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
-    <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-    <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
-    <button class="nav-item" id="nav_warnings" data-page="warningsHR"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="hrWrnBadge" style="display:none">0</span></button>
-    <button class="nav-item" data-page="employeeOfMonth"><span class="ic">🏆</span> موظف الشهر</button>
-    <button class="nav-item" data-page="medicalMembership"><span class="ic">🏥</span> العضوية الطبية</button>
-    <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
-    <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
+    <div class="nav-group open">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">👥</span> الموظفون</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav_employees" data-page="employees"><span class="ic">👥</span> الموظفين</button>
+        <button class="nav-item" id="nav_contracts" data-page="contracts"><span class="ic">✍</span> عقود الموظفين</button>
+        <button class="nav-item" id="nav_attendance" data-page="attendance"><span class="ic">🕐</span> الحضور والغياب</button>
+      </div>
+    </div>
+
+    <div class="nav-group open">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">📥</span> الطلبات</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
+        <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
+        <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+        <button class="nav-item" id="nav_warnings" data-page="warningsHR"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="hrWrnBadge" style="display:none">0</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">🏆</span> التحفيز</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" data-page="employeeOfMonth"><span class="ic">🏆</span> موظف الشهر</button>
+        <button class="nav-item" data-page="medicalMembership"><span class="ic">🏥</span> العضوية الطبية</button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">📄</span> الوثائق</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav_policies" data-page="policies"><span class="ic">§</span> الأنظمة والسياسات</button>
+        <button class="nav-item" id="nav_forms" data-page="forms"><span class="ic">📄</span> النماذج</button>
+        <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">💰</span> المالية</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
+        <button class="nav-item" id="nav_payrollStatements" data-page="payrollStatements"><span class="ic">📄</span> كشوفات الرواتب</button>
+        <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
+        <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
+        <button class="nav-item" id="nav_paymentFiles" data-page="paymentFiles"><span class="ic">📁</span> ملفات الصرف</button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="nav-group-head" onclick="toggleNavGroup(this)"><span><span class="ic">⚙️</span> النظام</span><span class="chev">‹</span></button>
+      <div class="nav-group-body">
+        <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
+        <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
+        <button class="nav-item" id="nav_auditLog" data-page="auditLog"><span class="ic">📋</span> سجل النشاط</button>
+      </div>
+    </div>
 
     <div class="nav-divider"></div>
-    <button class="nav-item" id="nav_payroll" data-page="payroll"><span class="ic">📑</span> الرواتب</button>
-    <button class="nav-item" id="nav_payrollStatements" data-page="payrollStatements"><span class="ic">📄</span> كشوفات الرواتب</button>
-    <button class="nav-item" id="nav_custody" data-page="custody"><span class="ic">📦</span> العهد</button>
-    <button class="nav-item" id="nav_paymentsAdmin" data-page="paymentsAdmin"><span class="ic">💵</span> طلبات الصرف</button>
-    <button class="nav-item" id="nav_paymentFiles" data-page="paymentFiles"><span class="ic">📁</span> ملفات الصرف</button>
-
-    <div class="nav-divider"></div>
-    <button class="nav-item" id="nav_files" data-page="files"><span class="ic">🗂</span> إدارة الملفات</button>
-    <button class="nav-item" id="nav_reports" data-page="reports"><span class="ic">📊</span> التقارير</button>
-    <button class="nav-item" id="nav_permissions" data-page="permissions"><span class="ic">🔐</span> الصلاحيات</button>
-    <button class="nav-item" id="nav_auditLog" data-page="auditLog"><span class="ic">📋</span> سجل النشاط</button>
-
-    <div class="nav-divider"></div>
+    <div class="nav-label">حسابي الشخصي</div>
     <button class="nav-item" onclick="openEmpProfile(me.id)"><span class="ic">🪪</span> ملفي الشخصي</button>
     <button class="nav-item" onclick="adminNewLeave()"><span class="ic">🌴</span> طلب إجازة لي</button>
     <button class="nav-item" onclick="adminNewPermit()"><span class="ic">🚪</span> طلب استئذان لي</button>
