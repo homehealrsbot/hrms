@@ -241,6 +241,10 @@ tbody tr:hover{background:#FAFCFB}
         <label>كلمة المرور</label>
         <input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
       </div>
+      <div class="field" id="activationCodeField" style="display:none">
+        <label>رمز التفعيل</label>
+        <input id="activationCode" placeholder="أعطاك إياه الأدمن" style="direction:ltr;text-align:left">
+      </div>
       <button class="btn btn-primary btn-block" id="authBtn" onclick="doAuth()">دخول</button>
       <div style="text-align:center;margin-top:12px"><a href="#" onclick="forgotPassword();return false" style="color:var(--pine);font-size:13px;font-weight:600">نسيت كلمة المرور؟</a></div>
     </div>
@@ -1602,16 +1606,18 @@ function setAuthMode(m){authMode=m;
  $('authTitle').textContent=m==='login'?'تسجيل الدخول':'تفعيل حساب جديد';
  $('authBtn').textContent=m==='login'?'دخول':'إنشاء الحساب';
  $('authSub').textContent=m==='login'?'أدخل بريد العمل وكلمة المرور':'أنشئ كلمة مرور لبريدك المسجل لدى الإدارة';
+ $('activationCodeField').style.display=m==='signup'?'block':'none';
 }
 async function doAuth(){
  const email=$('loginEmail').value.trim(), password=$('loginPass').value.trim();
  if(!email||!password){toast('أدخل البريد وكلمة المرور');return}
  if(password.length<6){toast('كلمة المرور 6 أحرف على الأقل');return}
+ if(authMode==='signup'&&!$('activationCode').value.trim()){toast('أدخل رمز التفعيل اللي أعطاك إياه الأدمن');return}
  $('authBtn').disabled=true;$('authBtn').textContent='لحظات...';
  try{
   let res;
   if(authMode==='signup'){
-    res=await sb.auth.signUp({email,password});
+    res=await sb.auth.signUp({email,password,options:{data:{activation_code:$('activationCode').value.trim()}}});
     if(res.error)throw res.error;
     if(!res.data.session){toast('تم إنشاء الحساب — فعّل بريدك من رسالة التأكيد ثم سجّل الدخول');resetAuthBtn();return}
   }else{
@@ -1697,7 +1703,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,activationCode:r.activation_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
@@ -2214,8 +2220,19 @@ function renderEmployees(){
  $('empTbody').innerHTML=rows.length?rows.map(e=>`<tr>
   <td><b>${e.num}</b></td><td><span class="link-name" onclick="openEmpProfile('${e.id}')">${e.name}</span></td><td>${e.dept||'—'}</td><td>${e.job||'—'}</td><td>${e.type||'—'}</td><td>${e.work||'—'}</td>
   <td><span class="tag ${e.status==='نشط'?'ok':'gray'}">${e.status}</span>${e.role==='admin'?' <span class="tag info">أدمن</span>':''}${e.role==='manager'?' <span class="tag info">رئيس قسم</span>':''}${e.role==='accountant'?' <span class="tag info">محاسب</span>':''}${e.auth_id?'':' <span class="tag gray">لم يفعّل حسابه</span>'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button> <button class="btn btn-ghost btn-sm" onclick="openDocsModal('${e.id}')">📎 المستندات</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
+  <td style="white-space:nowrap"><button class="btn btn-sand btn-sm" onclick="editEmp('${e.id}')">تعديل البيانات</button> <button class="btn btn-ghost btn-sm" onclick="openDocsModal('${e.id}')">📎 المستندات</button>${e.auth_id?'':` <button class="btn btn-ghost btn-sm" onclick="showActivationCode('${e.id}')">🔑 رمز التفعيل</button>`}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا يوجد موظفون بعد — أضف أول موظف</td></tr>';
  fillEmpSelects();
+}
+async function showActivationCode(empId){
+ const e=empById[empId];if(!e)return;
+ let code=e.activationCode;
+ if(!code){
+  code=Math.random().toString(36).slice(2,10);
+  const {error}=await sb.from('employees').update({activation_code:code}).eq('id',empId);
+  if(error){err(error);return}
+  e.activationCode=code;
+ }
+ prompt(`رمز تفعيل حساب ${e.name} — انسخه وأعطه للموظف بطريقة آمنة (شخصياً أو واتساب/هاتف، مو عبر نفس البريد الرسمي):`,code);
 }
 const DEPT_EMP_MAP={maDept:'maEmp',mbDept:'mbEmp',saDept:'saEmp',sbDept:'sbEmp'};
 function filterEmpByDept(deptId){
