@@ -5751,3 +5751,177 @@ document.addEventListener('DOMContentLoaded',()=>{try{arrange()}catch(e){}});
 setTimeout(()=>{try{arrange()}catch(e){}},1500);
 })();
 </script>
+<!-- ============================================================
+     تبويب داخلي للوحة التحكم — قائمة جانبية بالحاسب، أفقية بالجوال
+     تُلصق بعد ملف dashboard_polish.html في آخر ملف النظام.
+     يعرض قسماً واحداً فقط، فتقصر الصفحة ويسرع العرض.
+     ============================================================ -->
+<style>
+#dashShell{display:grid;grid-template-columns:236px 1fr;gap:20px;align-items:start}
+#dashNav{
+  position:sticky;top:74px;background:#fff;border:1px solid var(--hair,#E6EAF2);
+  border-radius:14px;padding:9px;box-shadow:0 1px 2px rgba(16,24,40,.04);
+}
+#dashNav .dn-title{
+  font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#93A0B8;
+  padding:8px 11px 6px;
+}
+.dn-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:11px 12px;border-radius:10px;margin-bottom:3px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:#3D4A63;
+  text-align:right;background:none;border:none;cursor:pointer;
+  transition:background .14s,color .14s;position:relative;
+}
+.dn-item:hover{background:#F5F7FB;color:#101B33}
+.dn-item.on{background:var(--pine,#143087);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(20,48,135,.25)}
+.dn-item .dn-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.dn-item .dn-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dn-count{
+  font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;
+  background:#EEF1F7;color:#5A6782;font-variant-numeric:tabular-nums;
+}
+.dn-item.on .dn-count{background:rgba(255,255,255,.22);color:#fff}
+.dn-dot{width:8px;height:8px;border-radius:50%;background:var(--st-bad-line,#B3261E);flex-shrink:0;
+  box-shadow:0 0 0 3px rgba(179,38,30,.14)}
+.dash-sec{display:none}
+.dash-sec.on{display:block;animation:dnFade .22s ease}
+@keyframes dnFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+@media(max-width:1024px){
+  #dashShell{grid-template-columns:1fr;gap:14px}
+  #dashNav{position:static;display:flex;gap:7px;overflow-x:auto;padding:8px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #dashNav::-webkit-scrollbar{display:none}
+  #dashNav .dn-title{display:none}
+  .dn-item{width:auto;flex:0 0 auto;margin-bottom:0;padding:9px 14px;font-size:12.5px;white-space:nowrap}
+  .dn-item .dn-lbl{overflow:visible}
+}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/* أقسام اللوحة: المعرّف، الأيقونة، العنوان، ودالة العدّاد */
+const SECS=[
+ {id:'glKpiSection',    ic:'📒', lbl:'المؤشرات المحاسبية'},
+ {id:'dashFinanceSection', ic:'💰', lbl:'النظرة المالية'},
+ {id:'dashEmpGroup',    ic:'👥', lbl:'نظرة الموظفين'},
+ {id:'dashAlertsGroup', ic:'🔔', lbl:'التنبيهات والمهام'},
+];
+let active=localStorage_safe_get()||'glKpiSection';
+
+function localStorage_safe_get(){ try{return sessionStorage.getItem('dashTab')}catch(e){return null} }
+function localStorage_safe_set(v){ try{sessionStorage.setItem('dashTab',v)}catch(e){} }
+
+/* ---------- بناء الهيكل ---------- */
+function build(){
+ const page=document.getElementById('page-dashboard');
+ if(!page)return false;
+ if(document.getElementById('dashShell'))return true;
+
+ const head   = page.querySelector(':scope > .page-head');
+ const legend = document.getElementById('stLegend');
+ const kpi    = document.getElementById('glKpiSection');
+ const fin    = document.getElementById('dashFinanceSection');
+ const empHd  = document.getElementById('dashEmpHead');
+ const stats  = document.getElementById('dashStats');
+ const grid   = [...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
+ const alerts = document.getElementById('dashAlerts') && document.getElementById('dashAlerts').closest('.card');
+ if(!kpi||!fin||!stats)return false;   /* ننتظر حقن الأقسام */
+
+ /* تجميع "نظرة الموظفين" و"التنبيهات" في حاويتين */
+ const empGroup=document.createElement('div'); empGroup.id='dashEmpGroup';
+ [empHd,stats,grid].forEach(el=>{ if(el)empGroup.appendChild(el) });
+
+ const alGroup=document.createElement('div'); alGroup.id='dashAlertsGroup';
+ const alHead=document.createElement('div');
+ alHead.className='page-head'; alHead.style.marginTop='6px';
+ alHead.innerHTML='<div><h1 style="font-size:20px">🔔 التنبيهات والمهام</h1><p>ما يحتاج قراراً أو متابعة منك</p></div>';
+ alGroup.appendChild(alHead);
+ if(alerts)alGroup.appendChild(alerts);
+
+ /* الهيكل: قائمة + محتوى */
+ const shell=document.createElement('div'); shell.id='dashShell';
+ const nav=document.createElement('div');   nav.id='dashNav';
+ nav.innerHTML='<div class="dn-title">أقسام اللوحة</div>';
+ const content=document.createElement('div'); content.id='dashContent';
+
+ [kpi,fin,empGroup,alGroup].forEach(el=>{ el.classList.add('dash-sec'); content.appendChild(el) });
+
+ SECS.forEach(s=>{
+  const b=document.createElement('button');
+  b.className='dn-item'; b.dataset.sec=s.id;
+  b.innerHTML=`<span class="dn-ic">${s.ic}</span><span class="dn-lbl">${s.lbl}</span><span class="dn-count" style="display:none"></span>`;
+  b.onclick=()=>show(s.id);
+  nav.appendChild(b);
+ });
+
+ shell.appendChild(nav); shell.appendChild(content);
+ page.appendChild(shell);
+ /* العنوان ومفتاح الألوان يبقيان أعلى الصفحة خارج التبويب */
+ if(head)page.insertBefore(head,shell);
+ if(legend)page.insertBefore(legend,shell);
+
+ show(active);
+ return true;
+}
+
+function show(id){
+ if(!document.getElementById(id))id=SECS[0].id;
+ active=id; localStorage_safe_set(id);
+ document.querySelectorAll('#dashContent .dash-sec').forEach(el=>el.classList.toggle('on',el.id===id));
+ document.querySelectorAll('#dashNav .dn-item').forEach(b=>b.classList.toggle('on',b.dataset.sec===id));
+ /* إعادة ضبط مقاس الشارتات بعد الإظهار (Chart.js يحتاجها بعد display:none) */
+ setTimeout(()=>{ try{ Object.values(DASH_CHARTS||{}).forEach(c=>{try{c.resize()}catch(e){}}) }catch(e){} },60);
+}
+
+/* ---------- العدّادات وإشارات الإنذار ---------- */
+function badges(){
+ const set=(secId,count,alert)=>{
+  const b=document.querySelector(`#dashNav .dn-item[data-sec="${secId}"]`);
+  if(!b)return;
+  const c=b.querySelector('.dn-count');
+  if(count===null||count===undefined||count===''){c.style.display='none'}
+  else{c.style.display='';c.textContent=count}
+  let d=b.querySelector('.dn-dot');
+  if(alert&&!d){ d=document.createElement('span'); d.className='dn-dot'; b.appendChild(d) }
+  if(!alert&&d)d.remove();
+ };
+ const bad=sec=>!!document.querySelector('#'+sec+' .stat.st-bad');
+
+ /* المحاسبة: عدد القيود */
+ const kpiHas=document.querySelector('#glKpiContent') &&
+   document.getElementById('glKpiContent').style.display!=='none';
+ set('glKpiSection', kpiHas?'':null, bad('glKpiSection'));
+
+ /* المالية */
+ set('dashFinanceSection','',bad('dashFinanceSection'));
+
+ /* الموظفون: عدد النشطين */
+ try{
+  const act=(typeof employees!=='undefined'?employees:[]).filter(e=>e.status==='نشط').length;
+  set('dashEmpGroup',act||null,bad('dashEmpGroup'));
+ }catch(e){ set('dashEmpGroup',null,false) }
+
+ /* التنبيهات: عدد غير المقروء من العدّاد الأصلي */
+ try{
+  const n=parseInt((document.getElementById('alertCount')||{}).textContent||'0',10)||0;
+  set('dashAlertsGroup',n||null,n>0);
+ }catch(e){ set('dashAlertsGroup',null,false) }
+}
+
+function run(){ if(build())badges() }
+
+if(typeof window.renderDashboard==='function'){
+ const _o=window.renderDashboard;
+ window.renderDashboard=function(){
+  const r=_o.apply(this,arguments);
+  try{ run() }catch(e){ console.error('dash-tabs',e) }
+  return r;
+ };
+}
+setTimeout(()=>{try{run()}catch(e){}},2000);
+})();
+</script>
