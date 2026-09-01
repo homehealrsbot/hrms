@@ -5491,3 +5491,196 @@ if(typeof window.renderDashboard==='function'){
 }
 })();
 </script>
+<!-- ============================================================
+     طبقة الهوية البصرية والألوان الدلالية — لوحة التحكم
+     تُلصق بعد ملف dashboard_order.html في آخر ملف النظام.
+     الفكرة: اللون يُحسب من القيمة، لا يُكتب يدوياً.
+     ============================================================ -->
+<style>
+/* ---------- 1) لوحة ألوان دلالية بطابع بنكي رسمي ---------- */
+:root{
+  --st-good:#1F7A54;  --st-good-bg:#EEF7F2;  --st-good-line:#1F7A54;
+  --st-warn:#9A6700;  --st-warn-bg:#FDF7E7;  --st-warn-line:#C99200;
+  --st-bad:#B3261E;   --st-bad-bg:#FCF0EF;   --st-bad-line:#B3261E;
+  --st-neut:#3D4A63;  --st-neut-bg:#F5F7FB;  --st-neut-line:#8A97AE;
+  --hair:#E6EAF2;
+}
+
+/* ---------- 2) بطاقات المؤشرات ---------- */
+#page-dashboard .stat{
+  border:1px solid var(--hair);
+  border-inline-start:4px solid var(--st-neut-line);
+  background:#fff;
+  padding:15px 17px 13px;
+  border-radius:12px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+  transition:box-shadow .16s, transform .16s;
+}
+#page-dashboard .stat:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,.09)}
+#page-dashboard .stat .num{
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.5px;
+  color:var(--st-neut);
+}
+#page-dashboard .stat .lbl{color:#65718A;font-weight:600;letter-spacing:.1px}
+
+/* حالات دلالية — تُطبَّق بالجافاسكربت حسب الرقم */
+.stat.st-good{border-inline-start-color:var(--st-good-line);background:linear-gradient(180deg,var(--st-good-bg),#fff 62%)}
+.stat.st-good .num{color:var(--st-good)}
+.stat.st-warn{border-inline-start-color:var(--st-warn-line);background:linear-gradient(180deg,var(--st-warn-bg),#fff 62%)}
+.stat.st-warn .num{color:var(--st-warn)}
+.stat.st-bad{border-inline-start-color:var(--st-bad-line);background:linear-gradient(180deg,var(--st-bad-bg),#fff 62%)}
+.stat.st-bad .num{color:var(--st-bad)}
+.stat.st-neut{border-inline-start-color:var(--st-neut-line)}
+
+/* شارة الحالة أسفل البطاقة */
+.st-note{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:7px;padding:2px 9px;border-radius:20px;
+  font-size:11px;font-weight:700;line-height:1.7;
+}
+.st-good .st-note{background:var(--st-good-bg);color:var(--st-good)}
+.st-warn .st-note{background:var(--st-warn-bg);color:var(--st-warn)}
+.st-bad  .st-note{background:var(--st-bad-bg);color:var(--st-bad)}
+.st-neut .st-note{background:var(--st-neut-bg);color:var(--st-neut)}
+
+/* ---------- 3) عناوين الأقسام بشريط لوني ---------- */
+#page-dashboard .page-head h1{
+  position:relative;padding-inline-start:14px;color:#101B33;
+}
+#page-dashboard .page-head h1::before{
+  content:"";position:absolute;inset-inline-start:0;top:14%;bottom:14%;
+  width:4px;border-radius:4px;background:var(--pine);
+}
+#glKpiSection .page-head h1::before{background:#1F7A54}
+#dashFinanceSection .page-head h1::before{background:#C99200}
+#dashEmpHead h1::before{background:var(--sand)}
+#page-dashboard .page-head p{color:#77839C}
+
+/* ---------- 4) البطاقات والرسوم ---------- */
+#page-dashboard .card{
+  border:1px solid var(--hair);
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+  border-radius:14px;
+}
+#page-dashboard .card h3{
+  color:#101B33;font-size:15px;padding-bottom:11px;
+  border-bottom:1px solid var(--hair);margin-bottom:14px;
+}
+#page-dashboard .chart-box{height:305px}
+#page-dashboard .dash-charts-grid{gap:18px;margin-bottom:20px}
+#page-dashboard .stats{gap:14px;margin-bottom:22px}
+@media(max-width:1024px){#page-dashboard .chart-box{height:250px}}
+
+/* ---------- 5) الجداول ---------- */
+#page-dashboard table th{
+  background:#F5F7FB;color:#2C3A57;
+  border-bottom:1px solid var(--hair);font-size:12px;
+}
+#page-dashboard table tbody tr:nth-child(even){background:#FCFDFE}
+#page-dashboard table td{border-top:1px solid #EEF1F6;font-variant-numeric:tabular-nums}
+
+/* ---------- 6) مفتاح الألوان ---------- */
+#stLegend{
+  display:flex;gap:16px;flex-wrap:wrap;align-items:center;
+  background:#fff;border:1px solid var(--hair);border-radius:12px;
+  padding:10px 16px;margin-bottom:18px;font-size:12.5px;color:#65718A;
+}
+#stLegend b{color:#101B33;font-weight:800;margin-inline-end:4px}
+#stLegend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+#stLegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   قواعد الحالة: لكل مؤشر، دالة تُرجع الحالة والتعليق.
+   good = سليم · warn = يحتاج متابعة · bad = يتطلب إجراء
+   ============================================================ */
+const num=t=>{const m=String(t).replace(/,/g,'').match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):NaN};
+
+const RULES=[
+ /* ---- المؤشرات المحاسبية ---- */
+ {m:/^إجمالي الإيرادات$/,      f:v=>v>0?['good','إيراد مسجّل']:['neut','لا يوجد إيراد بعد']},
+ {m:/^تكلفة الإيراد$/,          f:v=>['neut','تكلفة مباشرة']},
+ {m:/^مجمل الربح$/,             f:v=>v>0?['good','موجب']:['bad','سالب — يتطلب إجراء']},
+ {m:/^صافي الربح$/,             f:v=>v>0?['good','ربح']:['bad','يتطلب إجراء']},
+ {m:/^صافي الخسارة$/,           f:v=>['bad','خسارة — يتطلب إجراء']},
+ {m:/^هامش مجمل الربح$/,        f:v=>v>=30?['good','هامش صحي']:v>=10?['warn','هامش منخفض']:['bad','هامش حرج']},
+ {m:/^هامش صافي الربح$/,        f:v=>v>=15?['good','هامش صحي']:v>=5?['warn','هامش منخفض']:['bad','هامش حرج']},
+ {m:/^النقدية/,                 f:v=>v>0?['good','سيولة متاحة']:['bad','لا توجد سيولة']},
+ {m:/^الذمم المدينة/,           f:v=>v>0?['warn','مستحق التحصيل']:['neut','لا توجد ذمم']},
+ {m:/^إجمالي الأصول$/,          f:v=>['neut','إجمالي']},
+ {m:/^إجمالي الخصوم$/,          f:v=>['warn','التزامات قائمة']},
+ {m:/^حالة الميزانية$/,         f:(v,t)=>/متوازنة/.test(t)&&!/غير/.test(t)?['good','سليمة']:['bad','خلل في القيود']},
+
+ /* ---- إحصاءات الموظفين ---- */
+ {m:/^إجمالي عدد الموظفين$/,     f:v=>['neut','إجمالي']},
+ {m:/^الموظفون النشطون$/,        f:v=>['good','على رأس العمل']},
+ {m:/^الموظفون غير النشطين$/,    f:v=>v>0?['warn','خارج الخدمة']:['good','لا يوجد']},
+ {m:/^موظفو فترة التجربة$/,      f:v=>v>0?['warn','تحتاج تقييماً']:['neut','لا يوجد']},
+ {m:/^الموظفون في إجازة حالياً$/,f:v=>v>0?['warn','غياب مخطَّط']:['good','الفريق مكتمل']},
+ {m:/^عقود تنتهي خلال 30 يوم$/,  f:v=>v===0?['good','لا يوجد']:v<=2?['warn','تحتاج تجديداً']:['bad','عاجل — يتطلب إجراء']},
+ {m:/^طلبات إجازات معلّقة$/,     f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
+ {m:/^طلبات استئذان معلّقة$/,    f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
+ {m:/^غيابات هذا الشهر$/,        f:v=>v===0?['good','لا غياب']:v<=3?['warn','ضمن الحد']:['bad','تجاوز الحد']},
+
+ /* ---- النظرة المالية ---- */
+ {m:/^إجمالي المصروف هذا الشهر$/,f:v=>['neut','مصروف فعلي']},
+ {m:/^مبالغ طلبات معلّقة$/,      f:v=>v>0?['warn','بانتظار الاعتماد']:['good','لا يوجد معلّق']},
+ {m:/^عُهد مفتوحة/,             f:v=>v===0?['good','لا يوجد']:v<=3?['warn','لم تُرجع']:['bad','متراكمة']},
+ {m:/^إجمالي رواتب آخر كشف/,    f:v=>['neut','آخر كشف']},
+];
+
+function apply(card){
+ const lblEl=card.querySelector('.lbl'), numEl=card.querySelector('.num');
+ if(!lblEl||!numEl)return;
+ const lbl=lblEl.textContent.trim(), txt=numEl.textContent.trim();
+ const rule=RULES.find(r=>r.m.test(lbl));
+ if(!rule)return;
+ let state,note;
+ try{ [state,note]=rule.f(num(txt),txt) }catch(e){ return }
+ if(!state)return;
+
+ card.classList.remove('st-good','st-warn','st-bad','st-neut','ok','sand','danger','info');
+ card.classList.add('st-'+state);
+
+ const icon={good:'●',warn:'▲',bad:'■',neut:'○'}[state];
+ let n=card.querySelector('.st-note');
+ if(!n){ n=document.createElement('span'); n.className='st-note'; card.appendChild(n) }
+ n.innerHTML=`<span>${icon}</span> ${note}`;
+}
+
+function legend(){
+ const page=document.getElementById('page-dashboard');
+ if(!page||document.getElementById('stLegend'))return;
+ const head=page.querySelector(':scope > .page-head');
+ if(!head)return;
+ const d=document.createElement('div');
+ d.id='stLegend';
+ d.innerHTML='<b>دلالة الألوان:</b>'
+  +'<span><i style="background:var(--st-good-line)"></i> سليم</span>'
+  +'<span><i style="background:var(--st-warn-line)"></i> يحتاج متابعة</span>'
+  +'<span><i style="background:var(--st-bad-line)"></i> يتطلب إجراءً عاجلاً</span>'
+  +'<span><i style="background:var(--st-neut-line)"></i> معلومة عامة</span>';
+ head.parentNode.insertBefore(d,head.nextSibling);
+}
+
+function run(){
+ legend();
+ document.querySelectorAll('#page-dashboard .stat').forEach(apply);
+}
+
+if(typeof window.renderDashboard==='function'){
+ const _o=window.renderDashboard;
+ window.renderDashboard=function(){
+  const r=_o.apply(this,arguments);
+  try{ run() }catch(e){ console.error('semantic-colors',e) }
+  return r;
+ };
+}
+setTimeout(()=>{try{run()}catch(e){}},1800);
+})();
+</script>
