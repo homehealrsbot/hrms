@@ -5684,3 +5684,70 @@ if(typeof window.renderDashboard==='function'){
 setTimeout(()=>{try{run()}catch(e){}},1800);
 })();
 </script>
+<!-- ============================================================
+     إعادة ترتيب لوحة التحكم — مدير النظام
+     تُلصق بعد ملف المؤشرات المحاسبية في آخر ملف النظام.
+     الترتيب: المؤشرات المحاسبية ← النظرة المالية ← إحصاءات
+     الموظفين (بشارتين) ← التنبيهات.
+     ============================================================ -->
+<script>
+(function(){
+"use strict";
+
+/* الشارتات التي تبقى ظاهرة ضمن مجموعة الموظفين */
+const KEEP=['chartDept','chartPending'];
+const HIDE=['chartLeaves','chartTrend'];
+
+function arrange(){
+ const page=document.getElementById('page-dashboard');
+ if(!page)return;
+
+ const head   = page.querySelector(':scope > .page-head');
+ const stats  = document.getElementById('dashStats');
+ const fin    = document.getElementById('dashFinanceSection');
+ const kpi    = document.getElementById('glKpiSection');
+ const alerts = document.getElementById('dashAlerts') && document.getElementById('dashAlerts').closest('.card');
+
+ /* شبكة شارتات الموظفين = أول .dash-charts-grid ابن مباشر للصفحة */
+ const grid=[...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
+
+ /* عنوان فرعي لمجموعة الموظفين (مرة واحدة فقط) */
+ let empHead=document.getElementById('dashEmpHead');
+ if(!empHead&&stats){
+  empHead=document.createElement('div');
+  empHead.id='dashEmpHead'; empHead.className='page-head'; empHead.style.marginTop='6px';
+  empHead.innerHTML='<div><h1 style="font-size:20px">👥 نظرة الموظفين</h1><p>أعداد الموظفين والطلبات المعلّقة والغياب</p></div>';
+  stats.parentNode.insertBefore(empHead,stats);
+ }
+
+ /* إخفاء الشارتين الأقل أولوية مع إبقاء الكود يعمل كما هو */
+ HIDE.forEach(id=>{
+  const c=document.getElementById(id);
+  const card=c&&c.closest('.card');
+  if(card)card.style.display='none';
+ });
+ KEEP.forEach(id=>{
+  const c=document.getElementById(id);
+  const card=c&&c.closest('.card');
+  if(card)card.style.display='';
+ });
+
+ /* الترتيب النهائي — appendChild ينقل العنصر الموجود لا ينسخه */
+ [head,kpi,fin,empHead,stats,grid,alerts].forEach(el=>{ if(el&&el.parentNode===page)page.appendChild(el) });
+
+ /* أي عناصر متبقية (مثل جدول العقود المخفي) تبقى في آخر الصفحة تلقائياً */
+}
+
+/* التشغيل: عند التحميل، وبعد كل رسم للوحة (لأن قسم المؤشرات يُحقن أثناءه) */
+if(typeof window.renderDashboard==='function'){
+ const _orig=window.renderDashboard;
+ window.renderDashboard=function(){
+  const r=_orig.apply(this,arguments);
+  try{ arrange() }catch(e){ console.error('dashboard-order',e) }
+  return r;
+ };
+}
+document.addEventListener('DOMContentLoaded',()=>{try{arrange()}catch(e){}});
+setTimeout(()=>{try{arrange()}catch(e){}},1500);
+})();
+</script>
