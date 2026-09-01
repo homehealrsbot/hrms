@@ -4890,3 +4890,386 @@ window.addNewPolicy=async function(){
  });
 })();
 </script>
+<!-- ============================================================
+     وحدة المحاسبة (دفتر الأستاذ العام) — Home Healers HRMS
+     تُلصق كما هي في آخر ملف النظام، بعد آخر </script> موجود.
+     لا تعدّل أي سطر من الكود الحالي — تُسجّل نفسها تلقائياً.
+     ============================================================ -->
+<script>
+(function(){
+"use strict";
+
+/* ---------- 1) تسجيل الوحدة في نظام الصلاحيات ---------- */
+if(typeof MODULES!=='undefined' && !MODULES.some(m=>m.key==='accounting'))
+  MODULES.push({key:'accounting',label:'المحاسبة'});
+if(typeof PAGE_TITLES!=='undefined') PAGE_TITLES.accounting='المحاسبة';
+if(typeof EP_TITLES!=='undefined')   EP_TITLES.accounting='المحاسبة';
+if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.accounting='📒';
+
+/* ---------- 2) الحالة ---------- */
+let glAcc=[], glJrn=[], glLn=[], glTab='dash', glHost=null, glFull=false, glLedgerCode='';
+const glCur='ر.س';
+const M=n=>(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const TYPE_AR={Asset:'أصول',Liability:'خصوم',Equity:'حقوق ملكية',Revenue:'إيرادات',Expense:'مصروفات'};
+/* اتجاه الرصيد الطبيعي لكل فئة: +1 يعني (مدين − دائن) */
+const SIGN={Asset:1,Expense:1,Liability:-1,Equity:-1,Revenue:-1};
+
+async function glLoad(){
+ const [A,J,L]=await Promise.all([
+  sb.from('gl_accounts').select('*').order('code'),
+  sb.from('gl_journals').select('*').order('entry_date',{ascending:false}),
+  sb.from('gl_journal_lines').select('*'),
+ ]);
+ for(const r of [A,J,L]) if(r.error) throw r.error;
+ glAcc=A.data||[]; glJrn=J.data||[]; glLn=L.data||[];
+}
+const accByCode=c=>glAcc.find(a=>a.code===+c)||{};
+const jrnLines=id=>glLn.filter(l=>l.journal_id===id).sort((a,b)=>a.line_no-b.line_no);
+const jrnTotal=id=>jrnLines(id).reduce((s,l)=>s+(+l.debit||0),0);
+
+/* رصيد كل حساب بالاتجاه الطبيعي لفئته (يعالج الحسابات العكسية تلقائياً) */
+function accBalances(){
+ const m={};
+ glAcc.forEach(a=>m[a.code]={dr:0,cr:0});
+ glLn.forEach(l=>{ if(!m[l.account_code])m[l.account_code]={dr:0,cr:0};
+  m[l.account_code].dr+=(+l.debit||0); m[l.account_code].cr+=(+l.credit||0); });
+ return m;
+}
+function groupTotal(type){
+ const b=accBalances(); let t=0;
+ glAcc.filter(a=>a.type===type).forEach(a=>{ const x=b[a.code]||{dr:0,cr:0};
+  t+=SIGN[type]*((x.dr||0)-(x.cr||0)); });
+ return t;
+}
+
+/* ---------- 3) الواجهة ---------- */
+function glMount(host,full){
+ glHost=host; glFull=full;
+ host.innerHTML='<div class="empty">⏳ جاري تحميل البيانات المحاسبية...</div>';
+ glLoad().then(glDraw).catch(e=>{ host.innerHTML='<div class="empty">تعذّر التحميل — تأكد من تنفيذ سكربت قاعدة البيانات</div>'; err(e); });
+}
+function glDraw(){
+ if(!glHost)return;
+ const tabs=[['dash','📊 لوحة المحاسبة'],['journal','📘 دفتر القيود'],['ledger','📗 دفتر الأستاذ'],
+             ['tb','⚖️ ميزان المراجعة'],['fs','📑 القوائم المالية'],['coa','🗂 دليل الحسابات']];
+ glHost.innerHTML='<div class="tabs" id="glTabs">'+tabs.map(([k,l])=>
+   `<button class="${glTab===k?'active':''}" data-t="${k}">${l}</button>`).join('')+'</div><div id="glBody"></div>';
+ glHost.querySelectorAll('#glTabs button').forEach(b=>b.onclick=()=>{glTab=b.dataset.t;glDraw()});
+ const body=glHost.querySelector('#glBody');
+ ({dash:glDash,journal:glJournalTab,ledger:glLedger,tb:glTB,fs:glFS,coa:glCOA})[glTab](body);
+}
+const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+
+/* --- لوحة المحاسبة --- */
+function glDash(b){
+ const rev=groupTotal('Revenue'), exp=groupTotal('Expense');
+ const cogs=(()=>{const bal=accBalances();let t=0;glAcc.filter(a=>a.is_cogs).forEach(a=>{const x=bal[a.code]||{dr:0,cr:0};t+=(x.dr-x.cr)});return t})();
+ const S=[
+  {n:M(rev),l:'إجمالي الإيرادات',k:'ok'},
+  {n:M(exp),l:'إجمالي المصروفات',k:'danger'},
+  {n:M(rev-exp),l:'صافي الربح / (الخسارة)',k:rev-exp>=0?'ok':'danger'},
+  {n:M(rev-cogs),l:'مجمل الربح',k:'info'},
+  {n:M(groupTotal('Asset')),l:'إجمالي الأصول',k:''},
+  {n:M(groupTotal('Liability')),l:'إجمالي الخصوم',k:'sand'},
+  {n:glJrn.length,l:'عدد القيود المسجّلة',k:'info'},
+  {n:glJrn.filter(j=>j.is_locked).length,l:'قيود مقفلة نهائياً',k:''},
+ ];
+ const recent=glJrn.slice(0,8).map(j=>`<tr><td><b>${j.entry_no}</b></td><td>${fmt(j.entry_date)}</td><td>${j.description}</td><td>${M(jrnTotal(j.id))} ${glCur}</td><td>${j.is_locked?'<span class="tag ok">🔒 مقفل</span>':'<span class="tag sand">مسودة</span>'}</td></tr>`).join('');
+ b.innerHTML=`<div class="stats">${S.map(s=>`<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>10?'18px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('')}</div>
+  <div class="card"><h3>🕐 أحدث القيود</h3>${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة'],recent||'<tr><td colspan="5" class="empty">لا توجد قيود بعد</td></tr>')}</div>`;
+}
+
+/* --- دفتر القيود --- */
+function glJournalTab(b){
+ const rows=glJrn.map(j=>`<tr>
+  <td><b>${j.entry_no}</b></td><td>${fmt(j.entry_date)}</td><td>${j.description}</td>
+  <td>${M(jrnTotal(j.id))} ${glCur}</td>
+  <td>${j.is_locked?'<span class="tag ok">🔒 مقفل نهائياً</span>':'<span class="tag sand">📝 مسودة</span>'}</td>
+  <td style="white-space:nowrap">
+   <button class="btn btn-ghost btn-sm" onclick="glView('${j.id}')">عرض</button>
+   ${glFull&&!j.is_locked?`<button class="btn btn-sand btn-sm" onclick="glLock('${j.id}')">🔒 قفل</button>
+   <button class="btn btn-danger btn-sm" onclick="glDel('${j.id}','${j.entry_no}')">حذف</button>`:''}
+  </td></tr>`).join('');
+ b.innerHTML=(glFull?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="glNew()">+ قيد يومية جديد</button></div>`:'')
+  +`<div class="section-note">القيد المقفل لا يُعدَّل ولا يُحذف. قاعدة البيانات ترفض أي قيد غير متوازن قبل حفظه.</div>`
+  +`<div class="card">${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة','إجراء'],rows||'<tr><td colspan="6" class="empty">لا توجد قيود — ابدأ بتسجيل أول قيد</td></tr>')}</div>`;
+}
+
+/* --- دفتر الأستاذ --- */
+function glLedger(b){
+ if(!glLedgerCode&&glAcc.length)glLedgerCode=glAcc[0].code;
+ const a=accByCode(glLedgerCode);
+ const mine=glLn.filter(l=>l.account_code===+glLedgerCode)
+  .map(l=>({...l,j:glJrn.find(j=>j.id===l.journal_id)||{}}))
+  .sort((x,y)=>String(x.j.entry_date).localeCompare(String(y.j.entry_date)));
+ let run=0;
+ const rows=mine.map(l=>{ run+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0));
+  return `<tr><td>${l.j.entry_no||'—'}</td><td>${fmt(l.j.entry_date)}</td><td>${l.j.description||'—'}</td>
+   <td>${+l.debit?M(l.debit):'—'}</td><td>${+l.credit?M(l.credit):'—'}</td><td><b>${M(run)}</b></td></tr>`}).join('');
+ b.innerHTML=`<div class="card">
+   <div class="field" style="max-width:420px"><label>اختر الحساب</label>
+    <select id="glLedgerSel">${glAcc.map(x=>`<option value="${x.code}" ${+glLedgerCode===x.code?'selected':''}>${x.code} — ${x.name}</option>`).join('')}</select></div>
+   <div class="section-note">الرصيد المتحرك محسوب بالاتجاه الطبيعي لفئة الحساب (${TYPE_AR[a.type]||''} — ${a.normal_side==='Dr'?'مدين':'دائن'}).</div>
+   ${T(['رقم القيد','التاريخ','البيان','مدين','دائن','الرصيد'],rows||'<tr><td colspan="6" class="empty">لا توجد حركات على هذا الحساب</td></tr>')}
+   <div style="margin-top:12px;font-weight:800">الرصيد الختامي: ${M(run)} ${glCur}</div></div>`;
+ b.querySelector('#glLedgerSel').onchange=e=>{glLedgerCode=e.target.value;glDraw()};
+}
+
+/* --- ميزان المراجعة --- */
+function glTBRows(){
+ const bal=accBalances();
+ return glAcc.map(a=>({a,x:bal[a.code]||{dr:0,cr:0}})).filter(r=>r.x.dr||r.x.cr);
+}
+function glTB(b){
+ const rows=glTBRows();
+ const tdr=rows.reduce((s,r)=>s+r.x.dr,0), tcr=rows.reduce((s,r)=>s+r.x.cr,0);
+ const html=rows.map(r=>`<tr><td>${r.a.code}</td><td><b>${r.a.name}</b></td><td>${TYPE_AR[r.a.type]}</td>
+   <td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td><b>${M(SIGN[r.a.type]*(r.x.dr-r.x.cr))}</b></td></tr>`).join('');
+ const ok=Math.abs(tdr-tcr)<0.01;
+ b.innerHTML=`<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+   <span class="tag ${ok?'ok':'danger'}">${ok?'✅ الميزان متوازن':'⚠️ الميزان غير متوازن — راجع القيود'}</span>
+   <button class="btn btn-ghost btn-sm" onclick="glPrintTB()">🖨 طباعة</button></div>
+  ${T(['الرمز','اسم الحساب','الفئة','مدين','دائن','الرصيد'],
+    (html||'<tr><td colspan="6" class="empty">لا توجد حركات بعد</td></tr>')
+    +`<tr class="total-row" style="background:var(--pine-soft);font-weight:800"><td colspan="3">الإجمالي</td><td>${M(tdr)}</td><td>${M(tcr)}</td><td>—</td></tr>`)}
+  </div>`;
+}
+
+/* --- القوائم المالية --- */
+function glFS(b){
+ const bal=accBalances();
+ const sec=type=>glAcc.filter(a=>a.type===type).map(a=>{const x=bal[a.code]||{dr:0,cr:0};
+   return {name:a.name,v:SIGN[type]*((x.dr||0)-(x.cr||0))}}).filter(r=>Math.abs(r.v)>0.001);
+ const line=r=>`<tr><td>${r.name}</td><td style="text-align:left">${M(r.v)}</td></tr>`;
+ const tot=(l,v)=>`<tr style="background:var(--pine-soft);font-weight:800"><td>${l}</td><td style="text-align:left">${M(v)}</td></tr>`;
+ const rev=groupTotal('Revenue'), exp=groupTotal('Expense');
+ const cogsRows=glAcc.filter(a=>a.is_cogs).map(a=>{const x=bal[a.code]||{dr:0,cr:0};return{name:a.name,v:(x.dr-x.cr)}}).filter(r=>Math.abs(r.v)>0.001);
+ const cogs=cogsRows.reduce((s,r)=>s+r.v,0);
+ const opexRows=glAcc.filter(a=>a.type==='Expense'&&!a.is_cogs).map(a=>{const x=bal[a.code]||{dr:0,cr:0};return{name:a.name,v:(x.dr-x.cr)}}).filter(r=>Math.abs(r.v)>0.001);
+ const opex=opexRows.reduce((s,r)=>s+r.v,0);
+ const assets=groupTotal('Asset'), liab=groupTotal('Liability'), eq=groupTotal('Equity');
+ const profit=rev-exp;
+ const bsOk=Math.abs(assets-(liab+eq+profit))<0.01;
+ b.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-ghost btn-sm" onclick="glPrintFS()">🖨 طباعة</button></div>
+ <div class="card"><h3>📈 قائمة الدخل</h3>
+  ${T(['البند','المبلغ'],sec('Revenue').map(line).join('')+tot('إجمالي الإيرادات',rev)
+    +cogsRows.map(line).join('')+tot('تكلفة الإيرادات',cogs)+tot('مجمل الربح',rev-cogs)
+    +opexRows.map(line).join('')+tot('المصروفات التشغيلية',opex)
+    +tot(profit>=0?'صافي الربح':'صافي الخسارة',profit))}</div>
+ <div class="card"><h3>🏛 قائمة المركز المالي</h3>
+  <span class="tag ${bsOk?'ok':'danger'}" style="margin-bottom:10px;display:inline-block">${bsOk?'✅ الميزانية متوازنة':'⚠️ غير متوازنة — راجع القيود'}</span>
+  ${T(['البند','المبلغ'],sec('Asset').map(line).join('')+tot('إجمالي الأصول',assets)
+    +sec('Liability').map(line).join('')+tot('إجمالي الخصوم',liab)
+    +sec('Equity').map(line).join('')+`<tr><td>صافي ربح الفترة</td><td style="text-align:left">${M(profit)}</td></tr>`
+    +tot('إجمالي حقوق الملكية',eq+profit)+tot('إجمالي الخصوم وحقوق الملكية',liab+eq+profit))}</div>`;
+}
+
+/* --- دليل الحسابات --- */
+function glCOA(b){
+ const rows=glAcc.map(a=>`<tr><td><b>${a.code}</b></td><td>${a.name}</td><td>${TYPE_AR[a.type]}</td>
+  <td>${a.normal_side==='Dr'?'مدين':'دائن'}</td>
+  <td>${a.is_contra?'<span class="tag sand">عكسي</span>':''}${a.is_cogs?' <span class="tag info">تكلفة إيراد</span>':''}</td></tr>`).join('');
+ b.innerHTML=(glFull?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="glNewAcc()">+ إضافة حساب</button></div>`:'')
+  +`<div class="card">${T(['الرمز','اسم الحساب','الفئة','الطبيعة','خصائص'],rows||'<tr><td colspan="5" class="empty">لا توجد حسابات</td></tr>')}</div>`;
+}
+
+/* ---------- 4) النوافذ ---------- */
+function mkModal(id,html){
+ if($(id))return;
+ const d=document.createElement('div'); d.className='modal-back'; d.id=id; d.innerHTML=html;
+ document.body.appendChild(d);
+ d.addEventListener('click',e=>{if(e.target===d)d.classList.remove('on')});
+}
+mkModal('glEntryModal',`<div class="modal lg">
+ <div class="modal-head"><h3>قيد يومية جديد</h3><button class="x-btn" onclick="closeModal('glEntryModal')">✕</button></div>
+ <div class="grid-2">
+  <div class="field"><label>تاريخ القيد <b style="color:var(--danger)">*</b></label><input id="glnDate" type="date"></div>
+  <div class="field"><label>البيان / الوصف <b style="color:var(--danger)">*</b></label><input id="glnDesc" placeholder="مثال: إثبات إيراد شهر يناير"></div>
+ </div>
+ <div class="tbl-wrap"><table><thead><tr><th style="min-width:220px">الحساب</th><th>مدين</th><th>دائن</th><th>ملاحظة</th><th></th></tr></thead>
+  <tbody id="glnRows"></tbody></table></div>
+ <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+  <button class="btn btn-ghost btn-sm" onclick="glAddRow()">+ إضافة سطر</button>
+  <div id="glnBalance" style="margin-inline-start:auto;font-weight:800"></div>
+ </div>
+ <div class="modal-foot"><button class="btn btn-primary" id="glnSave" onclick="glSave()">حفظ القيد</button>
+  <button class="btn btn-ghost" onclick="closeModal('glEntryModal')">إلغاء</button></div></div>`);
+mkModal('glViewModal',`<div class="modal lg" id="glViewBody"></div>`);
+mkModal('glAccModal',`<div class="modal sm">
+ <div class="modal-head"><h3>إضافة حساب جديد</h3><button class="x-btn" onclick="closeModal('glAccModal')">✕</button></div>
+ <div class="field"><label>رمز الحساب <b style="color:var(--danger)">*</b></label><input id="glaCode" type="number" placeholder="مثال: 516"></div>
+ <div class="field"><label>اسم الحساب <b style="color:var(--danger)">*</b></label><input id="glaName"></div>
+ <div class="field"><label>الفئة</label><select id="glaType">
+  <option value="Asset">أصول</option><option value="Liability">خصوم</option><option value="Equity">حقوق ملكية</option>
+  <option value="Revenue">إيرادات</option><option value="Expense">مصروفات</option></select></div>
+ <div class="field"><label>الطبيعة</label><select id="glaSide"><option value="Dr">مدين</option><option value="Cr">دائن</option></select></div>
+ <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="glaContra" style="width:18px;height:18px"> حساب عكسي (Contra)</label>
+ <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="glaCogs" style="width:18px;height:18px"> يُحتسب ضمن تكلفة الإيراد</label>
+ <div class="modal-foot"><button class="btn btn-primary" onclick="glSaveAcc()">حفظ الحساب</button>
+  <button class="btn btn-ghost" onclick="closeModal('glAccModal')">إلغاء</button></div></div>`);
+
+window.glNew=function(){
+ $('glnDate').value=D(0); $('glnDesc').value='';
+ $('glnRows').innerHTML=''; glAddRow(); glAddRow(); glCalc();
+ openModal('glEntryModal');
+};
+window.glAddRow=function(){
+ const tr=document.createElement('tr');
+ tr.innerHTML=`<td><select class="gln-acc">${glAcc.map(a=>`<option value="${a.code}">${a.code} — ${a.name}</option>`).join('')}</select></td>
+  <td><input class="gln-dr" type="number" step="0.01" min="0" value="0" style="width:110px"></td>
+  <td><input class="gln-cr" type="number" step="0.01" min="0" value="0" style="width:110px"></td>
+  <td><input class="gln-memo" placeholder="اختياري" style="width:130px"></td>
+  <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove();glCalc()">✕</button></td>`;
+ $('glnRows').appendChild(tr);
+ tr.querySelectorAll('.gln-dr,.gln-cr').forEach(i=>i.oninput=glCalc);
+};
+window.glCalc=function(){
+ let dr=0,cr=0;
+ $('glnRows').querySelectorAll('tr').forEach(t=>{
+  dr+=+t.querySelector('.gln-dr').value||0; cr+=+t.querySelector('.gln-cr').value||0; });
+ const ok=Math.abs(dr-cr)<0.005 && dr>0;
+ $('glnBalance').innerHTML=`مدين: ${M(dr)} · دائن: ${M(cr)} — <span class="tag ${ok?'ok':'danger'}">${ok?'✅ متوازن':'⚠️ غير متوازن'}</span>`;
+ $('glnSave').disabled=!ok;
+};
+window.glSave=async function(){
+ const date=$('glnDate').value, desc=$('glnDesc').value.trim();
+ if(!date){toast('حدد تاريخ القيد');return}
+ if(!desc){toast('البيان إلزامي');return}
+ const rows=[...$('glnRows').querySelectorAll('tr')].map(t=>({
+  code:+t.querySelector('.gln-acc').value,
+  dr:+t.querySelector('.gln-dr').value||0,
+  cr:+t.querySelector('.gln-cr').value||0,
+  memo:t.querySelector('.gln-memo').value||null,
+ })).filter(r=>r.dr>0||r.cr>0);
+ if(rows.length<2){toast('القيد يحتاج سطرين على الأقل (مدين ودائن)');return}
+ if(rows.some(r=>r.dr>0&&r.cr>0)){toast('السطر الواحد إمّا مدين أو دائن — لا الاثنين معاً');return}
+ const dr=rows.reduce((s,r)=>s+r.dr,0), cr=rows.reduce((s,r)=>s+r.cr,0);
+ if(Math.abs(dr-cr)>=0.005){toast('القيد غير متوازن');return}
+ $('glnSave').disabled=true;
+ let jid=null;
+ try{
+  const {data:j,error}=await sb.from('gl_journals')
+   .insert({entry_date:date,description:desc,created_by:(me&&me.id)||null}).select().maybeSingle();
+  if(error)throw error;
+  jid=j.id;
+  const lines=rows.map((r,i)=>({journal_id:j.id,line_no:i+1,account_code:r.code,debit:r.dr,credit:r.cr,memo:r.memo}));
+  const {error:e2}=await sb.from('gl_journal_lines').insert(lines);
+  if(e2)throw e2;
+  closeModal('glEntryModal');
+  await glLoad(); glDraw();
+  toast('✅ تم حفظ القيد '+j.entry_no);
+ }catch(e){
+  if(jid){try{await sb.from('gl_journals').delete().eq('id',jid)}catch(x){}}
+  err(e);
+ }
+ $('glnSave').disabled=false;
+};
+window.glView=function(id){
+ const j=glJrn.find(x=>x.id===id); if(!j)return;
+ const ls=jrnLines(id);
+ $('glViewBody').innerHTML=`<div class="modal-head"><h3>القيد ${j.entry_no}</h3><button class="x-btn" onclick="closeModal('glViewModal')">✕</button></div>
+  <div class="info-grid" style="margin-bottom:14px">
+   <div class="info-item"><div class="k">التاريخ</div><div class="v">${fmt(j.entry_date)}</div></div>
+   <div class="info-item"><div class="k">البيان</div><div class="v">${j.description}</div></div>
+   <div class="info-item"><div class="k">الحالة</div><div class="v">${j.is_locked?'🔒 مقفل نهائياً':'📝 مسودة'}</div></div>
+  </div>
+  ${T(['الحساب','مدين','دائن','ملاحظة'],ls.map(l=>{const a=accByCode(l.account_code);
+    return `<tr><td>${a.code} — ${a.name||'—'}</td><td>${+l.debit?M(l.debit):'—'}</td><td>${+l.credit?M(l.credit):'—'}</td><td>${l.memo||'—'}</td></tr>`}).join('')
+   +`<tr style="background:var(--pine-soft);font-weight:800"><td>الإجمالي</td><td>${M(ls.reduce((s,l)=>s+(+l.debit||0),0))}</td><td>${M(ls.reduce((s,l)=>s+(+l.credit||0),0))}</td><td></td></tr>`)}`;
+ openModal('glViewModal');
+};
+window.glLock=async function(id){
+ if(!(await showConfirm('قفل هذا القيد نهائياً؟ لن يمكن تعديله أو حذفه بعد القفل.')))return;
+ const {error}=await sb.from('gl_journals').update({is_locked:true}).eq('id',id);
+ if(error){err(error);return}
+ await glLoad(); glDraw(); toast('تم قفل القيد نهائياً');
+};
+window.glDel=async function(id,no){
+ if(!(await showConfirm(`حذف القيد ${no} نهائياً بكل سطوره؟ لا يمكن التراجع.`)))return;
+ const {error}=await sb.from('gl_journals').delete().eq('id',id);
+ if(error){err(error);return}
+ await glLoad(); glDraw(); toast('تم حذف القيد');
+};
+window.glNewAcc=function(){
+ ['glaCode','glaName'].forEach(i=>$(i).value=''); $('glaContra').checked=false; $('glaCogs').checked=false;
+ openModal('glAccModal');
+};
+window.glSaveAcc=async function(){
+ const code=+$('glaCode').value, name=$('glaName').value.trim();
+ if(!code){toast('أدخل رمز الحساب');return}
+ if(!name){toast('أدخل اسم الحساب');return}
+ if(glAcc.some(a=>a.code===code)){toast('هذا الرمز مستخدم مسبقاً');return}
+ const {error}=await sb.from('gl_accounts').insert({code,name,type:$('glaType').value,
+  normal_side:$('glaSide').value,is_contra:$('glaContra').checked,is_cogs:$('glaCogs').checked});
+ if(error){err(error);return}
+ closeModal('glAccModal'); await glLoad(); glDraw(); toast('تمت إضافة الحساب');
+};
+
+/* ---------- 5) الطباعة ---------- */
+function glPrint(title,inner){
+ const w=window.open('','_blank');
+ w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${title}</title>
+ <style>body{font-family:Tahoma,Arial;padding:30px;color:#17251F}h1{color:#143087;font-size:21px;border-bottom:3px solid #143087;padding-bottom:10px}
+ .meta{color:#6B7A73;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px}
+ th{background:#E7ECFB;color:#143087;padding:9px;border:1px solid #ccd;text-align:right}
+ td{padding:8px 9px;border:1px solid #dde;text-align:right}h2{color:#143087;font-size:16px;margin-top:18px}
+ @media print{@page{size:A4;margin:15mm}}</style></head><body>
+ <h1>هوم هيلرز — ${title}</h1>
+ <div class="meta">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-SA-u-nu-latn')} — أصدره: ${(me&&me.name)||''}</div>
+ ${inner}<script>window.onload=()=>window.print()<\/script></body></html>`);
+ w.document.close();
+}
+window.glPrintTB=function(){
+ const rows=glTBRows();
+ const tdr=rows.reduce((s,r)=>s+r.x.dr,0), tcr=rows.reduce((s,r)=>s+r.x.cr,0);
+ glPrint('ميزان المراجعة',`<table><tr><th>الرمز</th><th>الحساب</th><th>الفئة</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
+  ${rows.map(r=>`<tr><td>${r.a.code}</td><td>${r.a.name}</td><td>${TYPE_AR[r.a.type]}</td><td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td>${M(SIGN[r.a.type]*(r.x.dr-r.x.cr))}</td></tr>`).join('')}
+  <tr><th colspan="3">الإجمالي</th><th>${M(tdr)}</th><th>${M(tcr)}</th><th>—</th></tr></table>`);
+};
+window.glPrintFS=function(){
+ const rev=groupTotal('Revenue'), exp=groupTotal('Expense');
+ const assets=groupTotal('Asset'), liab=groupTotal('Liability'), eq=groupTotal('Equity'), profit=rev-exp;
+ glPrint('القوائم المالية',`
+  <h2>قائمة الدخل</h2><table>
+   <tr><td>إجمالي الإيرادات</td><td>${M(rev)}</td></tr>
+   <tr><td>إجمالي المصروفات</td><td>${M(exp)}</td></tr>
+   <tr><th>${profit>=0?'صافي الربح':'صافي الخسارة'}</th><th>${M(profit)}</th></tr></table>
+  <h2>قائمة المركز المالي</h2><table>
+   <tr><td>إجمالي الأصول</td><td>${M(assets)}</td></tr>
+   <tr><td>إجمالي الخصوم</td><td>${M(liab)}</td></tr>
+   <tr><td>حقوق الملكية (شاملة ربح الفترة)</td><td>${M(eq+profit)}</td></tr>
+   <tr><th>إجمالي الخصوم وحقوق الملكية</th><th>${M(liab+eq+profit)}</th></tr></table>`);
+};
+
+/* ---------- 6) الحقن في لوحة الإدارة ---------- */
+(function injectAdmin(){
+ const anchor=document.getElementById('nav_paymentFiles');
+ if(anchor&&!document.getElementById('nav_accounting')){
+  const btn=document.createElement('button');
+  btn.className='nav-item'; btn.id='nav_accounting'; btn.dataset.page='accounting';
+  btn.innerHTML='<span class="ic">📒</span> المحاسبة';
+  btn.addEventListener('click',()=>{ go('accounting');
+   glMount(document.getElementById('glHostAdmin'),hasPerm('accounting','full'));
+   if(window.toggleSidebar)toggleSidebar(false); });
+  anchor.parentNode.insertBefore(btn,anchor.nextSibling);
+ }
+ const main=document.querySelector('#app main');
+ if(main&&!document.getElementById('page-accounting')){
+  const s=document.createElement('section');
+  s.className='page'; s.id='page-accounting';
+  s.innerHTML='<div class="page-head"><div><h1>المحاسبة</h1><p>دفتر الأستاذ العام — القيد المزدوج، ميزان المراجعة، والقوائم المالية</p></div></div><div id="glHostAdmin"></div>';
+  main.appendChild(s);
+ }
+})();
+
+/* ---------- 7) الربط ببوابة الموظف (المحاسب) ---------- */
+if(typeof window.renderExtraModuleBody==='function'){
+ const _orig=window.renderExtraModuleBody;
+ window.renderExtraModuleBody=function(key,full){
+  if(key==='accounting'){ glMount(document.getElementById('extraModuleBody'),!!full); return }
+  return _orig.apply(this,arguments);
+ };
+}
+})();
+</script>
