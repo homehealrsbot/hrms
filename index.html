@@ -5273,3 +5273,221 @@ if(typeof window.renderExtraModuleBody==='function'){
 }
 })();
 </script>
+<!-- ============================================================
+     مؤشرات الأداء المحاسبية (KPIs) — لوحة تحكم مدير النظام
+     تُلصق بعد وحدة المحاسبة مباشرة في آخر ملف النظام.
+     تعتمد على Chart.js المحمّل أصلاً وعلى جداول gl_* .
+     ============================================================ -->
+<script>
+(function(){
+"use strict";
+
+/* ---------- الحالة والتحميل ---------- */
+let kAcc=[], kJrn=[], kLn=[], kAt=0, kBusy=false;
+const KCUR='ر.س';
+const SIGN={Asset:1,Expense:1,Liability:-1,Equity:-1,Revenue:-1};
+const nf=n=>(+n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+const pf=n=>(isFinite(n)?n.toFixed(1):'0.0')+'%';
+const CH={pine:'#143087',sand:'#62A0F6',ok:'#2E8B62',danger:'#C34A3C',info:'#3A6EA5',gray:'#93A69D'};
+const PAL=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
+
+async function kLoad(force){
+ if(kBusy)return;
+ if(!force && Date.now()-kAt<60000 && kAcc.length)return;   /* تحديث كل دقيقة كحد أقصى */
+ kBusy=true;
+ try{
+  const [A,J,L]=await Promise.all([
+   sb.from('gl_accounts').select('code,name,type,normal_side,is_contra,is_cogs'),
+   sb.from('gl_journals').select('id,entry_date'),
+   sb.from('gl_journal_lines').select('journal_id,account_code,debit,credit'),
+  ]);
+  if(A.error||J.error||L.error)throw (A.error||J.error||L.error);
+  kAcc=A.data||[]; kJrn=J.data||[]; kLn=L.data||[]; kAt=Date.now();
+ }finally{ kBusy=false }
+}
+
+/* ---------- أدوات الحساب ---------- */
+const kAccOf=c=>kAcc.find(a=>a.code===+c)||{};
+const kDateOf=jid=>{const j=kJrn.find(x=>x.id===jid);return j?String(j.entry_date):''};
+
+/* رصيد الفئة بالاتجاه الطبيعي — يعالج الحسابات العكسية تلقائياً */
+function kGroup(type,fromKey,toKey){
+ let t=0;
+ kLn.forEach(l=>{
+  const a=kAccOf(l.account_code); if(a.type!==type)return;
+  const d=kDateOf(l.journal_id).slice(0,7);
+  if(fromKey&&d<fromKey)return; if(toKey&&d>toKey)return;
+  t+=SIGN[type]*((+l.debit||0)-(+l.credit||0));
+ });
+ return t;
+}
+function kAccTotal(pred,fromKey,toKey){
+ let t=0;
+ kLn.forEach(l=>{
+  const a=kAccOf(l.account_code); if(!a.type||!pred(a))return;
+  const d=kDateOf(l.journal_id).slice(0,7);
+  if(fromKey&&d<fromKey)return; if(toKey&&d>toKey)return;
+  t+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0));
+ });
+ return t;
+}
+function kMonths(n){
+ const out=[];
+ for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+  out.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}
+ return out;
+}
+
+/* ---------- بناء القسم ---------- */
+function kInject(){
+ if(document.getElementById('glKpiSection'))return true;
+ const anchor=document.getElementById('dashFinanceSection');
+ if(!anchor)return false;
+ const s=document.createElement('div');
+ s.id='glKpiSection'; s.style.display='none';
+ s.innerHTML=`
+  <div class="page-head" style="margin-top:6px">
+   <div><h1 style="font-size:20px">📒 المؤشرات المحاسبية</h1><p>مبنية على دفتر الأستاذ العام — قيود فعلية لا تقديرات</p></div>
+   <button class="btn btn-ghost btn-sm" onclick="glKpiRefresh()">🔄 تحديث البيانات</button>
+  </div>
+  <div id="glKpiEmpty" class="card" style="display:none;text-align:center;padding:40px 20px">
+   <div style="font-size:46px;margin-bottom:10px">📒</div>
+   <h3 style="margin-bottom:8px">لا توجد قيود محاسبية بعد</h3>
+   <p style="color:var(--muted);font-size:13.5px">سجّل أول قيد من تبويب «المحاسبة» وستظهر المؤشرات هنا تلقائياً</p>
+  </div>
+  <div id="glKpiContent">
+   <div class="stats" id="glKpiProfit"></div>
+   <div class="dash-charts-grid">
+     <div class="card"><h3>📈 الإيرادات مقابل المصروفات وصافي الربح — آخر 6 أشهر</h3><div class="chart-box"><canvas id="glChartPL"></canvas></div></div>
+     <div class="card"><h3>🥧 تركيبة المصروفات</h3><div class="chart-box"><canvas id="glChartExp"></canvas></div></div>
+     <div class="card"><h3>💧 اتجاه النقدية — الرصيد الختامي لكل شهر</h3><div class="chart-box"><canvas id="glChartCash"></canvas></div></div>
+     <div class="card"><h3>🏛 المركز المالي</h3><div class="chart-box"><canvas id="glChartBS"></canvas></div></div>
+   </div>
+   <div class="stats" id="glKpiPosition"></div>
+   <div class="card"><h3>🔝 أكبر بنود المصروفات</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>الحساب</th><th>المبلغ</th><th>النسبة من إجمالي المصروفات</th></tr></thead>
+    <tbody id="glTopExpTbody"></tbody></table></div></div>
+  </div>`;
+ anchor.parentNode.insertBefore(s,anchor.nextSibling);
+ return true;
+}
+
+/* ---------- الرسم ---------- */
+function kRender(){
+ const sec=document.getElementById('glKpiSection'); if(!sec)return;
+ const visible=(typeof hasPerm==='function')&&hasPerm('accounting','view');
+ sec.style.display=visible?'block':'none';
+ if(!visible)return;
+
+ const has=kLn.length>0;
+ document.getElementById('glKpiEmpty').style.display=has?'none':'block';
+ document.getElementById('glKpiContent').style.display=has?'block':'none';
+ if(!has)return;
+
+ /* ===== 1) الربحية ===== */
+ const rev=kGroup('Revenue'), exp=kGroup('Expense');
+ const cogs=kAccTotal(a=>a.is_cogs);
+ const gross=rev-cogs, net=rev-exp;
+ const gm=rev?(gross/rev*100):0, nm=rev?(net/rev*100):0;
+ const P=[
+  {n:nf(rev),l:'إجمالي الإيرادات',k:'ok'},
+  {n:nf(cogs),l:'تكلفة الإيراد',k:'sand'},
+  {n:nf(gross),l:'مجمل الربح',k:'info'},
+  {n:nf(net),l:net>=0?'صافي الربح':'صافي الخسارة',k:net>=0?'ok':'danger'},
+  {n:pf(gm),l:'هامش مجمل الربح',k:'info'},
+  {n:pf(nm),l:'هامش صافي الربح',k:nm>=0?'ok':'danger'},
+ ];
+ document.getElementById('glKpiProfit').innerHTML=P.map(s=>
+  `<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>9?'19px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+
+ /* ===== شارت 1: الإيراد/المصروف/الربح شهرياً ===== */
+ const ms=kMonths(6);
+ const mRev=ms.map(m=>kGroup('Revenue',m.key,m.key));
+ const mExp=ms.map(m=>kGroup('Expense',m.key,m.key));
+ const mNet=ms.map((m,i)=>mRev[i]-mExp[i]);
+ drawChart('glChartPL',{data:{labels:ms.map(m=>m.label),datasets:[
+   {type:'bar',label:'الإيرادات',data:mRev,backgroundColor:CH.ok,borderRadius:6,maxBarThickness:34,order:2},
+   {type:'bar',label:'المصروفات',data:mExp,backgroundColor:CH.danger,borderRadius:6,maxBarThickness:34,order:2},
+   {type:'line',label:'صافي الربح',data:mNet,borderColor:CH.pine,backgroundColor:'rgba(20,48,135,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.pine,order:1},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:12,boxWidth:14}}},
+   scales:{y:{beginAtZero:true,ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
+
+ /* ===== شارت 2 + جدول: تركيبة المصروفات ===== */
+ const expRows=kAcc.filter(a=>a.type==='Expense').map(a=>({
+   name:a.name, v:kAccTotal(x=>x.code===a.code)
+  })).filter(r=>r.v>0.5).sort((a,b)=>b.v-a.v);
+ const top=expRows.slice(0,7);
+ const others=expRows.slice(7).reduce((s,r)=>s+r.v,0);
+ const eLabels=top.map(r=>r.name).concat(others>0?['حسابات أخرى']:[]);
+ const eData=top.map(r=>r.v).concat(others>0?[others]:[]);
+ drawChart('glChartExp',{type:'doughnut',
+  data:{labels:eLabels,datasets:[{data:eData,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'56%',
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria',size:11},padding:9,boxWidth:12}},
+    tooltip:{callbacks:{label:c=>` ${c.label}: ${nf(c.parsed)} ${KCUR} (${exp?pf(c.parsed/exp*100):'0%'})`}}}}});
+ document.getElementById('glTopExpTbody').innerHTML=expRows.length
+  ? expRows.slice(0,10).map(r=>`<tr><td><b>${r.name}</b></td><td>${nf(r.v)} ${KCUR}</td>
+     <td><div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px">
+       <div style="height:100%;width:${exp?Math.min(100,r.v/exp*100):0}%;background:${CH.pine}"></div></div>
+      <span style="font-size:12px;color:var(--muted);white-space:nowrap">${exp?pf(r.v/exp*100):'—'}</span></div></td></tr>`).join('')
+  : '<tr><td colspan="3" class="empty">لا توجد مصروفات مسجّلة</td></tr>';
+
+ /* ===== شارت 3: اتجاه النقدية ===== */
+ const cashPred=a=>a.type==='Asset'&&/نقد|بنك|صندوق|كاش/.test(a.name||'');
+ const cashSeries=ms.map(m=>kAccTotal(cashPred,null,m.key));   /* تراكمي حتى نهاية كل شهر */
+ drawChart('glChartCash',{type:'line',
+  data:{labels:ms.map(m=>m.label),datasets:[{label:'النقدية',data:cashSeries,
+   borderColor:CH.sand,backgroundColor:'rgba(98,160,246,.15)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.sand}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+   tooltip:{callbacks:{label:c=>` ${nf(c.parsed.y)} ${KCUR}`}}},
+   scales:{y:{ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
+
+ /* ===== شارت 4 + بطاقات: المركز المالي ===== */
+ const assets=kGroup('Asset'), liab=kGroup('Liability'), eq=kGroup('Equity')+net;
+ drawChart('glChartBS',{type:'bar',
+  data:{labels:['الأصول','الخصوم وحقوق الملكية'],datasets:[
+   {label:'الأصول',data:[assets,0],backgroundColor:CH.pine,borderRadius:6,maxBarThickness:70},
+   {label:'الخصوم',data:[0,liab],backgroundColor:CH.danger,borderRadius:6,maxBarThickness:70},
+   {label:'حقوق الملكية',data:[0,eq],backgroundColor:CH.ok,borderRadius:6,maxBarThickness:70},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:10,boxWidth:13}},
+    tooltip:{callbacks:{label:c=>c.parsed.y?` ${c.dataset.label}: ${nf(c.parsed.y)} ${KCUR}`:null}}},
+   scales:{x:{stacked:true,ticks:{font:{family:'Alexandria'}}},
+    y:{stacked:true,beginAtZero:true,ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}}}}});
+
+ const cash=kAccTotal(cashPred);
+ const recv=kAccTotal(a=>a.type==='Asset'&&/عملاء|ذمم|مستحق/.test(a.name||''));
+ const balanced=Math.abs(assets-(liab+eq))<0.5;
+ const Q=[
+  {n:nf(cash),l:'النقدية والأرصدة البنكية',k:cash>=0?'ok':'danger'},
+  {n:nf(recv),l:'الذمم المدينة (مستحق للشركة)',k:'info'},
+  {n:nf(assets),l:'إجمالي الأصول',k:''},
+  {n:nf(liab),l:'إجمالي الخصوم',k:'sand'},
+  {n:balanced?'✅ متوازنة':'⚠️ غير متوازنة',l:'حالة الميزانية',k:balanced?'ok':'danger'},
+ ];
+ document.getElementById('glKpiPosition').innerHTML=Q.map(s=>
+  `<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>9?'18px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+}
+
+/* ---------- التشغيل والربط ---------- */
+window.glKpiRefresh=function(){
+ kLoad(true).then(kRender).catch(e=>{ if(typeof toast==='function')toast('تعذّر تحديث المؤشرات المحاسبية') });
+};
+function kTick(){
+ if(!kInject())return;
+ if(!(typeof me!=='undefined'&&me&&me.role==='admin'))return;
+ if(!(typeof hasPerm==='function'&&hasPerm('accounting','view'))){
+  const s=document.getElementById('glKpiSection'); if(s)s.style.display='none'; return;
+ }
+ kLoad(false).then(kRender).catch(()=>{});
+}
+if(typeof window.renderDashboard==='function'){
+ const _orig=window.renderDashboard;
+ window.renderDashboard=function(){ const r=_orig.apply(this,arguments); try{kTick()}catch(e){console.error('KPI',e)} return r };
+}
+})();
+</script>
