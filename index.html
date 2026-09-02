@@ -1520,12 +1520,12 @@ tbody tr:hover{background:#FAFCFB}
 <!-- تأكيد الحذف الموحّد -->
 <div class="modal-back" id="confirmModal"><div class="modal sm">
   <div style="text-align:center;padding:6px 0 4px">
-    <div style="font-size:42px;line-height:1">🗑️</div>
-    <h3 style="margin:12px 0 6px">تأكيد الحذف</h3>
+    <div id="confirmModalIcon" style="font-size:42px;line-height:1">🗑️</div>
+    <h3 id="confirmModalTitle" style="margin:12px 0 6px">تأكيد الحذف</h3>
     <p id="confirmModalMsg" style="color:var(--muted);font-size:14px"></p>
   </div>
   <div class="modal-foot" style="justify-content:center">
-    <button class="btn btn-danger" onclick="resolveConfirm(true)">نعم، احذف نهائياً</button>
+    <button class="btn btn-danger" id="confirmModalOk" onclick="resolveConfirm(true)">نعم، احذف نهائياً</button>
     <button class="btn btn-ghost" onclick="resolveConfirm(false)">إلغاء</button>
   </div>
 </div></div>
@@ -1793,8 +1793,16 @@ async function registerFile(file,category,source,path){
  await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
 }
 let _confirmResolve=null;
-function showConfirm(message){
+function showConfirm(message,opts){
+ opts=opts||{};
  $('confirmModalMsg').textContent=message;
+ if($('confirmModalIcon'))  $('confirmModalIcon').textContent = opts.icon  || '🗑️';
+ if($('confirmModalTitle')) $('confirmModalTitle').textContent= opts.title || 'تأكيد الحذف';
+ const ok=$('confirmModalOk');
+ if(ok){
+  ok.textContent = opts.okText || 'نعم، احذف نهائياً';
+  ok.className   = 'btn ' + (opts.okClass || 'btn-danger');
+ }
  openModal('confirmModal');
  return new Promise(res=>{_confirmResolve=res});
 }
@@ -2503,7 +2511,7 @@ async function addOfficeLocationManual(){
  const lat=+$('newLocLat').value,lng=+$('newLocLng').value;
  if(!name){toast('اكتب اسماً للموقع');return}
  if(!lat||!lng||lat<-90||lat>90||lng<-180||lng>180){toast('أدخل خط عرض وخط طول صحيحين (مثال: 21.5433, 39.1728)');return}
- if(!(await showConfirm(`إضافة موقع "${name}" بالإحداثيات (${lat}, ${lng})؟`)))return;
+ if(!(await showConfirm(`إضافة موقع "${name}" بالإحداثيات (${lat}, ${lng})؟`,{icon:'📍',title:'تأكيد إضافة الموقع',okText:'نعم، أضف الموقع',okClass:'btn-primary'})))return;
  const radius=+$('newLocRadiusManual').value||150;
  const {error}=await sb.from('office_locations').insert({name,lat,lng,radius_meters:radius,active:true,created_by:me.name});
  if(error){err(error);return}
@@ -2513,7 +2521,7 @@ async function addOfficeLocationManual(){
 async function addOfficeLocationFromHere(){
  const name=$('newLocName').value.trim();
  if(!name){toast('اكتب اسماً للموقع (مثال: الفرع الرئيسي)');return}
- if(!(await showConfirm(`سيتم تسجيل موقعك الحالي كموقع "${name}". تأكد أنك واقف فعلياً هناك الآن. متابعة؟`)))return;
+ if(!(await showConfirm(`سيتم تسجيل موقعك الحالي كموقع "${name}". تأكد أنك واقف فعلياً هناك الآن. متابعة؟`,{icon:'📍',title:'تأكيد تسجيل الموقع',okText:'نعم، سجّل الموقع',okClass:'btn-primary'})))return;
  try{
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
@@ -3008,7 +3016,7 @@ function showFormSubs(formId){
  openModal('empProfileModal');
 }
 async function reopenFormSub(subId,formId){
- if(!(await showConfirm('إعادة فتح هذا الطلب من جديد بنفس البيانات المقدَّمة؟ سيمر مرة أخرى على مسار الاعتماد بدءاً من رئيس القسم.')))return;
+ if(!(await showConfirm('إعادة فتح هذا الطلب من جديد بنفس البيانات المقدَّمة؟ سيمر مرة أخرى على مسار الاعتماد بدءاً من رئيس القسم.',{icon:'🔄',title:'تأكيد إعادة فتح الطلب',okText:'نعم، أعد فتحه',okClass:'btn-primary'})))return;
  const {error}=await sb.from('form_submissions').update({status:LV_P1,dept_head:null}).eq('id',subId);
  if(error){err(error);return}
  await refresh();toast('تمت إعادة فتح الطلب — سيمر على مسار الاعتماد من جديد');
@@ -3188,7 +3196,7 @@ async function sendMonthlyReportNow(testOnly){
  if(customFrom&&customTo&&customTo<customFrom){toast('تاريخ النهاية لا يمكن أن يسبق تاريخ البداية');return}
  const periodTxt=customFrom&&customTo?`من ${fmt(customFrom)} إلى ${fmt(customTo)}`:'للشهر الميلادي الماضي';
  if(!testOnly){
-  if(!(await showConfirm(only?`إرسال التقرير ${periodTxt} لكل موظف اسمه يحتوي "${only}"؟`:`إرسال التقرير ${periodTxt} لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.`)))return;
+  if(!(await showConfirm(only?`إرسال التقرير ${periodTxt} لكل موظف اسمه يحتوي "${only}"؟`:`إرسال التقرير ${periodTxt} لكل الموظفين النشطين الآن؟ هذا يرسل بريداً فعلياً لكل واحد فيهم.`,{icon:'📧',title:'تأكيد إرسال التقارير',okText:'نعم، أرسل',okClass:'btn-primary'})))return;
  }
  $('reportSendStatus').innerHTML='<span class="tag sand">⏳ جاري الإرسال... قد يستغرق دقيقة أو أكثر حسب عدد الموظفين</span>';
  try{
@@ -3640,7 +3648,7 @@ async function epAddPayment(){
  const amt=+$('eppayAmount').value;
  if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
  if(!$('eppayReason').value.trim()){toast('سبب الطلب إلزامي');return}
- if(!(await showConfirm('هل تريد إرسال طلب الصرف؟ سيمر على رئيس القسم ثم المحاسب.')))return;
+ if(!(await showConfirm('هل تريد إرسال طلب الصرف؟ سيمر على رئيس القسم ثم المحاسب.',{icon:'📤',title:'تأكيد إرسال الطلب',okText:'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
  try{
   let path=null;const f=takeStaged('paymentReceipt','eppayFileBox','📎 إرفاق إيصال/مستند داعم (اختياري)');
   if(f){toast('جاري رفع المرفق...');path=await uploadToStorage(f,'employees/'+currentEmp.id+'/payments')}
@@ -3818,7 +3826,7 @@ async function submitDeduction(){
  const amt=+$('dedAmount').value;
  if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
  if(!$('dedReason').value.trim()){toast('سبب الخصم إلزامي');return}
- if(!(await showConfirm('هل تريد إرسال طلب الخصم؟ سيمر على مراجعة الموارد البشرية ثم الاعتماد المالي النهائي.')))return;
+ if(!(await showConfirm('هل تريد إرسال طلب الخصم؟ سيمر على مراجعة الموارد البشرية ثم الاعتماد المالي النهائي.',{icon:'📤',title:'تأكيد إرسال الطلب',okText:'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
  const {error}=await sb.from('deduction_requests').insert({
   employee_id:$('dedEmp').value,amount:amt,reason:$('dedReason').value,
   requested_by_name:currentEmp.name,requested_by_role:currentEmp.role,status:DED_P1});
@@ -3906,7 +3914,7 @@ async function submitWarning(){
  if(!$('wrnEmp').value){toast('اختر الموظف');return}
  if(!$('wrnReason').value.trim()){toast('سبب الإنذار إلزامي');return}
  const empName=(empById[$('wrnEmp').value]||{}).name||'الموظف';
- if(!(await showConfirm(`هل تريد إرسال طلب "${$('wrnLevel').value}" بحق ${empName}؟ هذا إجراء تأديبي جدي وسيمر على مراجعة رسمية.`)))return;
+ if(!(await showConfirm(`هل تريد إرسال طلب "${$('wrnLevel').value}" بحق ${empName}؟ هذا إجراء تأديبي جدي وسيمر على مراجعة رسمية.`,{icon:'⚠️',title:'تأكيد الإجراء التأديبي',okText:'نعم، أرسل الطلب',okClass:'btn-sand'})))return;
  try{
   let attUrl=null;const f=takeStaged('warning','wrnFileBox','📎 إرفاق دليل (اختياري)');
   if(f){toast('جاري رفع المرفق...');attUrl=await uploadToStorage(f,'employees/'+$('wrnEmp').value+'/warnings')}
@@ -3923,13 +3931,13 @@ async function hrDecideWarning(id,approve){
  await refresh();toast(approve?'تمت المراجعة ورُفع الطلب للاعتماد النهائي':'تم رفض طلب الإنذار');
 }
 async function finalDecideWarning(id,approve){
- if(approve&&!(await showConfirm('هل تريد اعتماد هذا الإنذار نهائياً؟ سيصبح رسمياً فوراً ويُخطر الموظف لإقراره بالعلم.')))return;
+ if(approve&&!(await showConfirm('هل تريد اعتماد هذا الإنذار نهائياً؟ سيصبح رسمياً فوراً ويُخطر الموظف لإقراره بالعلم.',{icon:'⚠️',title:'تأكيد اعتماد الإنذار',okText:'نعم، اعتمد الإنذار',okClass:'btn-sand'})))return;
  const {error}=await sb.from('warnings').update({status:approve?'معتمد':'مرفوض',final_approver:me.name}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم اعتماد الإنذار رسمياً — سيُخطر الموظف لإقراره':'تم رفض طلب الإنذار');
 }
 async function acknowledgeWarning(id){
- if(!(await showConfirm('بالضغط على "تأكيد" أنت تقر رسمياً بأنك اطّلعت على هذا الإنذار. هل تريد المتابعة؟')))return;
+ if(!(await showConfirm('بالضغط على "تأكيد" أنت تقر رسمياً بأنك اطّلعت على هذا الإنذار. هل تريد المتابعة؟',{icon:'✍️',title:'إقرار بالعلم',okText:'نعم، أقرّ بالاطلاع',okClass:'btn-primary'})))return;
  const {error}=await sb.from('warnings').update({acknowledged_by_employee:true,acknowledged_at:new Date().toISOString()}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast('تم تسجيل إقرارك بالعلم');
@@ -4215,7 +4223,7 @@ async function extraAddLeave(){
  const empName=(empById[$('xlvEmp').value]||{}).name||'';
  const balErr=checkLeaveBalance(empName,$('xlvType').value,days);
  if(balErr){toast(balErr);return}
- if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empName}؟`)))return;
+ if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empName}؟`,{icon:'🌴',title:'تأكيد إضافة الإجازة',okText:'نعم، أضف الإجازة',okClass:'btn-primary'})))return;
  const {error}=await sb.from('leaves').insert({employee_id:$('xlvEmp').value,leave_type:$('xlvType').value,start_date:$('xlvStart').value,end_date:$('xlvEnd').value,days,reason:$('xlvReason').value,status:LV_P1});
  if(error){err(error);return}
  closeModal('extraAddLeaveModal');await refresh();toast('تم حفظ طلب الإجازة');
@@ -4456,7 +4464,7 @@ async function epAddLeave(){
  const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1,editingLeaveId);
  if(balErr){toast(balErr);return}
  const confirmMsg=editingLeaveId?'هل تريد حفظ التعديل على طلب الإجازة؟':'هل تريد إرسال طلب الإجازة؟';
- if(!(await showConfirm(confirmMsg)))return;
+ if(!(await showConfirm(confirmMsg,{icon:'🌴',title:editingLeaveId?'تأكيد حفظ التعديل':'تأكيد إرسال الطلب',okText:editingLeaveId?'نعم، احفظ التعديل':'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
  try{
   const fs2=takeStaged('leaveEmpSick','eplSickBox','📎 إرفاق التقرير الطبي (إلزامي للإجازة المرضية)');
   let sickPath=null;
@@ -4523,7 +4531,7 @@ function epEditPermit(id){
 async function epAddPermit(){
  if(!$('eppDate').value){toast('حدد تاريخ الاستئذان');return}
  const confirmMsg=editingPermitId?'هل تريد حفظ التعديل على طلب الاستئذان؟':'هل تريد إرسال طلب الاستئذان؟';
- if(!(await showConfirm(confirmMsg)))return;
+ if(!(await showConfirm(confirmMsg,{icon:'🚪',title:editingPermitId?'تأكيد حفظ التعديل':'تأكيد إرسال الطلب',okText:editingPermitId?'نعم، احفظ التعديل':'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
  const payload={permit_date:$('eppDate').value,permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value};
  let error;
  if(editingPermitId){
@@ -5180,7 +5188,7 @@ window.glView=function(id){
  openModal('glViewModal');
 };
 window.glLock=async function(id){
- if(!(await showConfirm('قفل هذا القيد نهائياً؟ لن يمكن تعديله أو حذفه بعد القفل.')))return;
+ if(!(await showConfirm('قفل هذا القيد نهائياً؟ لن يمكن تعديله أو حذفه بعد القفل.',{icon:'🔒',title:'تأكيد القفل النهائي',okText:'نعم، اقفل القيد',okClass:'btn-sand'})))return;
  const {error}=await sb.from('gl_journals').update({is_locked:true}).eq('id',id);
  if(error){err(error);return}
  await glLoad(); glDraw(); toast('تم قفل القيد نهائياً');
@@ -5837,7 +5845,7 @@ async function prepSend(host,full){
  if(prepDirty){ toast('احفظ التحضير أولاً قبل الإرسال'); return }
  const inc=prepItems.filter(i=>i.included).length;
  if(!inc){ toast('حدّد موظفاً واحداً مستحقاً على الأقل'); return }
- if(!(await showConfirm(`إرسال تحضير ${AR_MONTHS[pM-1]} ${pY} للمحاسب؟\nعدد المستحقين: ${inc}\nلن تتمكني من التعديل بعد الإرسال.`)))return;
+ if(!(await showConfirm(`إرسال تحضير ${AR_MONTHS[pM-1]} ${pY} للمحاسب؟\nعدد المستحقين: ${inc}\nلن تتمكني من التعديل بعد الإرسال.`,{icon:'📤',title:'تأكيد الإرسال للمحاسب',okText:'نعم، أرسل للمحاسب',okClass:'btn-primary'})))return;
  const {error}=await sb.from('payroll_prep_runs')
    .update({status:'قيد المراجعة',sent_at:new Date().toISOString()}).eq('id',prepRun.id);
  if(error){err(error);return}
@@ -5896,7 +5904,7 @@ async function acctPanel(isAdmin){
  }
 }
 window.acctGenerate=async function(m,y,isAdmin){
- if(!(await showConfirm(`توليد كشف ${AR_MONTHS[m-1]} ${y} من التحضير؟\nستُضاف رواتب الموظفين المستحقين مع خصومات وإضافات الموارد البشرية.`)))return;
+ if(!(await showConfirm(`توليد كشف ${AR_MONTHS[m-1]} ${y} من التحضير؟\nستُضاف رواتب الموظفين المستحقين مع خصومات وإضافات الموارد البشرية.`,{icon:'⚙️',title:'تأكيد توليد الكشف',okText:'نعم، ولّد الكشف',okClass:'btn-primary'})))return;
  const {error}=await sb.rpc('payroll_generate_from_prep',{p_month:m,p_year:y});
  if(error){err(error);return}
  toast('⚙️ تم توليد الكشف'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
@@ -5910,14 +5918,14 @@ window.acctReturn=async function(m,y,isAdmin){
  toast('↩️ أُعيد للموارد البشرية'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
 };
 window.acctApprove=async function(m,y,isAdmin){
- if(!(await showConfirm('اعتماد الكشف نهائياً؟\nلن يُعدَّل بعدها، وسيُفعَّل تصدير WPS.\nالموظفون لن يروه حتى تضغط «نشر».')))return;
+ if(!(await showConfirm('اعتماد الكشف نهائياً؟\nلن يُعدَّل بعدها، وسيُفعَّل تصدير WPS.\nالموظفون لن يروه حتى تضغط «نشر».',{icon:'✅',title:'تأكيد الاعتماد النهائي',okText:'نعم، اعتمد الكشف',okClass:'btn-ok'})))return;
  const run=payrollRuns.find(r=>r.month===m&&r.year===y);
  const {error}=await sb.from('payroll_runs').update({status:'معتمد'}).eq('id',run.id);
  if(error){err(error);return}
  toast('✅ تم الاعتماد'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
 };
 window.acctPublish=async function(m,y,isAdmin){
- if(!(await showConfirm('نشر الكشف للموظفين؟\nكل موظف سيرى راتبه في بوابته فوراً.')))return;
+ if(!(await showConfirm('نشر الكشف للموظفين؟\nكل موظف سيرى راتبه في بوابته فوراً.',{icon:'📢',title:'تأكيد النشر للموظفين',okText:'نعم، انشر الكشف',okClass:'btn-primary'})))return;
  const run=payrollRuns.find(r=>r.month===m&&r.year===y);
  const {error}=await sb.from('payroll_runs').update({status:'منشور'}).eq('id',run.id);
  if(error){err(error);return}
