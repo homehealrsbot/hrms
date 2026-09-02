@@ -5274,26 +5274,109 @@ if(typeof window.renderExtraModuleBody==='function'){
 })();
 </script>
 <!-- ============================================================
-     مؤشرات الأداء المحاسبية (KPIs) — لوحة تحكم مدير النظام
-     تُلصق بعد وحدة المحاسبة مباشرة في آخر ملف النظام.
-     تعتمد على Chart.js المحمّل أصلاً وعلى جداول gl_* .
+     لوحة التحكم الاحترافية — ملف واحد شامل
+     يحل محل: المؤشرات المحاسبية + الترتيب + الألوان + التبويب
+     يُلصق مرة واحدة بعد وحدة المحاسبة (accounting_module) فقط.
      ============================================================ -->
+<style>
+:root{
+  --st-good:#1F7A54; --st-good-bg:#EEF7F2; --st-good-line:#1F7A54;
+  --st-warn:#9A6700;  --st-warn-bg:#FDF7E7; --st-warn-line:#C99200;
+  --st-bad:#B3261E;   --st-bad-bg:#FCF0EF;  --st-bad-line:#B3261E;
+  --st-neut:#3D4A63;  --st-neut-bg:#F5F7FB; --st-neut-line:#8A97AE;
+  --hair:#E6EAF2;
+}
+/* بطاقات المؤشرات */
+#page-dashboard .stat{border:1px solid var(--hair);border-inline-start:4px solid var(--st-neut-line);
+  background:#fff;padding:15px 17px 13px;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);
+  transition:box-shadow .16s,transform .16s}
+#page-dashboard .stat:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,.09)}
+#page-dashboard .stat .num{font-variant-numeric:tabular-nums;letter-spacing:-.5px;color:var(--st-neut)}
+#page-dashboard .stat .lbl{color:#65718A;font-weight:600}
+.stat.st-good{border-inline-start-color:var(--st-good-line);background:linear-gradient(180deg,var(--st-good-bg),#fff 62%)}
+.stat.st-good .num{color:var(--st-good)}
+.stat.st-warn{border-inline-start-color:var(--st-warn-line);background:linear-gradient(180deg,var(--st-warn-bg),#fff 62%)}
+.stat.st-warn .num{color:var(--st-warn)}
+.stat.st-bad{border-inline-start-color:var(--st-bad-line);background:linear-gradient(180deg,var(--st-bad-bg),#fff 62%)}
+.stat.st-bad .num{color:var(--st-bad)}
+.stat.st-neut{border-inline-start-color:var(--st-neut-line)}
+.st-note{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:2px 9px;
+  border-radius:20px;font-size:11px;font-weight:700;line-height:1.7}
+.st-good .st-note{background:var(--st-good-bg);color:var(--st-good)}
+.st-warn .st-note{background:var(--st-warn-bg);color:var(--st-warn)}
+.st-bad  .st-note{background:var(--st-bad-bg);color:var(--st-bad)}
+.st-neut .st-note{background:var(--st-neut-bg);color:var(--st-neut)}
+/* عناوين */
+#page-dashboard .page-head h1{position:relative;padding-inline-start:14px;color:#101B33}
+#page-dashboard .page-head h1::before{content:"";position:absolute;inset-inline-start:0;top:14%;bottom:14%;
+  width:4px;border-radius:4px;background:var(--pine)}
+#glKpiSection .page-head h1::before{background:#1F7A54}
+#dashFinanceSection .page-head h1::before{background:#C99200}
+#dashEmpHead h1::before{background:var(--sand)}
+#page-dashboard .page-head p{color:#77839C}
+/* بطاقات ورسوم */
+#page-dashboard .card{border:1px solid var(--hair);box-shadow:0 1px 2px rgba(16,24,40,.04);border-radius:14px}
+#page-dashboard .card h3{color:#101B33;font-size:15px;padding-bottom:11px;border-bottom:1px solid var(--hair);margin-bottom:14px}
+#page-dashboard .chart-box{height:305px}
+#page-dashboard .dash-charts-grid{gap:18px;margin-bottom:20px}
+#page-dashboard .stats{gap:14px;margin-bottom:22px}
+@media(max-width:1024px){#page-dashboard .chart-box{height:250px}}
+#page-dashboard table th{background:#F5F7FB;color:#2C3A57;border-bottom:1px solid var(--hair);font-size:12px}
+#page-dashboard table tbody tr:nth-child(even){background:#FCFDFE}
+#page-dashboard table td{border-top:1px solid #EEF1F6;font-variant-numeric:tabular-nums}
+/* مفتاح الألوان */
+#stLegend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:#fff;
+  border:1px solid var(--hair);border-radius:12px;padding:10px 16px;margin-bottom:18px;font-size:12.5px;color:#65718A}
+#stLegend b{color:#101B33;font-weight:800;margin-inline-end:4px}
+#stLegend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+#stLegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+/* التبويب */
+#dashShell{display:grid;grid-template-columns:236px 1fr;gap:20px;align-items:start}
+#dashNav{position:sticky;top:74px;background:#fff;border:1px solid var(--hair);border-radius:14px;
+  padding:9px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+#dashNav .dn-title{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#93A0B8;padding:8px 11px 6px}
+.dn-item{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-radius:10px;
+  margin-bottom:3px;font-family:inherit;font-size:13.5px;font-weight:600;color:#3D4A63;text-align:right;
+  background:none;border:none;cursor:pointer;transition:background .14s,color .14s;position:relative}
+.dn-item:hover{background:#F5F7FB;color:#101B33}
+.dn-item.on{background:var(--pine);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(20,48,135,.25)}
+.dn-item .dn-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.dn-item .dn-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dn-count{font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;background:#EEF1F7;
+  color:#5A6782;font-variant-numeric:tabular-nums}
+.dn-item.on .dn-count{background:rgba(255,255,255,.22);color:#fff}
+.dn-dot{width:8px;height:8px;border-radius:50%;background:var(--st-bad-line);flex-shrink:0;
+  box-shadow:0 0 0 3px rgba(179,38,30,.14)}
+.dash-sec{display:none}
+.dash-sec.on{display:block;animation:dnFade .22s ease}
+@keyframes dnFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:1024px){
+  #dashShell{grid-template-columns:1fr;gap:14px}
+  #dashNav{position:static;display:flex;gap:7px;overflow-x:auto;padding:8px;scrollbar-width:none}
+  #dashNav::-webkit-scrollbar{display:none}
+  #dashNav .dn-title{display:none}
+  .dn-item{width:auto;flex:0 0 auto;margin-bottom:0;padding:9px 14px;font-size:12.5px;white-space:nowrap}
+  .dn-item .dn-lbl{overflow:visible}
+}
+</style>
+
 <script>
+/* ============================================================
+   الجزء 1 — المؤشرات المحاسبية
+   ============================================================ */
 (function(){
 "use strict";
-
-/* ---------- الحالة والتحميل ---------- */
-let kAcc=[], kJrn=[], kLn=[], kAt=0, kBusy=false;
+let kAcc=[],kJrn=[],kLn=[],kAt=0,kBusy=false;
 const KCUR='ر.س';
 const SIGN={Asset:1,Expense:1,Liability:-1,Equity:-1,Revenue:-1};
 const nf=n=>(+n||0).toLocaleString('en-US',{maximumFractionDigits:0});
 const pf=n=>(isFinite(n)?n.toFixed(1):'0.0')+'%';
-const CH={pine:'#143087',sand:'#62A0F6',ok:'#2E8B62',danger:'#C34A3C',info:'#3A6EA5',gray:'#93A69D'};
+const CH={pine:'#143087',sand:'#62A0F6',ok:'#1F7A54',danger:'#B3261E',info:'#3A6EA5',gray:'#93A69D'};
 const PAL=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
 
 async function kLoad(force){
  if(kBusy)return;
- if(!force && Date.now()-kAt<60000 && kAcc.length)return;   /* تحديث كل دقيقة كحد أقصى */
+ if(!force&&Date.now()-kAt<60000&&kAcc.length)return;
  kBusy=true;
  try{
   const [A,J,L]=await Promise.all([
@@ -5302,59 +5385,30 @@ async function kLoad(force){
    sb.from('gl_journal_lines').select('journal_id,account_code,debit,credit'),
   ]);
   if(A.error||J.error||L.error)throw (A.error||J.error||L.error);
-  kAcc=A.data||[]; kJrn=J.data||[]; kLn=L.data||[]; kAt=Date.now();
- }finally{ kBusy=false }
+  kAcc=A.data||[];kJrn=J.data||[];kLn=L.data||[];kAt=Date.now();
+ }finally{kBusy=false}
 }
-
-/* ---------- أدوات الحساب ---------- */
 const kAccOf=c=>kAcc.find(a=>a.code===+c)||{};
-const kDateOf=jid=>{const j=kJrn.find(x=>x.id===jid);return j?String(j.entry_date):''};
+const kDateOf=j=>{const x=kJrn.find(y=>y.id===j);return x?String(x.entry_date):''};
+function kGroup(t,f,to){let s=0;kLn.forEach(l=>{const a=kAccOf(l.account_code);if(a.type!==t)return;
+ const d=kDateOf(l.journal_id).slice(0,7);if(f&&d<f)return;if(to&&d>to)return;
+ s+=SIGN[t]*((+l.debit||0)-(+l.credit||0))});return s}
+function kAccTotal(p,f,to){let s=0;kLn.forEach(l=>{const a=kAccOf(l.account_code);if(!a.type||!p(a))return;
+ const d=kDateOf(l.journal_id).slice(0,7);if(f&&d<f)return;if(to&&d>to)return;
+ s+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0))});return s}
+function kMonths(n){const o=[];for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+ o.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}return o}
 
-/* رصيد الفئة بالاتجاه الطبيعي — يعالج الحسابات العكسية تلقائياً */
-function kGroup(type,fromKey,toKey){
- let t=0;
- kLn.forEach(l=>{
-  const a=kAccOf(l.account_code); if(a.type!==type)return;
-  const d=kDateOf(l.journal_id).slice(0,7);
-  if(fromKey&&d<fromKey)return; if(toKey&&d>toKey)return;
-  t+=SIGN[type]*((+l.debit||0)-(+l.credit||0));
- });
- return t;
-}
-function kAccTotal(pred,fromKey,toKey){
- let t=0;
- kLn.forEach(l=>{
-  const a=kAccOf(l.account_code); if(!a.type||!pred(a))return;
-  const d=kDateOf(l.journal_id).slice(0,7);
-  if(fromKey&&d<fromKey)return; if(toKey&&d>toKey)return;
-  t+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0));
- });
- return t;
-}
-function kMonths(n){
- const out=[];
- for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-  out.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}
- return out;
-}
-
-/* ---------- بناء القسم ---------- */
 function kInject(){
  if(document.getElementById('glKpiSection'))return true;
- const anchor=document.getElementById('dashFinanceSection');
- if(!anchor)return false;
- const s=document.createElement('div');
- s.id='glKpiSection'; s.style.display='none';
- s.innerHTML=`
-  <div class="page-head" style="margin-top:6px">
+ const a=document.getElementById('dashFinanceSection');if(!a)return false;
+ const s=document.createElement('div');s.id='glKpiSection';
+ s.innerHTML=`<div class="page-head" style="margin-top:6px">
    <div><h1 style="font-size:20px">📒 المؤشرات المحاسبية</h1><p>مبنية على دفتر الأستاذ العام — قيود فعلية لا تقديرات</p></div>
-   <button class="btn btn-ghost btn-sm" onclick="glKpiRefresh()">🔄 تحديث البيانات</button>
-  </div>
+   <button class="btn btn-ghost btn-sm" onclick="glKpiRefresh()">🔄 تحديث البيانات</button></div>
   <div id="glKpiEmpty" class="card" style="display:none;text-align:center;padding:40px 20px">
-   <div style="font-size:46px;margin-bottom:10px">📒</div>
-   <h3 style="margin-bottom:8px">لا توجد قيود محاسبية بعد</h3>
-   <p style="color:var(--muted);font-size:13.5px">سجّل أول قيد من تبويب «المحاسبة» وستظهر المؤشرات هنا تلقائياً</p>
-  </div>
+   <div style="font-size:46px;margin-bottom:10px">📒</div><h3 style="margin-bottom:8px">لا توجد قيود محاسبية بعد</h3>
+   <p style="color:var(--muted);font-size:13.5px">سجّل أول قيد من تبويب «المحاسبة» وستظهر المؤشرات هنا تلقائياً</p></div>
   <div id="glKpiContent">
    <div class="stats" id="glKpiProfit"></div>
    <div class="dash-charts-grid">
@@ -5364,95 +5418,69 @@ function kInject(){
      <div class="card"><h3>🏛 المركز المالي</h3><div class="chart-box"><canvas id="glChartBS"></canvas></div></div>
    </div>
    <div class="stats" id="glKpiPosition"></div>
-   <div class="card"><h3>🔝 أكبر بنود المصروفات</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الحساب</th><th>المبلغ</th><th>النسبة من إجمالي المصروفات</th></tr></thead>
-    <tbody id="glTopExpTbody"></tbody></table></div></div>
-  </div>`;
- anchor.parentNode.insertBefore(s,anchor.nextSibling);
+   <div class="card"><h3>🔝 أكبر بنود المصروفات</h3><div class="tbl-wrap"><table>
+     <thead><tr><th>الحساب</th><th>المبلغ</th><th>النسبة من إجمالي المصروفات</th></tr></thead>
+     <tbody id="glTopExpTbody"></tbody></table></div></div></div>`;
+ a.parentNode.insertBefore(s,a.nextSibling);
  return true;
 }
-
-/* ---------- الرسم ---------- */
 function kRender(){
- const sec=document.getElementById('glKpiSection'); if(!sec)return;
- const visible=(typeof hasPerm==='function')&&hasPerm('accounting','view');
- sec.style.display=visible?'block':'none';
- if(!visible)return;
-
+ const sec=document.getElementById('glKpiSection');if(!sec)return;
+ const vis=(typeof hasPerm==='function')&&hasPerm('accounting','view');
+ sec.dataset.allowed=vis?'1':'0';
+ if(!vis)return;
  const has=kLn.length>0;
  document.getElementById('glKpiEmpty').style.display=has?'none':'block';
  document.getElementById('glKpiContent').style.display=has?'block':'none';
  if(!has)return;
 
- /* ===== 1) الربحية ===== */
- const rev=kGroup('Revenue'), exp=kGroup('Expense');
- const cogs=kAccTotal(a=>a.is_cogs);
- const gross=rev-cogs, net=rev-exp;
- const gm=rev?(gross/rev*100):0, nm=rev?(net/rev*100):0;
- const P=[
-  {n:nf(rev),l:'إجمالي الإيرادات',k:'ok'},
-  {n:nf(cogs),l:'تكلفة الإيراد',k:'sand'},
-  {n:nf(gross),l:'مجمل الربح',k:'info'},
-  {n:nf(net),l:net>=0?'صافي الربح':'صافي الخسارة',k:net>=0?'ok':'danger'},
-  {n:pf(gm),l:'هامش مجمل الربح',k:'info'},
-  {n:pf(nm),l:'هامش صافي الربح',k:nm>=0?'ok':'danger'},
- ];
- document.getElementById('glKpiProfit').innerHTML=P.map(s=>
-  `<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>9?'19px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+ const rev=kGroup('Revenue'),exp=kGroup('Expense'),cogs=kAccTotal(a=>a.is_cogs);
+ const gross=rev-cogs,net=rev-exp,gm=rev?gross/rev*100:0,nm=rev?net/rev*100:0;
+ document.getElementById('glKpiProfit').innerHTML=[
+  {n:nf(rev),l:'إجمالي الإيرادات'},{n:nf(cogs),l:'تكلفة الإيراد'},{n:nf(gross),l:'مجمل الربح'},
+  {n:nf(net),l:net>=0?'صافي الربح':'صافي الخسارة'},{n:pf(gm),l:'هامش مجمل الربح'},{n:pf(nm),l:'هامش صافي الربح'},
+ ].map(s=>`<div class="stat"><span class="num" style="font-size:${String(s.n).length>9?'19px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 
- /* ===== شارت 1: الإيراد/المصروف/الربح شهرياً ===== */
  const ms=kMonths(6);
- const mRev=ms.map(m=>kGroup('Revenue',m.key,m.key));
- const mExp=ms.map(m=>kGroup('Expense',m.key,m.key));
- const mNet=ms.map((m,i)=>mRev[i]-mExp[i]);
+ const mRev=ms.map(m=>kGroup('Revenue',m.key,m.key)),mExp=ms.map(m=>kGroup('Expense',m.key,m.key));
  drawChart('glChartPL',{data:{labels:ms.map(m=>m.label),datasets:[
    {type:'bar',label:'الإيرادات',data:mRev,backgroundColor:CH.ok,borderRadius:6,maxBarThickness:34,order:2},
    {type:'bar',label:'المصروفات',data:mExp,backgroundColor:CH.danger,borderRadius:6,maxBarThickness:34,order:2},
-   {type:'line',label:'صافي الربح',data:mNet,borderColor:CH.pine,backgroundColor:'rgba(20,48,135,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.pine,order:1},
-  ]},
+   {type:'line',label:'صافي الربح',data:ms.map((m,i)=>mRev[i]-mExp[i]),borderColor:CH.pine,
+    backgroundColor:'rgba(20,48,135,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.pine,order:1}]},
   options:{responsive:true,maintainAspectRatio:false,
    plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:12,boxWidth:14}}},
    scales:{y:{beginAtZero:true,ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
 
- /* ===== شارت 2 + جدول: تركيبة المصروفات ===== */
- const expRows=kAcc.filter(a=>a.type==='Expense').map(a=>({
-   name:a.name, v:kAccTotal(x=>x.code===a.code)
-  })).filter(r=>r.v>0.5).sort((a,b)=>b.v-a.v);
- const top=expRows.slice(0,7);
- const others=expRows.slice(7).reduce((s,r)=>s+r.v,0);
- const eLabels=top.map(r=>r.name).concat(others>0?['حسابات أخرى']:[]);
- const eData=top.map(r=>r.v).concat(others>0?[others]:[]);
- drawChart('glChartExp',{type:'doughnut',
-  data:{labels:eLabels,datasets:[{data:eData,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+ const expRows=kAcc.filter(a=>a.type==='Expense').map(a=>({name:a.name,v:kAccTotal(x=>x.code===a.code)}))
+   .filter(r=>r.v>0.5).sort((a,b)=>b.v-a.v);
+ const top=expRows.slice(0,7),others=expRows.slice(7).reduce((s,r)=>s+r.v,0);
+ drawChart('glChartExp',{type:'doughnut',data:{labels:top.map(r=>r.name).concat(others>0?['حسابات أخرى']:[]),
+   datasets:[{data:top.map(r=>r.v).concat(others>0?[others]:[]),backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
   options:{responsive:true,maintainAspectRatio:false,cutout:'56%',
    plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria',size:11},padding:9,boxWidth:12}},
     tooltip:{callbacks:{label:c=>` ${c.label}: ${nf(c.parsed)} ${KCUR} (${exp?pf(c.parsed/exp*100):'0%'})`}}}}});
  document.getElementById('glTopExpTbody').innerHTML=expRows.length
-  ? expRows.slice(0,10).map(r=>`<tr><td><b>${r.name}</b></td><td>${nf(r.v)} ${KCUR}</td>
-     <td><div style="display:flex;align-items:center;gap:8px">
-      <div style="flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px">
-       <div style="height:100%;width:${exp?Math.min(100,r.v/exp*100):0}%;background:${CH.pine}"></div></div>
-      <span style="font-size:12px;color:var(--muted);white-space:nowrap">${exp?pf(r.v/exp*100):'—'}</span></div></td></tr>`).join('')
-  : '<tr><td colspan="3" class="empty">لا توجد مصروفات مسجّلة</td></tr>';
+  ?expRows.slice(0,10).map(r=>`<tr><td><b>${r.name}</b></td><td>${nf(r.v)} ${KCUR}</td>
+    <td><div style="display:flex;align-items:center;gap:8px">
+     <div style="flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px">
+      <div style="height:100%;width:${exp?Math.min(100,r.v/exp*100):0}%;background:${CH.pine}"></div></div>
+     <span style="font-size:12px;color:var(--muted);white-space:nowrap">${exp?pf(r.v/exp*100):'—'}</span></div></td></tr>`).join('')
+  :'<tr><td colspan="3" class="empty">لا توجد مصروفات مسجّلة</td></tr>';
 
- /* ===== شارت 3: اتجاه النقدية ===== */
  const cashPred=a=>a.type==='Asset'&&/نقد|بنك|صندوق|كاش/.test(a.name||'');
- const cashSeries=ms.map(m=>kAccTotal(cashPred,null,m.key));   /* تراكمي حتى نهاية كل شهر */
- drawChart('glChartCash',{type:'line',
-  data:{labels:ms.map(m=>m.label),datasets:[{label:'النقدية',data:cashSeries,
-   borderColor:CH.sand,backgroundColor:'rgba(98,160,246,.15)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.sand}]},
+ drawChart('glChartCash',{type:'line',data:{labels:ms.map(m=>m.label),
+   datasets:[{label:'النقدية',data:ms.map(m=>kAccTotal(cashPred,null,m.key)),borderColor:CH.sand,
+    backgroundColor:'rgba(98,160,246,.15)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.sand}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
    tooltip:{callbacks:{label:c=>` ${nf(c.parsed.y)} ${KCUR}`}}},
    scales:{y:{ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
 
- /* ===== شارت 4 + بطاقات: المركز المالي ===== */
- const assets=kGroup('Asset'), liab=kGroup('Liability'), eq=kGroup('Equity')+net;
- drawChart('glChartBS',{type:'bar',
-  data:{labels:['الأصول','الخصوم وحقوق الملكية'],datasets:[
+ const assets=kGroup('Asset'),liab=kGroup('Liability'),eq=kGroup('Equity')+net;
+ drawChart('glChartBS',{type:'bar',data:{labels:['الأصول','الخصوم وحقوق الملكية'],datasets:[
    {label:'الأصول',data:[assets,0],backgroundColor:CH.pine,borderRadius:6,maxBarThickness:70},
    {label:'الخصوم',data:[0,liab],backgroundColor:CH.danger,borderRadius:6,maxBarThickness:70},
-   {label:'حقوق الملكية',data:[0,eq],backgroundColor:CH.ok,borderRadius:6,maxBarThickness:70},
-  ]},
+   {label:'حقوق الملكية',data:[0,eq],backgroundColor:CH.ok,borderRadius:6,maxBarThickness:70}]},
   options:{responsive:true,maintainAspectRatio:false,
    plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:10,boxWidth:13}},
     tooltip:{callbacks:{label:c=>c.parsed.y?` ${c.dataset.label}: ${nf(c.parsed.y)} ${KCUR}`:null}}},
@@ -5461,467 +5489,179 @@ function kRender(){
 
  const cash=kAccTotal(cashPred);
  const recv=kAccTotal(a=>a.type==='Asset'&&/عملاء|ذمم|مستحق/.test(a.name||''));
- const balanced=Math.abs(assets-(liab+eq))<0.5;
- const Q=[
-  {n:nf(cash),l:'النقدية والأرصدة البنكية',k:cash>=0?'ok':'danger'},
-  {n:nf(recv),l:'الذمم المدينة (مستحق للشركة)',k:'info'},
-  {n:nf(assets),l:'إجمالي الأصول',k:''},
-  {n:nf(liab),l:'إجمالي الخصوم',k:'sand'},
-  {n:balanced?'✅ متوازنة':'⚠️ غير متوازنة',l:'حالة الميزانية',k:balanced?'ok':'danger'},
- ];
- document.getElementById('glKpiPosition').innerHTML=Q.map(s=>
-  `<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>9?'18px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
+ const bal=Math.abs(assets-(liab+eq))<0.5;
+ document.getElementById('glKpiPosition').innerHTML=[
+  {n:nf(cash),l:'النقدية والأرصدة البنكية'},{n:nf(recv),l:'الذمم المدينة (مستحق للشركة)'},
+  {n:nf(assets),l:'إجمالي الأصول'},{n:nf(liab),l:'إجمالي الخصوم'},
+  {n:bal?'✅ متوازنة':'⚠️ غير متوازنة',l:'حالة الميزانية'},
+ ].map(s=>`<div class="stat"><span class="num" style="font-size:${String(s.n).length>9?'18px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 }
-
-/* ---------- التشغيل والربط ---------- */
-window.glKpiRefresh=function(){
- kLoad(true).then(kRender).catch(e=>{ if(typeof toast==='function')toast('تعذّر تحديث المؤشرات المحاسبية') });
-};
-function kTick(){
+window.glKpiRefresh=function(){kLoad(true).then(kRender).catch(()=>{})};
+window.__kpiTick=function(){
  if(!kInject())return;
  if(!(typeof me!=='undefined'&&me&&me.role==='admin'))return;
- if(!(typeof hasPerm==='function'&&hasPerm('accounting','view'))){
-  const s=document.getElementById('glKpiSection'); if(s)s.style.display='none'; return;
- }
+ if(!(typeof hasPerm==='function'&&hasPerm('accounting','view')))return;
  kLoad(false).then(kRender).catch(()=>{});
-}
-if(typeof window.renderDashboard==='function'){
- const _orig=window.renderDashboard;
- window.renderDashboard=function(){ const r=_orig.apply(this,arguments); try{kTick()}catch(e){console.error('KPI',e)} return r };
-}
+};
 })();
-</script>
-<!-- ============================================================
-     طبقة الهوية البصرية والألوان الدلالية — لوحة التحكم
-     تُلصق بعد ملف dashboard_order.html في آخر ملف النظام.
-     الفكرة: اللون يُحسب من القيمة، لا يُكتب يدوياً.
-     ============================================================ -->
-<style>
-/* ---------- 1) لوحة ألوان دلالية بطابع بنكي رسمي ---------- */
-:root{
-  --st-good:#1F7A54;  --st-good-bg:#EEF7F2;  --st-good-line:#1F7A54;
-  --st-warn:#9A6700;  --st-warn-bg:#FDF7E7;  --st-warn-line:#C99200;
-  --st-bad:#B3261E;   --st-bad-bg:#FCF0EF;   --st-bad-line:#B3261E;
-  --st-neut:#3D4A63;  --st-neut-bg:#F5F7FB;  --st-neut-line:#8A97AE;
-  --hair:#E6EAF2;
-}
-
-/* ---------- 2) بطاقات المؤشرات ---------- */
-#page-dashboard .stat{
-  border:1px solid var(--hair);
-  border-inline-start:4px solid var(--st-neut-line);
-  background:#fff;
-  padding:15px 17px 13px;
-  border-radius:12px;
-  box-shadow:0 1px 2px rgba(16,24,40,.04);
-  transition:box-shadow .16s, transform .16s;
-}
-#page-dashboard .stat:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,.09)}
-#page-dashboard .stat .num{
-  font-variant-numeric:tabular-nums;
-  letter-spacing:-.5px;
-  color:var(--st-neut);
-}
-#page-dashboard .stat .lbl{color:#65718A;font-weight:600;letter-spacing:.1px}
-
-/* حالات دلالية — تُطبَّق بالجافاسكربت حسب الرقم */
-.stat.st-good{border-inline-start-color:var(--st-good-line);background:linear-gradient(180deg,var(--st-good-bg),#fff 62%)}
-.stat.st-good .num{color:var(--st-good)}
-.stat.st-warn{border-inline-start-color:var(--st-warn-line);background:linear-gradient(180deg,var(--st-warn-bg),#fff 62%)}
-.stat.st-warn .num{color:var(--st-warn)}
-.stat.st-bad{border-inline-start-color:var(--st-bad-line);background:linear-gradient(180deg,var(--st-bad-bg),#fff 62%)}
-.stat.st-bad .num{color:var(--st-bad)}
-.stat.st-neut{border-inline-start-color:var(--st-neut-line)}
-
-/* شارة الحالة أسفل البطاقة */
-.st-note{
-  display:inline-flex;align-items:center;gap:5px;
-  margin-top:7px;padding:2px 9px;border-radius:20px;
-  font-size:11px;font-weight:700;line-height:1.7;
-}
-.st-good .st-note{background:var(--st-good-bg);color:var(--st-good)}
-.st-warn .st-note{background:var(--st-warn-bg);color:var(--st-warn)}
-.st-bad  .st-note{background:var(--st-bad-bg);color:var(--st-bad)}
-.st-neut .st-note{background:var(--st-neut-bg);color:var(--st-neut)}
-
-/* ---------- 3) عناوين الأقسام بشريط لوني ---------- */
-#page-dashboard .page-head h1{
-  position:relative;padding-inline-start:14px;color:#101B33;
-}
-#page-dashboard .page-head h1::before{
-  content:"";position:absolute;inset-inline-start:0;top:14%;bottom:14%;
-  width:4px;border-radius:4px;background:var(--pine);
-}
-#glKpiSection .page-head h1::before{background:#1F7A54}
-#dashFinanceSection .page-head h1::before{background:#C99200}
-#dashEmpHead h1::before{background:var(--sand)}
-#page-dashboard .page-head p{color:#77839C}
-
-/* ---------- 4) البطاقات والرسوم ---------- */
-#page-dashboard .card{
-  border:1px solid var(--hair);
-  box-shadow:0 1px 2px rgba(16,24,40,.04);
-  border-radius:14px;
-}
-#page-dashboard .card h3{
-  color:#101B33;font-size:15px;padding-bottom:11px;
-  border-bottom:1px solid var(--hair);margin-bottom:14px;
-}
-#page-dashboard .chart-box{height:305px}
-#page-dashboard .dash-charts-grid{gap:18px;margin-bottom:20px}
-#page-dashboard .stats{gap:14px;margin-bottom:22px}
-@media(max-width:1024px){#page-dashboard .chart-box{height:250px}}
-
-/* ---------- 5) الجداول ---------- */
-#page-dashboard table th{
-  background:#F5F7FB;color:#2C3A57;
-  border-bottom:1px solid var(--hair);font-size:12px;
-}
-#page-dashboard table tbody tr:nth-child(even){background:#FCFDFE}
-#page-dashboard table td{border-top:1px solid #EEF1F6;font-variant-numeric:tabular-nums}
-
-/* ---------- 6) مفتاح الألوان ---------- */
-#stLegend{
-  display:flex;gap:16px;flex-wrap:wrap;align-items:center;
-  background:#fff;border:1px solid var(--hair);border-radius:12px;
-  padding:10px 16px;margin-bottom:18px;font-size:12.5px;color:#65718A;
-}
-#stLegend b{color:#101B33;font-weight:800;margin-inline-end:4px}
-#stLegend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
-#stLegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-</style>
-
-<script>
-(function(){
-"use strict";
 
 /* ============================================================
-   قواعد الحالة: لكل مؤشر، دالة تُرجع الحالة والتعليق.
-   good = سليم · warn = يحتاج متابعة · bad = يتطلب إجراء
+   الجزء 2 — الألوان الدلالية
    ============================================================ */
+(function(){
+"use strict";
 const num=t=>{const m=String(t).replace(/,/g,'').match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):NaN};
-
 const RULES=[
- /* ---- المؤشرات المحاسبية ---- */
- {m:/^إجمالي الإيرادات$/,      f:v=>v>0?['good','إيراد مسجّل']:['neut','لا يوجد إيراد بعد']},
- {m:/^تكلفة الإيراد$/,          f:v=>['neut','تكلفة مباشرة']},
- {m:/^مجمل الربح$/,             f:v=>v>0?['good','موجب']:['bad','سالب — يتطلب إجراء']},
- {m:/^صافي الربح$/,             f:v=>v>0?['good','ربح']:['bad','يتطلب إجراء']},
- {m:/^صافي الخسارة$/,           f:v=>['bad','خسارة — يتطلب إجراء']},
- {m:/^هامش مجمل الربح$/,        f:v=>v>=30?['good','هامش صحي']:v>=10?['warn','هامش منخفض']:['bad','هامش حرج']},
- {m:/^هامش صافي الربح$/,        f:v=>v>=15?['good','هامش صحي']:v>=5?['warn','هامش منخفض']:['bad','هامش حرج']},
- {m:/^النقدية/,                 f:v=>v>0?['good','سيولة متاحة']:['bad','لا توجد سيولة']},
- {m:/^الذمم المدينة/,           f:v=>v>0?['warn','مستحق التحصيل']:['neut','لا توجد ذمم']},
- {m:/^إجمالي الأصول$/,          f:v=>['neut','إجمالي']},
- {m:/^إجمالي الخصوم$/,          f:v=>['warn','التزامات قائمة']},
- {m:/^حالة الميزانية$/,         f:(v,t)=>/متوازنة/.test(t)&&!/غير/.test(t)?['good','سليمة']:['bad','خلل في القيود']},
-
- /* ---- إحصاءات الموظفين ---- */
- {m:/^إجمالي عدد الموظفين$/,     f:v=>['neut','إجمالي']},
- {m:/^الموظفون النشطون$/,        f:v=>['good','على رأس العمل']},
- {m:/^الموظفون غير النشطين$/,    f:v=>v>0?['warn','خارج الخدمة']:['good','لا يوجد']},
- {m:/^موظفو فترة التجربة$/,      f:v=>v>0?['warn','تحتاج تقييماً']:['neut','لا يوجد']},
+ {m:/^إجمالي الإيرادات$/,f:v=>v>0?['good','إيراد مسجّل']:['neut','لا يوجد إيراد بعد']},
+ {m:/^تكلفة الإيراد$/,f:()=>['neut','تكلفة مباشرة']},
+ {m:/^مجمل الربح$/,f:v=>v>0?['good','موجب']:['bad','سالب — يتطلب إجراء']},
+ {m:/^صافي الربح$/,f:v=>v>0?['good','ربح']:['bad','يتطلب إجراء']},
+ {m:/^صافي الخسارة$/,f:()=>['bad','خسارة — يتطلب إجراء']},
+ {m:/^هامش مجمل الربح$/,f:v=>v>=30?['good','هامش صحي']:v>=10?['warn','هامش منخفض']:['bad','هامش حرج']},
+ {m:/^هامش صافي الربح$/,f:v=>v>=15?['good','هامش صحي']:v>=5?['warn','هامش منخفض']:['bad','هامش حرج']},
+ {m:/^النقدية/,f:v=>v>0?['good','سيولة متاحة']:['bad','لا توجد سيولة']},
+ {m:/^الذمم المدينة/,f:v=>v>0?['warn','مستحق التحصيل']:['neut','لا توجد ذمم']},
+ {m:/^إجمالي الأصول$/,f:()=>['neut','إجمالي']},
+ {m:/^إجمالي الخصوم$/,f:()=>['warn','التزامات قائمة']},
+ {m:/^حالة الميزانية$/,f:(v,t)=>/متوازنة/.test(t)&&!/غير/.test(t)?['good','سليمة']:['bad','خلل في القيود']},
+ {m:/^إجمالي عدد الموظفين$/,f:()=>['neut','إجمالي']},
+ {m:/^الموظفون النشطون$/,f:()=>['good','على رأس العمل']},
+ {m:/^الموظفون غير النشطين$/,f:v=>v>0?['warn','خارج الخدمة']:['good','لا يوجد']},
+ {m:/^موظفو فترة التجربة$/,f:v=>v>0?['warn','تحتاج تقييماً']:['neut','لا يوجد']},
  {m:/^الموظفون في إجازة حالياً$/,f:v=>v>0?['warn','غياب مخطَّط']:['good','الفريق مكتمل']},
- {m:/^عقود تنتهي خلال 30 يوم$/,  f:v=>v===0?['good','لا يوجد']:v<=2?['warn','تحتاج تجديداً']:['bad','عاجل — يتطلب إجراء']},
- {m:/^طلبات إجازات معلّقة$/,     f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
- {m:/^طلبات استئذان معلّقة$/,    f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
- {m:/^غيابات هذا الشهر$/,        f:v=>v===0?['good','لا غياب']:v<=3?['warn','ضمن الحد']:['bad','تجاوز الحد']},
-
- /* ---- النظرة المالية ---- */
- {m:/^إجمالي المصروف هذا الشهر$/,f:v=>['neut','مصروف فعلي']},
- {m:/^مبالغ طلبات معلّقة$/,      f:v=>v>0?['warn','بانتظار الاعتماد']:['good','لا يوجد معلّق']},
- {m:/^عُهد مفتوحة/,             f:v=>v===0?['good','لا يوجد']:v<=3?['warn','لم تُرجع']:['bad','متراكمة']},
- {m:/^إجمالي رواتب آخر كشف/,    f:v=>['neut','آخر كشف']},
+ {m:/^عقود تنتهي خلال 30 يوم$/,f:v=>v===0?['good','لا يوجد']:v<=2?['warn','تحتاج تجديداً']:['bad','عاجل — يتطلب إجراء']},
+ {m:/^طلبات إجازات معلّقة$/,f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
+ {m:/^طلبات استئذان معلّقة$/,f:v=>v===0?['good','لا يوجد معلّق']:v<=3?['warn','بانتظار قرارك']:['bad','متراكمة — يتطلب إجراء']},
+ {m:/^غيابات هذا الشهر$/,f:v=>v===0?['good','لا غياب']:v<=3?['warn','ضمن الحد']:['bad','تجاوز الحد']},
+ {m:/^إجمالي المصروف هذا الشهر$/,f:()=>['neut','مصروف فعلي']},
+ {m:/^مبالغ طلبات معلّقة$/,f:v=>v>0?['warn','بانتظار الاعتماد']:['good','لا يوجد معلّق']},
+ {m:/^عُهد مفتوحة/,f:v=>v===0?['good','لا يوجد']:v<=3?['warn','لم تُرجع']:['bad','متراكمة']},
+ {m:/^إجمالي رواتب آخر كشف/,f:()=>['neut','آخر كشف']},
 ];
-
 function apply(card){
- const lblEl=card.querySelector('.lbl'), numEl=card.querySelector('.num');
- if(!lblEl||!numEl)return;
- const lbl=lblEl.textContent.trim(), txt=numEl.textContent.trim();
- const rule=RULES.find(r=>r.m.test(lbl));
- if(!rule)return;
- let state,note;
- try{ [state,note]=rule.f(num(txt),txt) }catch(e){ return }
- if(!state)return;
-
+ const L=card.querySelector('.lbl'),N=card.querySelector('.num');
+ if(!L||!N)return;
+ const r=RULES.find(x=>x.m.test(L.textContent.trim()));if(!r)return;
+ let st,note;try{[st,note]=r.f(num(N.textContent),N.textContent.trim())}catch(e){return}
+ if(!st)return;
  card.classList.remove('st-good','st-warn','st-bad','st-neut','ok','sand','danger','info');
- card.classList.add('st-'+state);
-
- const icon={good:'●',warn:'▲',bad:'■',neut:'○'}[state];
+ card.classList.add('st-'+st);
+ const ic={good:'●',warn:'▲',bad:'■',neut:'○'}[st];
  let n=card.querySelector('.st-note');
- if(!n){ n=document.createElement('span'); n.className='st-note'; card.appendChild(n) }
- n.innerHTML=`<span>${icon}</span> ${note}`;
+ if(!n){n=document.createElement('span');n.className='st-note';card.appendChild(n)}
+ n.innerHTML=`<span>${ic}</span> ${note}`;
 }
+window.__colorTick=function(){document.querySelectorAll('#page-dashboard .stat').forEach(apply)};
+})();
+
+/* ============================================================
+   الجزء 3 — التبويب الداخلي (يتولّى الترتيب أيضاً)
+   ============================================================ */
+(function(){
+"use strict";
+const SECS=[
+ {id:'glKpiSection',ic:'📒',lbl:'المؤشرات المحاسبية'},
+ {id:'dashFinanceSection',ic:'💰',lbl:'النظرة المالية'},
+ {id:'dashEmpGroup',ic:'👥',lbl:'نظرة الموظفين'},
+ {id:'dashAlertsGroup',ic:'🔔',lbl:'التنبيهات والمهام'},
+];
+const HIDE_CHARTS=['chartLeaves','chartTrend'];   /* الشارتان المخفيان */
+let active=null;
+const getTab=()=>{try{return sessionStorage.getItem('dashTab')}catch(e){return null}};
+const setTab=v=>{try{sessionStorage.setItem('dashTab',v)}catch(e){}};
 
 function legend(){
  const page=document.getElementById('page-dashboard');
  if(!page||document.getElementById('stLegend'))return;
- const head=page.querySelector(':scope > .page-head');
- if(!head)return;
- const d=document.createElement('div');
- d.id='stLegend';
+ const h=page.querySelector(':scope > .page-head');if(!h)return;
+ const d=document.createElement('div');d.id='stLegend';
  d.innerHTML='<b>دلالة الألوان:</b>'
   +'<span><i style="background:var(--st-good-line)"></i> سليم</span>'
   +'<span><i style="background:var(--st-warn-line)"></i> يحتاج متابعة</span>'
   +'<span><i style="background:var(--st-bad-line)"></i> يتطلب إجراءً عاجلاً</span>'
   +'<span><i style="background:var(--st-neut-line)"></i> معلومة عامة</span>';
- head.parentNode.insertBefore(d,head.nextSibling);
+ h.parentNode.insertBefore(d,h.nextSibling);
 }
-
-function run(){
- legend();
- document.querySelectorAll('#page-dashboard .stat').forEach(apply);
-}
-
-if(typeof window.renderDashboard==='function'){
- const _o=window.renderDashboard;
- window.renderDashboard=function(){
-  const r=_o.apply(this,arguments);
-  try{ run() }catch(e){ console.error('semantic-colors',e) }
-  return r;
- };
-}
-setTimeout(()=>{try{run()}catch(e){}},1800);
-})();
-</script>
-<!-- ============================================================
-     إعادة ترتيب لوحة التحكم — مدير النظام
-     تُلصق بعد ملف المؤشرات المحاسبية في آخر ملف النظام.
-     الترتيب: المؤشرات المحاسبية ← النظرة المالية ← إحصاءات
-     الموظفين (بشارتين) ← التنبيهات.
-     ============================================================ -->
-<script>
-(function(){
-"use strict";
-
-/* الشارتات التي تبقى ظاهرة ضمن مجموعة الموظفين */
-const KEEP=['chartDept','chartPending'];
-const HIDE=['chartLeaves','chartTrend'];
-
-function arrange(){
- const page=document.getElementById('page-dashboard');
- if(!page)return;
-
- const head   = page.querySelector(':scope > .page-head');
- const stats  = document.getElementById('dashStats');
- const fin    = document.getElementById('dashFinanceSection');
- const kpi    = document.getElementById('glKpiSection');
- const alerts = document.getElementById('dashAlerts') && document.getElementById('dashAlerts').closest('.card');
-
- /* شبكة شارتات الموظفين = أول .dash-charts-grid ابن مباشر للصفحة */
- const grid=[...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
-
- /* عنوان فرعي لمجموعة الموظفين (مرة واحدة فقط) */
- let empHead=document.getElementById('dashEmpHead');
- if(!empHead&&stats){
-  empHead=document.createElement('div');
-  empHead.id='dashEmpHead'; empHead.className='page-head'; empHead.style.marginTop='6px';
-  empHead.innerHTML='<div><h1 style="font-size:20px">👥 نظرة الموظفين</h1><p>أعداد الموظفين والطلبات المعلّقة والغياب</p></div>';
-  stats.parentNode.insertBefore(empHead,stats);
- }
-
- /* إخفاء الشارتين الأقل أولوية مع إبقاء الكود يعمل كما هو */
- HIDE.forEach(id=>{
-  const c=document.getElementById(id);
-  const card=c&&c.closest('.card');
-  if(card)card.style.display='none';
- });
- KEEP.forEach(id=>{
-  const c=document.getElementById(id);
-  const card=c&&c.closest('.card');
-  if(card)card.style.display='';
- });
-
- /* الترتيب النهائي — appendChild ينقل العنصر الموجود لا ينسخه */
- [head,kpi,fin,empHead,stats,grid,alerts].forEach(el=>{ if(el&&el.parentNode===page)page.appendChild(el) });
-
- /* أي عناصر متبقية (مثل جدول العقود المخفي) تبقى في آخر الصفحة تلقائياً */
-}
-
-/* التشغيل: عند التحميل، وبعد كل رسم للوحة (لأن قسم المؤشرات يُحقن أثناءه) */
-if(typeof window.renderDashboard==='function'){
- const _orig=window.renderDashboard;
- window.renderDashboard=function(){
-  const r=_orig.apply(this,arguments);
-  try{ arrange() }catch(e){ console.error('dashboard-order',e) }
-  return r;
- };
-}
-document.addEventListener('DOMContentLoaded',()=>{try{arrange()}catch(e){}});
-setTimeout(()=>{try{arrange()}catch(e){}},1500);
-})();
-</script>
-<!-- ============================================================
-     تبويب داخلي للوحة التحكم — قائمة جانبية بالحاسب، أفقية بالجوال
-     تُلصق بعد ملف dashboard_polish.html في آخر ملف النظام.
-     يعرض قسماً واحداً فقط، فتقصر الصفحة ويسرع العرض.
-     ============================================================ -->
-<style>
-#dashShell{display:grid;grid-template-columns:236px 1fr;gap:20px;align-items:start}
-#dashNav{
-  position:sticky;top:74px;background:#fff;border:1px solid var(--hair,#E6EAF2);
-  border-radius:14px;padding:9px;box-shadow:0 1px 2px rgba(16,24,40,.04);
-}
-#dashNav .dn-title{
-  font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#93A0B8;
-  padding:8px 11px 6px;
-}
-.dn-item{
-  display:flex;align-items:center;gap:10px;width:100%;
-  padding:11px 12px;border-radius:10px;margin-bottom:3px;
-  font-family:inherit;font-size:13.5px;font-weight:600;color:#3D4A63;
-  text-align:right;background:none;border:none;cursor:pointer;
-  transition:background .14s,color .14s;position:relative;
-}
-.dn-item:hover{background:#F5F7FB;color:#101B33}
-.dn-item.on{background:var(--pine,#143087);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(20,48,135,.25)}
-.dn-item .dn-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
-.dn-item .dn-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dn-count{
-  font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;
-  background:#EEF1F7;color:#5A6782;font-variant-numeric:tabular-nums;
-}
-.dn-item.on .dn-count{background:rgba(255,255,255,.22);color:#fff}
-.dn-dot{width:8px;height:8px;border-radius:50%;background:var(--st-bad-line,#B3261E);flex-shrink:0;
-  box-shadow:0 0 0 3px rgba(179,38,30,.14)}
-.dash-sec{display:none}
-.dash-sec.on{display:block;animation:dnFade .22s ease}
-@keyframes dnFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-@media(max-width:1024px){
-  #dashShell{grid-template-columns:1fr;gap:14px}
-  #dashNav{position:static;display:flex;gap:7px;overflow-x:auto;padding:8px;
-    scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #dashNav::-webkit-scrollbar{display:none}
-  #dashNav .dn-title{display:none}
-  .dn-item{width:auto;flex:0 0 auto;margin-bottom:0;padding:9px 14px;font-size:12.5px;white-space:nowrap}
-  .dn-item .dn-lbl{overflow:visible}
-}
-</style>
-
-<script>
-(function(){
-"use strict";
-
-/* أقسام اللوحة: المعرّف، الأيقونة، العنوان، ودالة العدّاد */
-const SECS=[
- {id:'glKpiSection',    ic:'📒', lbl:'المؤشرات المحاسبية'},
- {id:'dashFinanceSection', ic:'💰', lbl:'النظرة المالية'},
- {id:'dashEmpGroup',    ic:'👥', lbl:'نظرة الموظفين'},
- {id:'dashAlertsGroup', ic:'🔔', lbl:'التنبيهات والمهام'},
-];
-let active=localStorage_safe_get()||'glKpiSection';
-
-function localStorage_safe_get(){ try{return sessionStorage.getItem('dashTab')}catch(e){return null} }
-function localStorage_safe_set(v){ try{sessionStorage.setItem('dashTab',v)}catch(e){} }
-
-/* ---------- بناء الهيكل ---------- */
 function build(){
  const page=document.getElementById('page-dashboard');
  if(!page)return false;
  if(document.getElementById('dashShell'))return true;
+ const kpi=document.getElementById('glKpiSection');
+ const fin=document.getElementById('dashFinanceSection');
+ const stats=document.getElementById('dashStats');
+ if(!kpi||!fin||!stats)return false;
 
- const head   = page.querySelector(':scope > .page-head');
- const legend = document.getElementById('stLegend');
- const kpi    = document.getElementById('glKpiSection');
- const fin    = document.getElementById('dashFinanceSection');
- const empHd  = document.getElementById('dashEmpHead');
- const stats  = document.getElementById('dashStats');
- const grid   = [...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
- const alerts = document.getElementById('dashAlerts') && document.getElementById('dashAlerts').closest('.card');
- if(!kpi||!fin||!stats)return false;   /* ننتظر حقن الأقسام */
+ HIDE_CHARTS.forEach(id=>{const c=document.getElementById(id),card=c&&c.closest('.card');if(card)card.style.display='none'});
 
- /* تجميع "نظرة الموظفين" و"التنبيهات" في حاويتين */
- const empGroup=document.createElement('div'); empGroup.id='dashEmpGroup';
- [empHd,stats,grid].forEach(el=>{ if(el)empGroup.appendChild(el) });
+ const head=page.querySelector(':scope > .page-head');
+ const grid=[...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
+ const alerts=document.getElementById('dashAlerts')&&document.getElementById('dashAlerts').closest('.card');
 
- const alGroup=document.createElement('div'); alGroup.id='dashAlertsGroup';
- const alHead=document.createElement('div');
- alHead.className='page-head'; alHead.style.marginTop='6px';
- alHead.innerHTML='<div><h1 style="font-size:20px">🔔 التنبيهات والمهام</h1><p>ما يحتاج قراراً أو متابعة منك</p></div>';
- alGroup.appendChild(alHead);
- if(alerts)alGroup.appendChild(alerts);
+ const empHd=document.createElement('div');
+ empHd.id='dashEmpHead';empHd.className='page-head';empHd.style.marginTop='6px';
+ empHd.innerHTML='<div><h1 style="font-size:20px">👥 نظرة الموظفين</h1><p>أعداد الموظفين والطلبات المعلّقة والغياب</p></div>';
+ const empGroup=document.createElement('div');empGroup.id='dashEmpGroup';
+ empGroup.appendChild(empHd);empGroup.appendChild(stats);if(grid)empGroup.appendChild(grid);
 
- /* الهيكل: قائمة + محتوى */
- const shell=document.createElement('div'); shell.id='dashShell';
- const nav=document.createElement('div');   nav.id='dashNav';
+ const alHd=document.createElement('div');alHd.className='page-head';alHd.style.marginTop='6px';
+ alHd.innerHTML='<div><h1 style="font-size:20px">🔔 التنبيهات والمهام</h1><p>ما يحتاج قراراً أو متابعة منك</p></div>';
+ const alGroup=document.createElement('div');alGroup.id='dashAlertsGroup';
+ alGroup.appendChild(alHd);if(alerts)alGroup.appendChild(alerts);
+
+ const shell=document.createElement('div');shell.id='dashShell';
+ const nav=document.createElement('div');nav.id='dashNav';
  nav.innerHTML='<div class="dn-title">أقسام اللوحة</div>';
- const content=document.createElement('div'); content.id='dashContent';
-
- [kpi,fin,empGroup,alGroup].forEach(el=>{ el.classList.add('dash-sec'); content.appendChild(el) });
-
+ const content=document.createElement('div');content.id='dashContent';
+ [kpi,fin,empGroup,alGroup].forEach(el=>{el.classList.add('dash-sec');content.appendChild(el)});
  SECS.forEach(s=>{
-  const b=document.createElement('button');
-  b.className='dn-item'; b.dataset.sec=s.id;
+  const b=document.createElement('button');b.className='dn-item';b.dataset.sec=s.id;
   b.innerHTML=`<span class="dn-ic">${s.ic}</span><span class="dn-lbl">${s.lbl}</span><span class="dn-count" style="display:none"></span>`;
-  b.onclick=()=>show(s.id);
-  nav.appendChild(b);
+  b.onclick=()=>show(s.id);nav.appendChild(b);
  });
-
- shell.appendChild(nav); shell.appendChild(content);
+ shell.appendChild(nav);shell.appendChild(content);
  page.appendChild(shell);
- /* العنوان ومفتاح الألوان يبقيان أعلى الصفحة خارج التبويب */
- if(head)page.insertBefore(head,shell);
- if(legend)page.insertBefore(legend,shell);
-
- show(active);
+ legend();
+ if(head)page.insertBefore(head,page.firstChild);
+ const lg=document.getElementById('stLegend');if(lg&&head)page.insertBefore(lg,head.nextSibling);
+ show(active||getTab()||SECS[0].id);
  return true;
 }
-
 function show(id){
  if(!document.getElementById(id))id=SECS[0].id;
- active=id; localStorage_safe_set(id);
+ active=id;setTab(id);
  document.querySelectorAll('#dashContent .dash-sec').forEach(el=>el.classList.toggle('on',el.id===id));
  document.querySelectorAll('#dashNav .dn-item').forEach(b=>b.classList.toggle('on',b.dataset.sec===id));
- /* إعادة ضبط مقاس الشارتات بعد الإظهار (Chart.js يحتاجها بعد display:none) */
- setTimeout(()=>{ try{ Object.values(DASH_CHARTS||{}).forEach(c=>{try{c.resize()}catch(e){}}) }catch(e){} },60);
+ setTimeout(()=>{try{Object.values(DASH_CHARTS||{}).forEach(c=>{try{c.resize()}catch(e){}})}catch(e){}},60);
 }
-
-/* ---------- العدّادات وإشارات الإنذار ---------- */
 function badges(){
- const set=(secId,count,alert)=>{
-  const b=document.querySelector(`#dashNav .dn-item[data-sec="${secId}"]`);
-  if(!b)return;
+ const set=(sec,cnt,alert)=>{
+  const b=document.querySelector(`#dashNav .dn-item[data-sec="${sec}"]`);if(!b)return;
   const c=b.querySelector('.dn-count');
-  if(count===null||count===undefined||count===''){c.style.display='none'}
-  else{c.style.display='';c.textContent=count}
+  if(cnt===null||cnt===undefined||cnt===''){c.style.display='none'}else{c.style.display='';c.textContent=cnt}
   let d=b.querySelector('.dn-dot');
-  if(alert&&!d){ d=document.createElement('span'); d.className='dn-dot'; b.appendChild(d) }
+  if(alert&&!d){d=document.createElement('span');d.className='dn-dot';b.appendChild(d)}
   if(!alert&&d)d.remove();
  };
- const bad=sec=>!!document.querySelector('#'+sec+' .stat.st-bad');
-
- /* المحاسبة: عدد القيود */
- const kpiHas=document.querySelector('#glKpiContent') &&
-   document.getElementById('glKpiContent').style.display!=='none';
- set('glKpiSection', kpiHas?'':null, bad('glKpiSection'));
-
- /* المالية */
+ const bad=s=>!!document.querySelector('#'+s+' .stat.st-bad');
+ const kpiSec=document.getElementById('glKpiSection');
+ const kpiBtn=document.querySelector('#dashNav .dn-item[data-sec="glKpiSection"]');
+ if(kpiBtn)kpiBtn.style.display=(kpiSec&&kpiSec.dataset.allowed==='0')?'none':'';
+ set('glKpiSection','',bad('glKpiSection'));
  set('dashFinanceSection','',bad('dashFinanceSection'));
-
- /* الموظفون: عدد النشطين */
- try{
-  const act=(typeof employees!=='undefined'?employees:[]).filter(e=>e.status==='نشط').length;
-  set('dashEmpGroup',act||null,bad('dashEmpGroup'));
- }catch(e){ set('dashEmpGroup',null,false) }
-
- /* التنبيهات: عدد غير المقروء من العدّاد الأصلي */
- try{
-  const n=parseInt((document.getElementById('alertCount')||{}).textContent||'0',10)||0;
-  set('dashAlertsGroup',n||null,n>0);
- }catch(e){ set('dashAlertsGroup',null,false) }
+ try{set('dashEmpGroup',(typeof employees!=='undefined'?employees:[]).filter(e=>e.status==='نشط').length||null,bad('dashEmpGroup'))}
+ catch(e){set('dashEmpGroup',null,false)}
+ try{const n=parseInt((document.getElementById('alertCount')||{}).textContent||'0',10)||0;set('dashAlertsGroup',n||null,n>0)}
+ catch(e){set('dashAlertsGroup',null,false)}
 }
-
-function run(){ if(build())badges() }
-
+function run(){
+ try{if(window.__kpiTick)window.__kpiTick()}catch(e){}
+ try{if(window.__colorTick)window.__colorTick()}catch(e){}
+ try{if(build())badges()}catch(e){console.error('dash',e)}
+}
 if(typeof window.renderDashboard==='function'){
  const _o=window.renderDashboard;
- window.renderDashboard=function(){
-  const r=_o.apply(this,arguments);
-  try{ run() }catch(e){ console.error('dash-tabs',e) }
-  return r;
- };
+ window.renderDashboard=function(){const r=_o.apply(this,arguments);setTimeout(run,40);return r};
 }
-setTimeout(()=>{try{run()}catch(e){}},2000);
+setTimeout(run,2000);
 })();
 </script>
