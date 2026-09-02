@@ -6106,3 +6106,35 @@ window.addEventListener('beforeunload',e=>{
 });
 })();
 </script>
+<script>
+(function(){
+"use strict";
+/* التحديث اللحظي يبقى للتنبيهات والطلبات والأرقام،
+   ويتوقف عن الصفحات التي يُدخِل فيها المستخدم بيانات */
+const FREEZE=['payroll','payrollStatements','custody','paymentsAdmin','employees','settings'];
+const isTyping=()=>{
+ const a=document.activeElement;
+ return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !a.disabled && a.type!=='checkbox';
+};
+const onFrozenPage=()=>{
+ const p=document.querySelector('#app .page.on, #empApp .page.on');
+ if(!p)return false;
+ const id=p.id.replace(/^page-|^ep-/,'');
+ return FREEZE.indexOf(id)>-1;
+};
+const hasUnsaved=()=>!!document.querySelector('.proll-dirty, .prep-dirty');
+
+/* تغليف دوال الرسم الثقيلة: تتوقف أثناء الكتابة أو وجود تعديل غير محفوظ */
+['renderPayrollTable','renderEmployees','renderCustody','renderPaymentRequests','renderPermissionsMatrix']
+.forEach(fn=>{
+ if(typeof window[fn]!=='function')return;
+ const _o=window[fn];
+ window[fn]=function(){
+  if(isTyping()||hasUnsaved()) return;      /* لا تمسح ما تحت يد المستخدم */
+  return _o.apply(this,arguments);
+ };
+});
+
+/* أما التنبيهات والأرقام والطلبات فتُحدَّث دائماً — لا نلمسها */
+})();
+</script>
