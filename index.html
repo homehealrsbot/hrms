@@ -5951,7 +5951,7 @@ if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.deductionsHR='�
   const _o=window.renderExtraModulesNav;
   window.renderExtraModulesNav=function(){
    const r=_o.apply(this,arguments);
-   const nav=document.getElementById('epExtraNav');
+   const nav=document.getElementById('extraModulesNav');
    if(nav&&hasPerm('deductionsHR','view')&&!nav.querySelector('[data-xm="deductionsHR"]')){
     const b=document.createElement('button');
     b.className='nav-item'; b.dataset.ep='extraModule'; b.dataset.xm='deductionsHR';
@@ -5962,5 +5962,147 @@ if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.deductionsHR='�
    return r;
   };
  }
+})();
+</script>
+<!-- ============================================================
+     حماية إدخالات الرواتب من التحديث التلقائي
+     يُلصق في آخر ملف index.html بعد كل شيء.
+     يحفظ ما كتبته ويعيده بعد كل تحديث دوري، ويميّزه بلون
+     حتى تحفظه بنفسك.
+     ============================================================ -->
+<style>
+.proll-dirty{
+  background:#FDF7E7 !important;
+  border-color:#C99200 !important;
+  box-shadow:0 0 0 2px rgba(201,146,0,.14);
+  font-weight:700;
+}
+#prollDirtyBar{
+  position:fixed;inset-inline-start:50%;transform:translateX(-50%);
+  bottom:22px;z-index:9999;display:none;align-items:center;gap:12px;
+  background:#101B33;color:#fff;padding:11px 18px;border-radius:12px;
+  box-shadow:0 10px 30px rgba(16,24,40,.3);font-size:13.5px;font-weight:700;
+  font-family:inherit;
+}
+#prollDirtyBar b{color:#FFC94D}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const CLS=['proll-add','proll-ded','proll-addnote','proll-dednote'];
+const TBODIES=['prollTbodyAdmin','prollTbody'];
+const keep=Object.create(null);   /* القيم غير المحفوظة: مفتاح → قيمة */
+
+const clsOf=el=>CLS.find(c=>el.classList.contains(c));
+const keyOf=el=>clsOf(el)+'|'+el.dataset.id;
+
+/* ---------- التقاط ما قبل إعادة البناء ---------- */
+function snapshot(){
+ const s={checks:[],vals:Object.create(null),focus:null,sel:null};
+ TBODIES.forEach(id=>{
+  const t=document.getElementById(id); if(!t)return;
+  t.querySelectorAll('input').forEach(i=>{
+   if(i.classList.contains('proll-select')){ if(i.checked)s.checks.push(i.dataset.emp); return }
+   if(!clsOf(i)||!i.dataset.id)return;
+   s.vals[keyOf(i)]=i.value;
+  });
+ });
+ const a=document.activeElement;
+ if(a&&a.dataset&&a.dataset.id&&clsOf(a)){
+  s.focus=keyOf(a);
+  try{ s.sel=[a.selectionStart,a.selectionEnd] }catch(e){}
+ }
+ return s;
+}
+
+/* ---------- الإعادة بعد إعادة البناء ---------- */
+function restore(s){
+ TBODIES.forEach(id=>{
+  const t=document.getElementById(id); if(!t)return;
+  t.querySelectorAll('input').forEach(i=>{
+   /* استعادة خانات الاختيار (مهمة لتصدير WPS) */
+   if(i.classList.contains('proll-select')){ i.checked=s.checks.indexOf(i.dataset.emp)>-1; return }
+   if(!clsOf(i)||!i.dataset.id)return;
+   const k=keyOf(i);
+   const before=s.vals[k];
+   if(before===undefined)return;
+   /* القيمة المعروضة الآن هي قيمة قاعدة البيانات.
+      لو اختلفت عمّا كان مكتوباً، فالفرق من يد المستخدم → نعيده. */
+   if(String(before)!==String(i.value)){
+    i.value=before;
+    keep[k]=before;
+    i.classList.add('proll-dirty');
+    if(typeof updatePayrollNetLive==='function'){ try{ updatePayrollNetLive(i) }catch(e){} }
+   }else{
+    delete keep[k];
+    i.classList.remove('proll-dirty');
+   }
+  });
+ });
+
+ /* إعادة المؤشر لموضعه بالضبط */
+ if(s.focus){
+  const [c,id]=s.focus.split('|');
+  const el=document.querySelector('.'+c+'[data-id="'+id+'"]');
+  if(el){
+   try{ el.focus({preventScroll:true}) }catch(e){ el.focus() }
+   if(s.sel){ try{ el.setSelectionRange(s.sel[0],s.sel[1]) }catch(e){} }
+  }
+ }
+ bar();
+}
+
+/* ---------- شريط التنبيه ---------- */
+function bar(){
+ let b=document.getElementById('prollDirtyBar');
+ if(!b){
+  b=document.createElement('div'); b.id='prollDirtyBar';
+  b.innerHTML='<span>⚠️ لديك <b id="prollDirtyN">0</b> تعديل غير محفوظ — اضغط «حفظ التعديلات»</span>';
+  document.body.appendChild(b);
+ }
+ const n=Object.keys(keep).length;
+ document.getElementById('prollDirtyN').textContent=n;
+ b.style.display=n?'flex':'none';
+}
+
+/* ---------- تعليم الحقل فور الكتابة ---------- */
+document.addEventListener('input',e=>{
+ const el=e.target;
+ if(!el.dataset||!el.dataset.id||!clsOf(el))return;
+ if(!el.closest('#prollTbodyAdmin,#prollTbody'))return;
+ keep[keyOf(el)]=el.value;
+ el.classList.add('proll-dirty');
+ bar();
+},true);
+
+/* ---------- تغليف دالة العرض ---------- */
+if(typeof window.renderPayrollTable==='function'){
+ const _orig=window.renderPayrollTable;
+ window.renderPayrollTable=function(){
+  const s=snapshot();
+  const r=_orig.apply(this,arguments);
+  try{ restore(s) }catch(e){ console.error('payroll-keep',e) }
+  return r;
+ };
+}
+
+/* ---------- بعد الحفظ الناجح: مسح علامات التعديل ---------- */
+if(typeof window.savePayrollChanges==='function'){
+ const _save=window.savePayrollChanges;
+ window.savePayrollChanges=async function(){
+  const r=await _save.apply(this,arguments);
+  Object.keys(keep).forEach(k=>delete keep[k]);
+  document.querySelectorAll('.proll-dirty').forEach(el=>el.classList.remove('proll-dirty'));
+  bar();
+  return r;
+ };
+}
+
+/* ---------- تحذير قبل مغادرة الصفحة ---------- */
+window.addEventListener('beforeunload',e=>{
+ if(Object.keys(keep).length){ e.preventDefault(); e.returnValue='' }
+});
 })();
 </script>
