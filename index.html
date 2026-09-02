@@ -5678,3 +5678,267 @@ setTimeout(run,2000);
  setInterval(fix,900);
 })();
 </script>
+<!-- ============================================================
+     دورة كشف الرواتب — المرحلة 2: الواجهة
+     شاشة تحضير لسلامة (بلا رواتب) + لوحة مراجعة للمحاسب
+     تُلصق في آخر index.html بعد كل شيء.
+     ============================================================ -->
+<style>
+.prep-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;
+  border:1px solid #E6EAF2;border-radius:12px;padding:12px 16px;margin-bottom:14px}
+.prep-bar .sp{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+.prep-note{background:#FDF7E7;border:1px solid #E8D9A8;color:#6B4E00;border-radius:10px;
+  padding:11px 15px;margin-bottom:14px;font-size:13.5px;font-weight:600;line-height:1.8}
+.prep-note b{color:#8A5A00}
+.prep-off{opacity:.55;pointer-events:none}
+tr.prep-out{background:#FAFBFC}
+tr.prep-out td:not(:first-child){opacity:.42}
+.prep-chk{width:19px;height:19px;cursor:pointer}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ حالة ============ */
+let pM=new Date().getMonth()+1, pY=new Date().getFullYear();
+let prepRun=null, prepItems=[], prepEmps=[], prepDirty=false;
+const $$=id=>document.getElementById(id);
+const AR_MONTHS=(typeof MONTH_NAMES!=='undefined')?MONTH_NAMES:
+ ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+const TAG={'مسودة':['sand','📝 مسودة — قيد التحضير'],
+           'قيد المراجعة':['info','📤 مُرسل للمحاسب'],
+           'معاد للتعديل':['danger','↩️ مُعاد للتعديل'],
+           'مكتمل':['ok','✅ تم تحويله لكشف رواتب']};
+
+async function prepLoad(){
+ const [R,E]=await Promise.all([
+  sb.from('payroll_prep_runs').select('*').eq('month',pM).eq('year',pY).maybeSingle(),
+  sb.from('employees').select('id,full_name,department,status').eq('status','نشط').order('full_name'),
+ ]);
+ if(E.error)throw E.error;
+ prepEmps=E.data||[];
+ prepRun=R.data||null;
+ prepItems=[];
+ if(prepRun){
+  const I=await sb.from('payroll_prep_items').select('*').eq('prep_run_id',prepRun.id);
+  if(I.error)throw I.error;
+  prepItems=I.data||[];
+ }
+ prepDirty=false;
+}
+
+/* ============ شاشة سلامة ============ */
+function prepRender(host,full){
+ if(!host)return;
+ const st=prepRun?prepRun.status:null;
+ const editable=full && (!st || st==='مسودة' || st==='معاد للتعديل');
+ const opts=AR_MONTHS.map((m,i)=>`<option value="${i+1}" ${pM===i+1?'selected':''}>${m}</option>`).join('');
+
+ let html=`<div class="prep-bar">
+   <div style="min-width:130px"><label style="font-size:12px;color:#77839C">الشهر</label>
+     <select id="prepMonth">${opts}</select></div>
+   <div style="min-width:110px"><label style="font-size:12px;color:#77839C">السنة</label>
+     <input id="prepYear" type="number" value="${pY}"></div>
+   <div class="sp">${prepRun?`<span class="tag ${TAG[st][0]}">${TAG[st][1]}</span>`:''}
+     ${!prepRun&&full?`<button class="btn btn-primary" id="prepOpenBtn">📋 فتح تحضير الشهر</button>`:''}</div>
+ </div>`;
+
+ if(st==='معاد للتعديل'&&prepRun.return_reason){
+  html+=`<div class="prep-note">↩️ <b>أعاد المحاسب التحضير للتعديل.</b><br>السبب: ${prepRun.return_reason}</div>`;
+ }
+ if(st==='قيد المراجعة'){
+  html+=`<div class="prep-note">📤 <b>التحضير عند المحاسب الآن.</b> لا يمكن التعديل حتى يعيده أو يعتمده.</div>`;
+ }
+ if(!prepRun){
+  html+=`<div class="card"><div class="empty">لم يُفتح تحضير لهذا الشهر بعد${full?' — اضغط «فتح تحضير الشهر»':''}</div></div>`;
+  host.innerHTML=html; bindTop(host,full); return;
+ }
+
+ const byEmp={}; prepItems.forEach(i=>byEmp[i.employee_id]=i);
+ const rows=prepEmps.map(e=>{
+  const it=byEmp[e.id]; if(!it)return '';
+  const off=!it.included;
+  return `<tr data-pid="${it.id}" class="${off?'prep-out':''}">
+   <td style="text-align:center"><input type="checkbox" class="prep-chk pi-inc" ${it.included?'checked':''} ${editable?'':'disabled'}></td>
+   <td><b>${e.full_name}</b></td>
+   <td>${e.department||'—'}</td>
+   <td><input class="pi-add" type="number" min="0" step="0.01" value="${+it.additions||0}" ${editable?'':'disabled'} style="width:95px"></td>
+   <td><input class="pi-addnote" value="${it.additions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
+   <td><input class="pi-ded" type="number" min="0" step="0.01" value="${+it.deductions||0}" ${editable?'':'disabled'} style="width:95px"></td>
+   <td><input class="pi-dednote" value="${it.deductions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
+   <td><input class="pi-note" value="${it.note||''}" ${editable?'':'disabled'} placeholder="ملاحظة للمحاسب" style="width:150px"></td>
+  </tr>`;
+ }).join('');
+
+ const inc=prepItems.filter(i=>i.included).length;
+ html+=`<div class="card">
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:#65718A">
+   <span>الموظفون النشطون: <b style="color:#101B33">${prepEmps.length}</b></span>
+   <span>المستحقون هذا الشهر: <b style="color:#1F7A54">${inc}</b></span>
+   <span>غير مستحقين: <b style="color:#B3261E">${prepEmps.length-inc}</b></span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr>
+    <th style="width:52px">مستحق</th><th>الموظف</th><th>القسم</th>
+    <th>إضافة</th><th>سبب الإضافة</th><th>خصم</th><th>سبب الخصم</th><th>ملاحظة</th>
+  </tr></thead><tbody id="prepTbody">${rows}</tbody></table></div>
+  ${editable?`<div class="modal-foot" style="justify-content:flex-start;margin-top:14px;flex-wrap:wrap">
+    <button class="btn btn-ok" id="prepSaveBtn">💾 حفظ التحضير</button>
+    <button class="btn btn-primary" id="prepSendBtn">📤 إرسال للمحاسب</button>
+  </div>`:''}
+ </div>`;
+
+ host.innerHTML=html;
+ bindTop(host,full);
+ if(editable){
+  host.querySelectorAll('#prepTbody input').forEach(i=>i.addEventListener('input',()=>{prepDirty=true;
+   const tr=i.closest('tr'); if(i.classList.contains('pi-inc'))tr.classList.toggle('prep-out',!i.checked)}));
+  $$('prepSaveBtn').onclick=()=>prepSave(host,full);
+  $$('prepSendBtn').onclick=()=>prepSend(host,full);
+ }
+}
+function bindTop(host,full){
+ const m=$$('prepMonth'), y=$$('prepYear');
+ if(m)m.onchange=()=>{pM=+m.value;reload(host,full)};
+ if(y)y.onchange=()=>{pY=+y.value;reload(host,full)};
+ const ob=$$('prepOpenBtn');
+ if(ob)ob.onclick=async()=>{
+  const {error}=await sb.rpc('prep_open_month',{p_month:pM,p_year:pY});
+  if(error){err(error);return}
+  toast('تم فتح تحضير الشهر'); reload(host,full);
+ };
+}
+function reload(host,full){
+ host.innerHTML='<div class="empty">⏳ جاري التحميل...</div>';
+ prepLoad().then(()=>prepRender(host,full)).catch(e=>{host.innerHTML='<div class="empty">تعذّر التحميل</div>';err(e)});
+}
+async function prepSave(host,full){
+ const rows=[...document.querySelectorAll('#prepTbody tr')].map(tr=>({
+  id:tr.dataset.pid,
+  included:tr.querySelector('.pi-inc').checked,
+  additions:+tr.querySelector('.pi-add').value||0,
+  additions_note:tr.querySelector('.pi-addnote').value||null,
+  deductions:+tr.querySelector('.pi-ded').value||0,
+  deductions_note:tr.querySelector('.pi-dednote').value||null,
+  note:tr.querySelector('.pi-note').value||null,
+ }));
+ const btn=$$('prepSaveBtn'); if(btn)btn.disabled=true;
+ for(const r of rows){
+  const {id,...rest}=r;
+  const {error}=await sb.from('payroll_prep_items').update(rest).eq('id',id);
+  if(error){err(error);if(btn)btn.disabled=false;return}
+ }
+ if(btn)btn.disabled=false;
+ prepDirty=false; toast('✅ تم حفظ التحضير');
+ reload(host,full);
+}
+async function prepSend(host,full){
+ if(prepDirty){ toast('احفظ التحضير أولاً قبل الإرسال'); return }
+ const inc=prepItems.filter(i=>i.included).length;
+ if(!inc){ toast('حدّد موظفاً واحداً مستحقاً على الأقل'); return }
+ if(!(await showConfirm(`إرسال تحضير ${AR_MONTHS[pM-1]} ${pY} للمحاسب؟\nعدد المستحقين: ${inc}\nلن تتمكني من التعديل بعد الإرسال.`)))return;
+ const {error}=await sb.from('payroll_prep_runs')
+   .update({status:'قيد المراجعة',sent_at:new Date().toISOString()}).eq('id',prepRun.id);
+ if(error){err(error);return}
+ toast('📤 أُرسل للمحاسب'); reload(host,full);
+}
+
+/* ============ لوحة المحاسب ============ */
+async function acctPanel(isAdmin){
+ const mSel=isAdmin?'prollMonthAdmin':'prollMonth', ySel=isAdmin?'prollYearAdmin':'prollYear';
+ const badge=$$(isAdmin?'prollStatusBadgeAdmin':'prollStatusBadge');
+ if(!badge||!$$(mSel)||!$$(mSel).value)return;
+ const m=+$$(mSel).value, y=+$$(ySel).value;
+
+ let host=$$('acctPrepPanel'+(isAdmin?'A':'E'));
+ if(!host){ host=document.createElement('div'); host.id='acctPrepPanel'+(isAdmin?'A':'E');
+  badge.parentNode.insertBefore(host,badge) }
+
+ const {data:pr}=await sb.from('payroll_prep_runs').select('*').eq('month',m).eq('year',y).maybeSingle();
+ const run=(typeof payrollRuns!=='undefined'?payrollRuns:[]).find(r=>r.month===m&&r.year===y);
+ const rs=run?run.status:null;
+
+ let h='';
+ if(pr&&pr.status==='قيد المراجعة'){
+  const {count}=await sb.from('payroll_prep_items').select('id',{count:'exact',head:true})
+    .eq('prep_run_id',pr.id).eq('included',true);
+  h=`<div class="prep-note">📥 <b>وصلك تحضير ${AR_MONTHS[m-1]} ${y} من الموارد البشرية.</b>
+   عدد المستحقين: <b>${count||0}</b> موظف — مع الخصومات والإضافات والملاحظات.</div>
+   <div class="prep-bar"><div class="sp">
+    <button class="btn btn-primary" onclick="acctGenerate(${m},${y},${isAdmin})">⚙️ توليد الكشف من التحضير</button>
+    <button class="btn btn-danger" onclick="acctReturn(${m},${y},${isAdmin})">↩️ إعادة للتعديل</button>
+   </div></div>`;
+ }else if(pr&&pr.status==='مسودة'){
+  h=`<div class="prep-note">⏳ تحضير هذا الشهر لم يُرسل بعد من الموارد البشرية.</div>`;
+ }
+
+ if(run){
+  if(rs==='مسودة'&&pr&&pr.status==='مكتمل')
+   h+=`<div class="prep-bar"><div class="sp">
+     <button class="btn btn-ok" onclick="acctApprove(${m},${y},${isAdmin})">✅ اعتماد الكشف نهائياً</button></div></div>`;
+  if(rs==='معتمد')
+   h+=`<div class="prep-note">✅ <b>الكشف معتمد ومقفل.</b> الموظفون لا يرونه بعد — اضغط «نشر» ليظهر لكل موظف راتبه.</div>
+    <div class="prep-bar"><div class="sp">
+     <button class="btn btn-primary" onclick="acctPublish(${m},${y},${isAdmin})">📢 نشر للموظفين</button></div></div>`;
+  if(rs==='منشور')
+   h+=`<div class="prep-note" style="background:#EEF7F2;border-color:#B7DCC7;color:#1F5A3D">
+     📢 <b>الكشف منشور.</b> كل موظف يرى راتبه الآن في بوابته.</div>`;
+ }
+ host.innerHTML=h;
+
+ /* قفل الحقول للحالات النهائية */
+ if(['معتمد','منشور','مقفل'].indexOf(rs)>-1){
+  const tb=$$(isAdmin?'prollTbodyAdmin':'prollTbody');
+  if(tb)tb.querySelectorAll('input:not(.proll-select)').forEach(i=>i.disabled=true);
+  badge.innerHTML=`<span class="tag ${rs==='منشور'?'ok':'danger'}">${rs==='منشور'?'📢 منشور للموظفين':'🔒 معتمد ومقفل'}</span>`;
+ }
+}
+window.acctGenerate=async function(m,y,isAdmin){
+ if(!(await showConfirm(`توليد كشف ${AR_MONTHS[m-1]} ${y} من التحضير؟\nستُضاف رواتب الموظفين المستحقين مع خصومات وإضافات الموارد البشرية.`)))return;
+ const {error}=await sb.rpc('payroll_generate_from_prep',{p_month:m,p_year:y});
+ if(error){err(error);return}
+ toast('⚙️ تم توليد الكشف'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
+};
+window.acctReturn=async function(m,y,isAdmin){
+ const reason=prompt('سبب إعادة التحضير للموارد البشرية (إلزامي):');
+ if(reason===null)return;
+ if(!reason.trim()){toast('السبب إلزامي');return}
+ const {error}=await sb.rpc('prep_return_to_hr',{p_month:m,p_year:y,p_reason:reason.trim()});
+ if(error){err(error);return}
+ toast('↩️ أُعيد للموارد البشرية'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
+};
+window.acctApprove=async function(m,y,isAdmin){
+ if(!(await showConfirm('اعتماد الكشف نهائياً؟\nلن يُعدَّل بعدها، وسيُفعَّل تصدير WPS.\nالموظفون لن يروه حتى تضغط «نشر».')))return;
+ const run=payrollRuns.find(r=>r.month===m&&r.year===y);
+ const {error}=await sb.from('payroll_runs').update({status:'معتمد'}).eq('id',run.id);
+ if(error){err(error);return}
+ toast('✅ تم الاعتماد'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
+};
+window.acctPublish=async function(m,y,isAdmin){
+ if(!(await showConfirm('نشر الكشف للموظفين؟\nكل موظف سيرى راتبه في بوابته فوراً.')))return;
+ const run=payrollRuns.find(r=>r.month===m&&r.year===y);
+ const {error}=await sb.from('payroll_runs').update({status:'منشور'}).eq('id',run.id);
+ if(error){err(error);return}
+ toast('📢 تم النشر'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
+};
+
+/* ============ الربط ============ */
+if(typeof window.renderExtraModuleBody==='function'){
+ const _o=window.renderExtraModuleBody;
+ window.renderExtraModuleBody=function(key,full){
+  if(key==='deductionsHR'){ reload(document.getElementById('extraModuleBody'),!!full); return }
+  return _o.apply(this,arguments);
+ };
+}
+if(typeof window.renderPayrollTable==='function'){
+ const _o=window.renderPayrollTable;
+ window.renderPayrollTable=function(isAdmin){
+  const r=_o.apply(this,arguments);
+  try{ acctPanel(!!isAdmin) }catch(e){ console.error('acct-panel',e) }
+  return r;
+ };
+}
+if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.deductionsHR='📋';
+})();
+</script>
