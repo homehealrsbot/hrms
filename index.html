@@ -5876,7 +5876,8 @@ async function acctPanel(isAdmin){
  if(run){
   if(rs==='مسودة'&&pr&&pr.status==='مكتمل')
    h+=`<div class="prep-bar"><div class="sp">
-     <button class="btn btn-ok" onclick="acctApprove(${m},${y},${isAdmin})">✅ اعتماد الكشف نهائياً</button></div></div>`;
+     <button class="btn btn-ok" onclick="acctApprove(${m},${y},${isAdmin})">✅ اعتماد الكشف نهائياً</button>
+     <button class="btn btn-danger" onclick="acctReturn(${m},${y},${isAdmin})">↩️ إعادة لسلامة للتعديل</button></div></div>`;
   if(rs==='معتمد')
    h+=`<div class="prep-note">✅ <b>الكشف معتمد ومقفل.</b> الموظفون لا يرونه بعد — اضغط «نشر» ليظهر لكل موظف راتبه.</div>
     <div class="prep-bar"><div class="sp">
