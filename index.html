@@ -5665,3 +5665,16 @@ if(typeof window.renderDashboard==='function'){
 setTimeout(run,2000);
 })();
 </script>
+<script>
+(function(){
+ const fix=()=>{
+  const on=(document.querySelector('#dashNav .dn-item.on')||{}).dataset;
+  const id=on?on.sec:null; if(!id)return;
+  document.querySelectorAll('#dashContent > div').forEach(d=>{
+   d.style.setProperty('display', d.id===id?'block':'none', 'important');
+  });
+ };
+ document.addEventListener('click',e=>{ if(e.target.closest('#dashNav .dn-item'))setTimeout(fix,20) },true);
+ setInterval(fix,900);
+})();
+</script>
