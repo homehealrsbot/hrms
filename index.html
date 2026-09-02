@@ -5942,3 +5942,25 @@ if(typeof window.renderPayrollTable==='function'){
 if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.deductionsHR='📋';
 })();
 </script>
+<script>
+(function(){
+ if(typeof MODULES==='undefined')return;
+ const m=MODULES.find(x=>x.key==='deductionsHR');
+ if(m)m.label='تحضير كشف الرواتب';
+ if(typeof window.renderExtraModulesNav==='function'){
+  const _o=window.renderExtraModulesNav;
+  window.renderExtraModulesNav=function(){
+   const r=_o.apply(this,arguments);
+   const nav=document.getElementById('epExtraNav');
+   if(nav&&hasPerm('deductionsHR','view')&&!nav.querySelector('[data-xm="deductionsHR"]')){
+    const b=document.createElement('button');
+    b.className='nav-item'; b.dataset.ep='extraModule'; b.dataset.xm='deductionsHR';
+    b.innerHTML='<span class="ic">📋</span> تحضير كشف الرواتب';
+    b.onclick=()=>openExtraModule('deductionsHR','تحضير كشف الرواتب');
+    nav.appendChild(b);
+   }
+   return r;
+  };
+ }
+})();
+</script>
