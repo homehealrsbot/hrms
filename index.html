@@ -5952,7 +5952,7 @@ if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.deductionsHR='�
   window.renderExtraModulesNav=function(){
    const r=_o.apply(this,arguments);
    const nav=document.getElementById('extraModulesNav');
-   if(nav&&hasPerm('deductionsHR','view')&&!nav.querySelector('[data-xm="deductionsHR"]')){
+   if(false){
     const b=document.createElement('button');
     b.className='nav-item'; b.dataset.ep='extraModule'; b.dataset.xm='deductionsHR';
     b.innerHTML='<span class="ic">📋</span> تحضير كشف الرواتب';
@@ -6106,76 +6106,83 @@ window.addEventListener('beforeunload',e=>{
 });
 })();
 </script>
+<!-- ============================================================
+     ضبط التحديث التلقائي
+     يوقف إعادة رسم الشاشات التي تُدخَل فيها بيانات،
+     ويبقي لوحة التحكم لحظية، ويضيف زر تحديث يدوي.
+     يُلصق في آخر index.html بعد كل شيء.
+     ============================================================ -->
 <script>
 (function(){
 "use strict";
-/* التحديث اللحظي يبقى للتنبيهات والطلبات والأرقام،
-   ويتوقف عن الصفحات التي يُدخِل فيها المستخدم بيانات */
-const FREEZE=['payroll','payrollStatements','custody','paymentsAdmin','employees','settings'];
-const isTyping=()=>{
- const a=document.activeElement;
- return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !a.disabled && a.type!=='checkbox';
-};
-const onFrozenPage=()=>{
- const p=document.querySelector('#app .page.on, #empApp .page.on');
- if(!p)return false;
- const id=p.id.replace(/^page-|^ep-/,'');
- return FREEZE.indexOf(id)>-1;
-};
-const hasUnsaved=()=>!!document.querySelector('.proll-dirty, .prep-dirty');
 
-/* تغليف دوال الرسم الثقيلة: تتوقف أثناء الكتابة أو وجود تعديل غير محفوظ */
-['renderPayrollTable','renderEmployees','renderCustody','renderPaymentRequests','renderPermissionsMatrix']
-.forEach(fn=>{
- if(typeof window[fn]!=='function')return;
- const _o=window[fn];
- window[fn]=function(){
-  if(isTyping()||hasUnsaved()) return;      /* لا تمسح ما تحت يد المستخدم */
-  return _o.apply(this,arguments);
- };
-});
-
-/* أما التنبيهات والأرقام والطلبات فتُحدَّث دائماً — لا نلمسها */
-})();
-</script>
-<script>
-(function(){
-"use strict";
-/* التحديث الدوري يجلب البيانات دائماً، لكن لا يعيد رسم الشاشة
-   إلا إذا كنت في لوحة التحكم (أرقام وتنبيهات فقط). */
 let manual=false;
 
-const wrap=(name)=>{
- if(typeof window[name]!=='function')return;
- const _o=window[name];
- window[name]=function(){
+/* ---------- 1) إيقاف الدورات الدورية ---------- */
+/* تُشغَّل بعد اكتمال التحميل حتى تُلغى الدورات التي أنشأها النظام */
+function killTimers(){
+ for(let i=1;i<99999;i++){ try{ clearInterval(i) }catch(e){} }
+}
+window.addEventListener('load',()=>setTimeout(killTimers,3000));
+setTimeout(killTimers,5000);
+
+/* منع إنشاء دورات جديدة بنفس النمط (10ث – 60ث) */
+const _si=window.setInterval;
+window.setInterval=function(fn,ms){
+ if(typeof ms==='number' && ms>=10000 && ms<=60000) return -1;
+ return _si.apply(this,arguments);
+};
+
+/* ---------- 2) تحديث لحظي للوحة التحكم فقط ---------- */
+/* كل 20 ثانية: يجلب البيانات، ويعيد الرسم فقط إن كنت في لوحة التحكم */
+_si(async function(){
+ try{
+  if(typeof me==='undefined'||!me)return;
+  const p=document.querySelector('#app .page.on, #empApp .page.on');
+  const id=p?p.id.replace(/^page-|^ep-/,''):'';
+  if(id!=='dashboard')return;           /* أي صفحة أخرى: لا تحديث ولا رسم */
+  manual=true;
+  await refresh();
+ }catch(e){}
+ finally{ manual=false }
+},20000);
+
+/* ---------- 3) حاجز أمان على دوال الرسم الشاملة ---------- */
+['renderAll','epRenderAll'].forEach(n=>{
+ if(typeof window[n]!=='function')return;
+ const _o=window[n];
+ window[n]=function(){
   if(manual) return _o.apply(this,arguments);
   const p=document.querySelector('#app .page.on, #empApp .page.on');
   const id=p?p.id.replace(/^page-|^ep-/,''):'';
-  if(id==='dashboard') return _o.apply(this,arguments);   /* اللوحة تبقى لحظية */
-  return;                                                  /* باقي الصفحات: لا رسم */
+  if(id==='dashboard') return _o.apply(this,arguments);
+  return;
  };
-};
-wrap('renderAll'); wrap('epRenderAll');
+});
 
-/* زر تحديث يدوي */
+/* ---------- 4) زر التحديث اليدوي ---------- */
 setTimeout(()=>{
  if(document.getElementById('manualRefreshBtn'))return;
  const b=document.createElement('button');
- b.id='manualRefreshBtn'; b.textContent='🔄 تحديث';
+ b.id='manualRefreshBtn';
+ b.innerHTML='🔄 تحديث';
+ b.title='جلب أحدث البيانات من الخادم';
  b.style.cssText='position:fixed;bottom:18px;inset-inline-end:18px;z-index:9998;'
   +'background:#143087;color:#fff;border:none;border-radius:24px;padding:11px 20px;'
   +'font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;'
-  +'box-shadow:0 6px 20px rgba(20,48,135,.35)';
+  +'box-shadow:0 6px 20px rgba(20,48,135,.35);transition:transform .15s';
+ b.onmouseenter=()=>b.style.transform='translateY(-2px)';
+ b.onmouseleave=()=>b.style.transform='none';
  b.onclick=async()=>{
-  b.disabled=true; b.textContent='⏳';
+  b.disabled=true; b.innerHTML='⏳ جاري التحديث';
   manual=true;
-  try{ await refresh() }catch(e){}
+  try{ await refresh() }catch(e){ if(typeof err==='function')err(e) }
   manual=false;
-  b.disabled=false; b.textContent='🔄 تحديث';
-  if(typeof toast==='function')toast('تم التحديث');
+  b.disabled=false; b.innerHTML='🔄 تحديث';
+  if(typeof toast==='function')toast('تم تحديث البيانات');
  };
  document.body.appendChild(b);
 },2500);
+
 })();
 </script>
