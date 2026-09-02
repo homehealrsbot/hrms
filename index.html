@@ -6138,3 +6138,44 @@ const hasUnsaved=()=>!!document.querySelector('.proll-dirty, .prep-dirty');
 /* أما التنبيهات والأرقام والطلبات فتُحدَّث دائماً — لا نلمسها */
 })();
 </script>
+<script>
+(function(){
+"use strict";
+/* التحديث الدوري يجلب البيانات دائماً، لكن لا يعيد رسم الشاشة
+   إلا إذا كنت في لوحة التحكم (أرقام وتنبيهات فقط). */
+let manual=false;
+
+const wrap=(name)=>{
+ if(typeof window[name]!=='function')return;
+ const _o=window[name];
+ window[name]=function(){
+  if(manual) return _o.apply(this,arguments);
+  const p=document.querySelector('#app .page.on, #empApp .page.on');
+  const id=p?p.id.replace(/^page-|^ep-/,''):'';
+  if(id==='dashboard') return _o.apply(this,arguments);   /* اللوحة تبقى لحظية */
+  return;                                                  /* باقي الصفحات: لا رسم */
+ };
+};
+wrap('renderAll'); wrap('epRenderAll');
+
+/* زر تحديث يدوي */
+setTimeout(()=>{
+ if(document.getElementById('manualRefreshBtn'))return;
+ const b=document.createElement('button');
+ b.id='manualRefreshBtn'; b.textContent='🔄 تحديث';
+ b.style.cssText='position:fixed;bottom:18px;inset-inline-end:18px;z-index:9998;'
+  +'background:#143087;color:#fff;border:none;border-radius:24px;padding:11px 20px;'
+  +'font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;'
+  +'box-shadow:0 6px 20px rgba(20,48,135,.35)';
+ b.onclick=async()=>{
+  b.disabled=true; b.textContent='⏳';
+  manual=true;
+  try{ await refresh() }catch(e){}
+  manual=false;
+  b.disabled=false; b.textContent='🔄 تحديث';
+  if(typeof toast==='function')toast('تم التحديث');
+ };
+ document.body.appendChild(b);
+},2500);
+})();
+</script>
