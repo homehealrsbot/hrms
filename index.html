@@ -5078,7 +5078,12 @@ function glCOA(b){
  const rows=glAcc.map(a=>`<tr><td><b>${a.code}</b></td><td>${a.name}</td><td>${TYPE_AR[a.type]}</td>
   <td>${a.normal_side==='Dr'?'مدين':'دائن'}</td>
   <td>${a.is_contra?'<span class="tag sand">عكسي</span>':''}${a.is_cogs?' <span class="tag info">تكلفة إيراد</span>':''}</td></tr>`).join('');
- b.innerHTML=(glFull?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="glNewAcc()">+ إضافة حساب</button></div>`:'')
+ const pendAcc=glFull?seedMissingAcc().length:0, pendJrn=glFull?seedMissingJrn().length:0;
+ b.innerHTML=(glFull?`<div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+   <button class="btn btn-primary" onclick="glNewAcc()">+ إضافة حساب</button>
+   <button class="btn btn-sand" onclick="glImportSeed()">📥 ترحيل بيانات النظام المحاسبي السابق</button>
+   ${pendAcc||pendJrn?`<span class="tag sand">بانتظار الترحيل: ${pendAcc} حساب · ${pendJrn} قيد</span>`:'<span class="tag ok">✅ البيانات مُرحّلة بالكامل</span>'}
+  </div>`:'')
   +`<div class="card">${T(['الرمز','اسم الحساب','الفئة','الطبيعة','خصائص'],rows||'<tr><td colspan="5" class="empty">لا توجد حسابات</td></tr>')}</div>`;
 }
 
@@ -5212,6 +5217,167 @@ window.glSaveAcc=async function(){
   normal_side:$('glaSide').value,is_contra:$('glaContra').checked,is_cogs:$('glaCogs').checked});
  if(error){err(error);return}
  closeModal('glAccModal'); await glLoad(); glDraw(); toast('تمت إضافة الحساب');
+};
+
+/* ---------- 4-ب) ترحيل بيانات النظام المحاسبي السابق (ERP) ---------- */
+/* دليل الحسابات والقيود المُرحّلة من ملف "نظام هوم هيلرز المحاسبي المتكامل".
+   الترحيل آمن للتكرار: يتخطّى أي حساب أو قيد موجود مسبقاً. */
+const GL_SEED={
+ accounts:[
+  {code:101,name:"نقدية بالبنوك",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:103,name:"عملاء ومستحقات بوابات الدفع",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:104,name:"عهد مدينة للموظفين",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:105,name:"ضريبة القيمة المضافة (مدين)",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:110,name:"أصول ثابتة (سيارات ومعدات)",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:111,name:"مجمع إهلاك سيارات",type:"Asset",normal_side:"Cr",is_contra:true,is_cogs:false},
+  {code:112,name:"أصول غير ملموسة (تطبيق)",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:113,name:"مشاريع تحت التنفيذ",type:"Asset",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:201,name:"دائنون وموردون",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:202,name:"رواتب مستحقة",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:203,name:"إيرادات مؤجلة (بكجات)",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:204,name:"ضريبة ق.م مستحقة",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:205,name:"أقساط سيارات مستحقة",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:206,name:"قروض سيارات طويل الأجل",type:"Liability",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:301,name:"رأس المال المستثمر",type:"Equity",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:302,name:"أرباح مبقاة (آلي)",type:"Equity",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:303,name:"جاري المالك - مسحوبات",type:"Equity",normal_side:"Dr",is_contra:true,is_cogs:false},
+  {code:304,name:"تمويل إضافي / تسويات",type:"Equity",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:401,name:"إجمالي الإيرادات (عملاء)",type:"Revenue",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:402,name:"إيرادات تعاقدات",type:"Revenue",normal_side:"Cr",is_contra:false,is_cogs:false},
+  {code:403,name:"مبالغ مستردة للبنك",type:"Revenue",normal_side:"Dr",is_contra:true,is_cogs:false},
+  {code:404,name:"مردودات مبيعات",type:"Revenue",normal_side:"Dr",is_contra:true,is_cogs:false},
+  {code:501,name:"تكلفة أطباء (Part Time)",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:true},
+  {code:502,name:"تكلفة أطباء (Full Time)",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:true},
+  {code:503,name:"مصروفات تشغيلية للطاقم الطبي",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:true},
+  {code:504,name:"مصاريف التسويق والإعلانات",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:505,name:"الرواتب والأجور الإدارية",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:506,name:"مصروف إيجار مبنى",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:507,name:"مصاريف حكومية",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:508,name:"مصاريف عمومية وإدارية",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:509,name:"مصروفات تشغيلية (نقاط بيع POS)",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:510,name:"مصروفات تشغيلية متغيرة",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:511,name:"مصروفات كول سنتر",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:512,name:"ديون معدومة",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:513,name:"إهلاك سيارات",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:514,name:"فوائد ومصاريف تمويلية",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false},
+  {code:515,name:"محروقات سيارات",type:"Expense",normal_side:"Dr",is_contra:false,is_cogs:false}
+ ],
+ journals:[
+  {date:"2024-12-31",desc:"الأرصدة الافتتاحية وحركات سنة 2024",lines:[
+   {c:101,d:41302.51,r:0},
+   {c:110,d:9000,r:0},
+   {c:303,d:27834,r:0},
+   {c:403,d:69.45,r:0},
+   {c:404,d:1336.6,r:0},
+   {c:501,d:96906,r:0},
+   {c:504,d:25067.06,r:0},
+   {c:505,d:44613,r:0},
+   {c:506,d:17000,r:0},
+   {c:507,d:4993.1,r:0},
+   {c:508,d:14206.3,r:0},
+   {c:509,d:152.15,r:0},
+   {c:510,d:5928.73,r:0},
+   {c:301,d:0,r:110739},
+   {c:304,d:0,r:9138.9},
+   {c:401,d:0,r:153930},
+   {c:402,d:0,r:14601}
+  ]},
+  {date:"2025-12-31",desc:"حركات وتأثيرات سنة 2025",lines:[
+   {c:101,d:94565.32,r:0},
+   {c:103,d:54911,r:0},
+   {c:104,d:7708,r:0},
+   {c:105,d:4361.41,r:0},
+   {c:110,d:129375,r:0},
+   {c:112,d:27500,r:0},
+   {c:113,d:77847.21,r:0},
+   {c:304,d:5315.7,r:0},
+   {c:403,d:21973.57,r:0},
+   {c:404,d:4688,r:0},
+   {c:501,d:393592,r:0},
+   {c:502,d:124163,r:0},
+   {c:503,d:5025,r:0},
+   {c:504,d:241782.59,r:0},
+   {c:505,d:119049.97,r:0},
+   {c:506,d:17500,r:0},
+   {c:507,d:23430,r:0},
+   {c:508,d:44589.6,r:0},
+   {c:509,d:1000,r:0},
+   {c:510,d:37516.72,r:0},
+   {c:511,d:7118.79,r:0},
+   {c:512,d:1820,r:0},
+   {c:513,d:6469,r:0},
+   {c:514,d:4414,r:0},
+   {c:515,d:600,r:0},
+   {c:111,d:0,r:6469},
+   {c:201,d:0,r:2138},
+   {c:202,d:0,r:32650},
+   {c:203,d:0,r:61991.48},
+   {c:204,d:0,r:4311.1},
+   {c:205,d:0,r:28764},
+   {c:206,d:0,r:64039},
+   {c:401,d:0,r:1103983.3},
+   {c:402,d:0,r:151970}
+  ]},
+  {date:"2026-06-30",desc:"حركات وإقفالات النصف الأول 2026",lines:[
+   {c:104,d:15757.97,r:0},
+   {c:113,d:67364.79,r:0},
+   {c:201,d:2138,r:0},
+   {c:202,d:1315,r:0},
+   {c:204,d:3510.18,r:0},
+   {c:205,d:26367,r:0},
+   {c:302,d:19254.83,r:0},
+   {c:304,d:3823.2,r:0},
+   {c:403,d:11890.17,r:0},
+   {c:404,d:6390,r:0},
+   {c:501,d:197060,r:0},
+   {c:502,d:131333.58,r:0},
+   {c:503,d:6768.08,r:0},
+   {c:504,d:189280.95,r:0},
+   {c:505,d:131434.5,r:0},
+   {c:506,d:17500,r:0},
+   {c:507,d:25844.93,r:0},
+   {c:508,d:44070.7,r:0},
+   {c:509,d:1265,r:0},
+   {c:510,d:2305.52,r:0},
+   {c:511,d:4138.95,r:0},
+   {c:513,d:12938,r:0},
+   {c:514,d:8428.05,r:0},
+   {c:101,d:0,r:50631.09},
+   {c:103,d:0,r:29050},
+   {c:105,d:0,r:4311.1},
+   {c:111,d:0,r:12938},
+   {c:206,d:0,r:22810.43},
+   {c:303,d:0,r:27834},
+   {c:401,d:0,r:782465.91},
+   {c:304,d:0,r:138.87,m:"تسوية فروق لضبط توازن القيد (فرق وارد من الملف المصدر)"}
+  ]}
+ ]
+};
+const seedMissingAcc=()=>GL_SEED.accounts.filter(a=>!glAcc.some(g=>+g.code===a.code));
+const seedMissingJrn=()=>GL_SEED.journals.filter(j=>!glJrn.some(g=>g.entry_date===j.date&&g.description===j.desc));
+
+window.glImportSeed=async function(){
+ const accs=seedMissingAcc(), jrns=seedMissingJrn();
+ if(!accs.length&&!jrns.length){toast('البيانات مُرحّلة مسبقاً — لا يوجد جديد');return}
+ if(!(await showConfirm(`سيتم ترحيل ${accs.length} حساب و${jrns.length} قيد من النظام المحاسبي السابق (2024 – النصف الأول 2026). ما هو موجود مسبقاً لن يتكرّر.`,
+   {icon:'📥',title:'ترحيل البيانات المحاسبية',okText:'نعم، رحّل البيانات',okClass:'btn-primary'})))return;
+ try{
+  if(accs.length){ const {error}=await sb.from('gl_accounts').insert(accs); if(error)throw error; }
+  for(const j of jrns){
+   let jid=null;
+   try{
+    const {data,error}=await sb.from('gl_journals')
+     .insert({entry_date:j.date,description:j.desc,created_by:(me&&me.id)||null}).select().maybeSingle();
+    if(error)throw error;
+    jid=data.id;
+    const lines=j.lines.map((l,i)=>({journal_id:jid,line_no:i+1,account_code:l.c,debit:l.d,credit:l.r,memo:l.m||null}));
+    const {error:e2}=await sb.from('gl_journal_lines').insert(lines);
+    if(e2)throw e2;
+   }catch(e){ if(jid){try{await sb.from('gl_journals').delete().eq('id',jid)}catch(x){}} throw e; }
+  }
+  await glLoad(); glDraw();
+  toast(`✅ تم الترحيل — ${accs.length} حساب و${jrns.length} قيد`);
+ }catch(e){ err(e) }
 };
 
 /* ---------- 5) الطباعة ---------- */
