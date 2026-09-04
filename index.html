@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نظام إدارة الموارد البشرية | HRMS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
@@ -21,8 +22,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Alexandria',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65}
-h1,h2,h3,h4{font-family:'Alexandria',sans-serif;line-height:1.35;font-weight:700}
+body{font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65}
+h1,h2,h3,h4{font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.35;font-weight:700}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit;font-size:14px;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);transition:border-color .15s, box-shadow .15s}
 input[type="date"],input[type="time"],input[type="datetime-local"]{direction:ltr;text-align:right}
@@ -36,7 +37,7 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 .login-side::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 20% 110%,rgba(98,160,246,.28),transparent 60%)}
 .login-side h1{font-size:34px;font-weight:900;margin:18px 0 10px;position:relative}
 .login-side p{opacity:.85;max-width:420px;position:relative}
-.logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Alexandria';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans Arabic';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .login-form-wrap{width:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff}
 .login-form{width:100%;max-width:340px}
 .login-form h2{font-size:24px;font-weight:800;margin-bottom:6px}
@@ -65,7 +66,7 @@ aside::-webkit-scrollbar{width:5px}
 aside::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
 .side-head{padding:22px 20px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)}
 .side-head .logo-mark{width:42px;height:42px;font-size:17px;border-radius:12px}
-.side-head b{font-family:'Alexandria';font-size:16px;display:block}
+.side-head b{font-family:'IBM Plex Sans Arabic';font-size:16px;display:block}
 .side-head small{opacity:.6;font-size:11.5px}
 nav{padding:14px 12px;flex:1}
 .nav-label{font-size:10.5px;letter-spacing:.5px;opacity:.45;padding:14px 10px 6px;font-weight:600}
@@ -93,7 +94,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .top-search input{padding-inline-start:38px;border-radius:22px;background:var(--bg)}
 .top-search .ic{position:absolute;inset-inline-start:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
 .top-user{margin-inline-start:auto;display:flex;align-items:center;gap:12px}
-.avatar{width:37px;height:37px;border-radius:50%;background:var(--pine);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'Alexandria'}
+.avatar{width:37px;height:37px;border-radius:50%;background:var(--pine);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:'IBM Plex Sans Arabic'}
 .bell{position:relative;font-size:19px;color:var(--muted);padding:4px}
 .bell .dot{position:absolute;top:2px;inset-inline-end:0;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid #fff}
 
@@ -114,7 +115,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .alert-item[data-nav]{cursor:pointer;transition:background .12s}
 .alert-item[data-nav]:hover{background:#F7FAF8}
 .chip-filter{display:inline-flex;align-items:center;gap:6px;background:var(--sand-soft);color:var(--pine-deep);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:20px;cursor:pointer;margin-bottom:12px}
-.stat .num{font-family:'Alexandria';font-size:28px;font-weight:900;line-height:1.2}
+.stat .num{font-family:'IBM Plex Sans Arabic';font-size:28px;font-weight:900;line-height:1.2}
 .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:600}
 .stat.sand{border-color:var(--sand)} .stat.danger{border-color:var(--danger)} .stat.info{border-color:var(--info)} .stat.ok{border-color:var(--ok)}
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px}
@@ -123,12 +124,12 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 fieldset{border:1.5px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-legend{font-family:'Alexandria';font-weight:800;font-size:14px;padding:0 10px;color:var(--pine)}
+legend{font-family:'IBM Plex Sans Arabic';font-weight:800;font-size:14px;padding:0 10px;color:var(--pine)}
 
 /* ---------- الجداول ---------- */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
 table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;min-width:640px}
-th{background:var(--pine-soft);color:var(--pine);font-family:'Alexandria';font-weight:800;font-size:12.5px;padding:11px 13px;text-align:right;white-space:nowrap}
+th{background:var(--pine-soft);color:var(--pine);font-family:'IBM Plex Sans Arabic';font-weight:800;font-size:12.5px;padding:11px 13px;text-align:right;white-space:nowrap}
 td{padding:11px 13px;border-top:1px solid var(--line);vertical-align:middle}
 tbody tr:hover{background:#FAFCFB}
 .tag{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
@@ -160,7 +161,7 @@ tbody tr:hover{background:#FAFCFB}
 .policy{display:flex;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff;flex-wrap:wrap}
 .policy .pic{width:44px;height:44px;border-radius:11px;background:var(--pine-soft);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
 .policy .pinfo{flex:1;min-width:200px}
-.policy b{font-size:14.5px;font-family:'Alexandria'}
+.policy b{font-size:14.5px;font-family:'IBM Plex Sans Arabic'}
 .policy small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .policy .actions{display:flex;gap:7px;flex-wrap:wrap}
 .file-cat{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--pine-soft);border-radius:11px;font-weight:700;cursor:pointer;transition:.13s;border:1.5px solid transparent}
@@ -197,7 +198,7 @@ tbody tr:hover{background:#FAFCFB}
 .hint{font-size:12px;color:var(--muted);margin-top:4px}
 .mini-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .mini-stat{background:var(--pine-soft);border-radius:11px;padding:11px 13px}
-.mini-stat .num{font-family:'Alexandria';font-weight:900;font-size:19px}
+.mini-stat .num{font-family:'IBM Plex Sans Arabic';font-weight:900;font-size:19px}
 .mini-stat .lbl{font-size:11.5px;color:var(--muted);font-weight:600}
 .upload-box{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;background:#FBFCFB}
 .upload-box:hover{border-color:var(--pine);color:var(--pine)}
@@ -2926,7 +2927,7 @@ function printReport(i){
  const r=window.REPORTS[i];const d=r.data();
  const w=window.open('','_blank');
  w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${r.t}</title>
- <style>body{font-family:'Alexandria',Tahoma,Arial;padding:30px;color:#17251F}h1{color:#143087;font-size:22px;border-bottom:3px solid #143087;padding-bottom:10px}
+ <style>body{font-family:'IBM Plex Sans Arabic',Tahoma,Arial;padding:30px;color:#17251F}h1{color:#143087;font-size:22px;border-bottom:3px solid #143087;padding-bottom:10px}
  .meta{color:#6B7A73;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}
  th{background:#E7ECFB;color:#143087;padding:9px 12px;text-align:right;border:1px solid #ccd}td{padding:8px 12px;border:1px solid #dde;text-align:right}
  @media print{@page{size:A4;margin:15mm}}</style></head><body>
@@ -4916,6 +4917,8 @@ if(typeof EXTRA_MODULE_ICONS!=='undefined') EXTRA_MODULE_ICONS.accounting='📒'
 
 /* ---------- 2) الحالة ---------- */
 let glAcc=[], glJrn=[], glLn=[], glTab='dash', glHost=null, glFull=false, glLedgerCode='';
+/* فلتر الفترة — فارغ = كل السنوات (يعطي نفس الأرقام الأصلية بلا أي تغيير) */
+let glFrom='', glTo='', glJDate={};
 const glCur='ر.س';
 const M=n=>(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const TYPE_AR={Asset:'أصول',Liability:'خصوم',Equity:'حقوق ملكية',Revenue:'إيرادات',Expense:'مصروفات'};
@@ -4930,18 +4933,55 @@ async function glLoad(){
  ]);
  for(const r of [A,J,L]) if(r.error) throw r.error;
  glAcc=A.data||[]; glJrn=J.data||[]; glLn=L.data||[];
+ glJDate={}; glJrn.forEach(j=>{glJDate[j.id]=String(j.entry_date||'').slice(0,10)});
 }
 const accByCode=c=>glAcc.find(a=>a.code===+c)||{};
 const jrnLines=id=>glLn.filter(l=>l.journal_id===id).sort((a,b)=>a.line_no-b.line_no);
 const jrnTotal=id=>jrnLines(id).reduce((s,l)=>s+(+l.debit||0),0);
 
 /* رصيد كل حساب بالاتجاه الطبيعي لفئته (يعالج الحسابات العكسية تلقائياً) */
-function accBalances(){
+const lineDate=l=>glJDate[l.journal_id]||'';
+const inPeriod=d=>(!glFrom||d>=glFrom)&&(!glTo||d<=glTo);
+const upToPeriod=d=>!glTo||d<=glTo;
+const isPL=t=>t==='Revenue'||t==='Expense';
+/* mode:
+   'fs'      (الافتراضي) قوائم مالية — إيراد/مصروف لحركة الفترة، وأصول/خصوم/حقوق تراكمية حتى نهايتها
+   'period'  حركة الفترة لكل الحسابات (ميزان المراجعة — متوازن دائماً)
+   'closing' أرصدة تراكمية حتى نهاية الفترة لكل الحسابات
+   بلا فلتر: الأوضاع الثلاثة متطابقة وتعطي نفس أرقام النظام الأصلية. */
+function accBalances(mode){
  const m={};
  glAcc.forEach(a=>m[a.code]={dr:0,cr:0});
- glLn.forEach(l=>{ if(!m[l.account_code])m[l.account_code]={dr:0,cr:0};
+ glLn.forEach(l=>{
+  const d=lineDate(l), t=(accByCode(l.account_code)||{}).type;
+  const keep = mode==='period' ? inPeriod(d)
+             : mode==='closing' ? upToPeriod(d)
+             : (isPL(t)?inPeriod(d):upToPeriod(d));
+  if(!keep)return;
+  if(!m[l.account_code])m[l.account_code]={dr:0,cr:0};
   m[l.account_code].dr+=(+l.debit||0); m[l.account_code].cr+=(+l.credit||0); });
  return m;
+}
+/* صافي أرباح الفترات السابقة لبداية الفترة — يُدرج ضمن حقوق الملكية حتى تتوازن الميزانية */
+function priorProfit(){
+ if(!glFrom)return 0;
+ let rev=0,exp=0;
+ glLn.forEach(l=>{
+  const t=(accByCode(l.account_code)||{}).type; if(!isPL(t))return;
+  const d=lineDate(l); if(!d||d>=glFrom)return;
+  const v=SIGN[t]*((+l.debit||0)-(+l.credit||0));
+  if(t==='Revenue')rev+=v; else exp+=v; });
+ return rev-exp;
+}
+/* السنوات المتاحة من القيود */
+function glYears(){
+ return [...new Set(glJrn.map(j=>String(j.entry_date||'').slice(0,4)).filter(Boolean))].sort();
+}
+function glPeriodLabel(){
+ if(!glFrom&&!glTo)return 'كل السنوات';
+ const y=glYears().find(y=>glFrom===y+'-01-01'&&glTo===y+'-12-31');
+ if(y)return 'سنة '+y;
+ return (glFrom?fmt(glFrom):'من البداية')+' ← '+(glTo?fmt(glTo):'حتى الآن');
 }
 function groupTotal(type){
  const b=accBalances(); let t=0;
@@ -4956,22 +4996,79 @@ function glMount(host,full){
  host.innerHTML='<div class="empty">⏳ جاري تحميل البيانات المحاسبية...</div>';
  glLoad().then(glDraw).catch(e=>{ host.innerHTML='<div class="empty">تعذّر التحميل — تأكد من تنفيذ سكربت قاعدة البيانات</div>'; err(e); });
 }
+/* --- شريط اختيار الفترة --- */
+function glPeriodBar(){
+ const ys=glYears(), isAll=!glFrom&&!glTo;
+ const chip=(lbl,on,act)=>`<button class="btn btn-sm ${on?'btn-primary':'btn-ghost'}" onclick="${act}" style="padding:5px 13px">${lbl}</button>`;
+ return `<div class="card" style="padding:12px 14px;margin-bottom:14px">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+   <span style="font-weight:800;font-size:13px;color:var(--muted);margin-inline-end:2px">📅 الفترة</span>
+   ${chip('كل السنوات',isAll,"glSetYear('')")}
+   ${ys.map(y=>chip(y,glFrom===y+'-01-01'&&glTo===y+'-12-31',`glSetYear('${y}')`)).join('')}
+   <span style="width:1px;height:22px;background:var(--line);margin:0 4px"></span>
+   <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)">من
+    <input type="date" id="glFromI" value="${glFrom}" style="padding:5px 8px;font-size:12.5px;width:145px"></label>
+   <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)">إلى
+    <input type="date" id="glToI" value="${glTo}" style="padding:5px 8px;font-size:12.5px;width:145px"></label>
+   <button class="btn btn-sm btn-ghost" onclick="glApplyRange()" style="padding:5px 13px">تطبيق</button>
+   <span class="tag info" style="margin-inline-start:auto">${glPeriodLabel()}</span>
+  </div></div>`;
+}
+window.glSetYear=function(y){
+ if(!y){glFrom='';glTo=''}else{glFrom=y+'-01-01';glTo=y+'-12-31'}
+ glDraw();
+};
+window.glApplyRange=function(){
+ const f=document.getElementById('glFromI'), t=document.getElementById('glToI');
+ const fv=f?f.value:'', tv=t?t.value:'';
+ if(fv&&tv&&fv>tv){toast('تاريخ البداية بعد تاريخ النهاية — صحّح الفترة');return}
+ glFrom=fv; glTo=tv; glDraw();
+};
+
 function glDraw(){
  if(!glHost)return;
  const tabs=[['dash','📊 لوحة المحاسبة'],['journal','📘 دفتر القيود'],['ledger','📗 دفتر الأستاذ'],
              ['tb','⚖️ ميزان المراجعة'],['fs','📑 القوائم المالية'],['coa','🗂 دليل الحسابات']];
  glHost.innerHTML='<div class="tabs" id="glTabs">'+tabs.map(([k,l])=>
-   `<button class="${glTab===k?'active':''}" data-t="${k}">${l}</button>`).join('')+'</div><div id="glBody"></div>';
+   `<button class="${glTab===k?'active':''}" data-t="${k}">${l}</button>`).join('')+'</div>'
+  +(glTab==='coa'?'':glPeriodBar())+'<div id="glBody"></div>';
  glHost.querySelectorAll('#glTabs button').forEach(b=>b.onclick=()=>{glTab=b.dataset.t;glDraw()});
  const body=glHost.querySelector('#glBody');
  ({dash:glDash,journal:glJournalTab,ledger:glLedger,tb:glTB,fs:glFS,coa:glCOA})[glTab](body);
 }
 const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
 
+/* --- تجميعات سنوية للرسوم --- */
+function glYearPL(y){
+ let rev=0,exp=0;
+ glLn.forEach(l=>{
+  const t=(accByCode(l.account_code)||{}).type; if(!isPL(t))return;
+  if(lineDate(l).slice(0,4)!==y)return;
+  const v=SIGN[t]*((+l.debit||0)-(+l.credit||0));
+  if(t==='Revenue')rev+=v; else exp+=v; });
+ return {rev,exp,net:rev-exp};
+}
+function glYearPos(y){
+ const end=y+'-12-31'; let as=0,li=0,eq=0,rev=0,exp=0;
+ glLn.forEach(l=>{
+  const t=(accByCode(l.account_code)||{}).type, d=lineDate(l);
+  if(!t||!d||d>end)return;
+  const v=SIGN[t]*((+l.debit||0)-(+l.credit||0));
+  if(t==='Asset')as+=v; else if(t==='Liability')li+=v; else if(t==='Equity')eq+=v;
+  else if(t==='Revenue')rev+=v; else exp+=v; });
+ return {assets:as,liab:li,eq:eq+(rev-exp)};
+}
+const GLC={rev:'#1F7A54',exp:'#B3261E',net:'#143087',ast:'#143087',lia:'#C99200',eqy:'#1F7A54'};
+const GLPAL=['#143087','#1F7A54','#62A0F6','#C99200','#B3261E','#8B5CF6','#3A6EA5','#93A69D'];
+const GLFONT={family:'IBM Plex Sans Arabic',size:12};
+const glAxis=()=>({ticks:{font:GLFONT,callback:v=>(+v).toLocaleString('en-US',{maximumFractionDigits:0})},
+  grid:{color:'#EEF1F6'}});
+
 /* --- لوحة المحاسبة --- */
 function glDash(b){
  const rev=groupTotal('Revenue'), exp=groupTotal('Expense');
  const cogs=(()=>{const bal=accBalances();let t=0;glAcc.filter(a=>a.is_cogs).forEach(a=>{const x=bal[a.code]||{dr:0,cr:0};t+=(x.dr-x.cr)});return t})();
+ const jrnIn=glJrn.filter(j=>inPeriod(String(j.entry_date||'').slice(0,10)));
  const S=[
   {n:M(rev),l:'إجمالي الإيرادات',k:'ok'},
   {n:M(exp),l:'إجمالي المصروفات',k:'danger'},
@@ -4979,17 +5076,68 @@ function glDash(b){
   {n:M(rev-cogs),l:'مجمل الربح',k:'info'},
   {n:M(groupTotal('Asset')),l:'إجمالي الأصول',k:''},
   {n:M(groupTotal('Liability')),l:'إجمالي الخصوم',k:'sand'},
-  {n:glJrn.length,l:'عدد القيود المسجّلة',k:'info'},
-  {n:glJrn.filter(j=>j.is_locked).length,l:'قيود مقفلة نهائياً',k:''},
+  {n:jrnIn.length,l:'قيود الفترة المحددة',k:'info'},
+  {n:jrnIn.filter(j=>j.is_locked).length,l:'قيود مقفلة نهائياً',k:''},
  ];
- const recent=glJrn.slice(0,8).map(j=>`<tr><td><b>${j.entry_no}</b></td><td>${fmt(j.entry_date)}</td><td>${j.description}</td><td>${M(jrnTotal(j.id))} ${glCur}</td><td>${j.is_locked?'<span class="tag ok">🔒 مقفل</span>':'<span class="tag sand">مسودة</span>'}</td></tr>`).join('');
+ const recent=jrnIn.slice(0,8).map(j=>`<tr><td><b>${j.entry_no}</b></td><td>${fmt(j.entry_date)}</td><td>${j.description}</td><td>${M(jrnTotal(j.id))} ${glCur}</td><td>${j.is_locked?'<span class="tag ok">🔒 مقفل</span>':'<span class="tag sand">مسودة</span>'}</td></tr>`).join('');
+ const ys=glYears();
  b.innerHTML=`<div class="stats">${S.map(s=>`<div class="stat ${s.k}"><span class="num" style="font-size:${String(s.n).length>10?'18px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('')}</div>
-  <div class="card"><h3>🕐 أحدث القيود</h3>${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة'],recent||'<tr><td colspan="5" class="empty">لا توجد قيود بعد</td></tr>')}</div>`;
+  ${ys.length?`<div class="card"><h3>📊 مقارنة سنوية — الإيرادات والمصروفات وصافي الربح</h3>
+    <div class="chart-box" style="height:330px"><canvas id="glcYear"></canvas></div>
+    <div class="section-note">كل عمود يمثل سنة كاملة من القيود الفعلية — مستقل عن فلتر الفترة أعلاه.</div></div>
+   <div class="dash-charts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px">
+    <div class="card"><h3>🥧 تركيبة المصروفات — ${glPeriodLabel()}</h3>
+     <div class="chart-box" style="height:320px"><canvas id="glcExp"></canvas></div></div>
+    <div class="card"><h3>🏛 المركز المالي في نهاية كل سنة</h3>
+     <div class="chart-box" style="height:320px"><canvas id="glcBS"></canvas></div></div>
+   </div>`:''}
+  <div class="card" style="margin-top:16px"><h3>🕐 أحدث القيود — ${glPeriodLabel()}</h3>${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة'],recent||'<tr><td colspan="5" class="empty">لا توجد قيود في هذه الفترة</td></tr>')}</div>`;
+ if(ys.length)glDashCharts(ys);
+}
+
+function glDashCharts(ys){
+ if(typeof drawChart!=='function')return;
+ const pl=ys.map(glYearPL);
+ drawChart('glcYear',{data:{labels:ys.map(y=>'سنة '+y),datasets:[
+   {type:'bar',label:'الإيرادات',data:pl.map(p=>p.rev),backgroundColor:GLC.rev,borderRadius:7,maxBarThickness:56,order:2},
+   {type:'bar',label:'المصروفات',data:pl.map(p=>p.exp),backgroundColor:GLC.exp,borderRadius:7,maxBarThickness:56,order:2},
+   {type:'line',label:'صافي الربح',data:pl.map(p=>p.net),borderColor:GLC.net,borderWidth:3,
+    backgroundColor:'rgba(20,48,135,.10)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#fff',
+    pointBorderColor:GLC.net,pointBorderWidth:3,order:1}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:GLFONT,padding:14,boxWidth:14,usePointStyle:true,pointStyle:'rectRounded'}},
+    tooltip:{rtl:true,titleFont:GLFONT,bodyFont:GLFONT,padding:11,
+     callbacks:{label:c=>` ${c.dataset.label}: ${M(c.parsed.y)} ${glCur}`}}},
+   scales:{y:{beginAtZero:true,...glAxis()},x:{ticks:{font:GLFONT},grid:{display:false}}}}});
+
+ const bal=accBalances();
+ const rows=glAcc.filter(a=>a.type==='Expense').map(a=>{const x=bal[a.code]||{dr:0,cr:0};
+   return {name:a.name,v:x.dr-x.cr}}).filter(r=>r.v>0.5).sort((a,b)=>b.v-a.v);
+ const top=rows.slice(0,7), rest=rows.slice(7).reduce((s,r)=>s+r.v,0);
+ const tot=rows.reduce((s,r)=>s+r.v,0);
+ drawChart('glcExp',{type:'doughnut',
+  data:{labels:top.map(r=>r.name).concat(rest>0?['حسابات أخرى']:[]),
+   datasets:[{data:top.map(r=>r.v).concat(rest>0?[rest]:[]),backgroundColor:GLPAL,borderWidth:3,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'IBM Plex Sans Arabic',size:11},padding:9,boxWidth:11,usePointStyle:true,pointStyle:'circle'}},
+    tooltip:{rtl:true,titleFont:GLFONT,bodyFont:GLFONT,padding:11,
+     callbacks:{label:c=>` ${M(c.parsed)} ${glCur} — ${tot?(c.parsed/tot*100).toFixed(1):'0.0'}%`}}}}});
+
+ const pos=ys.map(glYearPos);
+ drawChart('glcBS',{type:'bar',data:{labels:ys.map(y=>'نهاية '+y),datasets:[
+   {label:'الأصول',data:pos.map(p=>p.assets),backgroundColor:GLC.ast,borderRadius:7,maxBarThickness:46},
+   {label:'الخصوم',data:pos.map(p=>p.liab),backgroundColor:GLC.lia,borderRadius:7,maxBarThickness:46},
+   {label:'حقوق الملكية',data:pos.map(p=>p.eq),backgroundColor:GLC.eqy,borderRadius:7,maxBarThickness:46}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:GLFONT,padding:12,boxWidth:13,usePointStyle:true,pointStyle:'rectRounded'}},
+    tooltip:{rtl:true,titleFont:GLFONT,bodyFont:GLFONT,padding:11,
+     callbacks:{label:c=>` ${c.dataset.label}: ${M(c.parsed.y)} ${glCur}`}}},
+   scales:{y:{beginAtZero:true,...glAxis()},x:{ticks:{font:GLFONT},grid:{display:false}}}}});
 }
 
 /* --- دفتر القيود --- */
 function glJournalTab(b){
- const rows=glJrn.map(j=>`<tr>
+ const rows=glJrn.filter(j=>inPeriod(String(j.entry_date||'').slice(0,10))).map(j=>`<tr>
   <td><b>${j.entry_no}</b></td><td>${fmt(j.entry_date)}</td><td>${j.description}</td>
   <td>${M(jrnTotal(j.id))} ${glCur}</td>
   <td>${j.is_locked?'<span class="tag ok">🔒 مقفل نهائياً</span>':'<span class="tag sand">📝 مسودة</span>'}</td>
@@ -5000,17 +5148,21 @@ function glJournalTab(b){
   </td></tr>`).join('');
  b.innerHTML=(glFull?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="glNew()">+ قيد يومية جديد</button></div>`:'')
   +`<div class="section-note">القيد المقفل لا يُعدَّل ولا يُحذف. قاعدة البيانات ترفض أي قيد غير متوازن قبل حفظه.</div>`
-  +`<div class="card">${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة','إجراء'],rows||'<tr><td colspan="6" class="empty">لا توجد قيود — ابدأ بتسجيل أول قيد</td></tr>')}</div>`;
+  +`<div class="card">${T(['رقم القيد','التاريخ','البيان','المبلغ','الحالة','إجراء'],rows||'<tr><td colspan="6" class="empty">لا توجد قيود في الفترة المحددة</td></tr>')}</div>`;
 }
 
 /* --- دفتر الأستاذ --- */
 function glLedger(b){
  if(!glLedgerCode&&glAcc.length)glLedgerCode=glAcc[0].code;
  const a=accByCode(glLedgerCode);
- const mine=glLn.filter(l=>l.account_code===+glLedgerCode)
-  .map(l=>({...l,j:glJrn.find(j=>j.id===l.journal_id)||{}}))
-  .sort((x,y)=>String(x.j.entry_date).localeCompare(String(y.j.entry_date)));
- let run=0;
+ const all=glLn.filter(l=>l.account_code===+glLedgerCode)
+  .map(l=>({...l,j:glJrn.find(j=>j.id===l.journal_id)||{},d:lineDate(l)}))
+  .sort((x,y)=>String(x.d).localeCompare(String(y.d)));
+ /* الرصيد الافتتاحي = حركات ما قبل بداية الفترة */
+ let opening=0;
+ if(glFrom)all.filter(l=>l.d&&l.d<glFrom).forEach(l=>{opening+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0))});
+ const mine=all.filter(l=>inPeriod(l.d));
+ let run=opening;
  const rows=mine.map(l=>{ run+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0));
   return `<tr><td>${l.j.entry_no||'—'}</td><td>${fmt(l.j.entry_date)}</td><td>${l.j.description||'—'}</td>
    <td>${+l.debit?M(l.debit):'—'}</td><td>${+l.credit?M(l.credit):'—'}</td><td><b>${M(run)}</b></td></tr>`}).join('');
@@ -5018,27 +5170,32 @@ function glLedger(b){
    <div class="field" style="max-width:420px"><label>اختر الحساب</label>
     <select id="glLedgerSel">${glAcc.map(x=>`<option value="${x.code}" ${+glLedgerCode===x.code?'selected':''}>${x.code} — ${x.name}</option>`).join('')}</select></div>
    <div class="section-note">الرصيد المتحرك محسوب بالاتجاه الطبيعي لفئة الحساب (${TYPE_AR[a.type]||''} — ${a.normal_side==='Dr'?'مدين':'دائن'}).</div>
-   ${T(['رقم القيد','التاريخ','البيان','مدين','دائن','الرصيد'],rows||'<tr><td colspan="6" class="empty">لا توجد حركات على هذا الحساب</td></tr>')}
+   ${T(['رقم القيد','التاريخ','البيان','مدين','دائن','الرصيد'],
+     (glFrom?`<tr style="background:var(--pine-soft);font-weight:700"><td colspan="5">الرصيد الافتتاحي (قبل ${fmt(glFrom)})</td><td><b>${M(opening)}</b></td></tr>`:'')
+     +(rows||'<tr><td colspan="6" class="empty">لا توجد حركات على هذا الحساب في الفترة المحددة</td></tr>'))}
    <div style="margin-top:12px;font-weight:800">الرصيد الختامي: ${M(run)} ${glCur}</div></div>`;
  b.querySelector('#glLedgerSel').onchange=e=>{glLedgerCode=e.target.value;glDraw()};
 }
 
 /* --- ميزان المراجعة --- */
 function glTBRows(){
- const bal=accBalances();
- return glAcc.map(a=>({a,x:bal[a.code]||{dr:0,cr:0}})).filter(r=>r.x.dr||r.x.cr);
+ const mv=accBalances('period'), cl=accBalances('closing');
+ return glAcc.map(a=>{const x=mv[a.code]||{dr:0,cr:0}, c=cl[a.code]||{dr:0,cr:0};
+   return {a,x,closing:SIGN[a.type]*(c.dr-c.cr)}})
+  .filter(r=>r.x.dr||r.x.cr||Math.abs(r.closing)>0.001);
 }
 function glTB(b){
  const rows=glTBRows();
  const tdr=rows.reduce((s,r)=>s+r.x.dr,0), tcr=rows.reduce((s,r)=>s+r.x.cr,0);
  const html=rows.map(r=>`<tr><td>${r.a.code}</td><td><b>${r.a.name}</b></td><td>${TYPE_AR[r.a.type]}</td>
-   <td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td><b>${M(SIGN[r.a.type]*(r.x.dr-r.x.cr))}</b></td></tr>`).join('');
+   <td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td><b>${M(r.closing)}</b></td></tr>`).join('');
  const ok=Math.abs(tdr-tcr)<0.01;
  b.innerHTML=`<div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
    <span class="tag ${ok?'ok':'danger'}">${ok?'✅ الميزان متوازن':'⚠️ الميزان غير متوازن — راجع القيود'}</span>
    <button class="btn btn-ghost btn-sm" onclick="glPrintTB()">🖨 طباعة</button></div>
-  ${T(['الرمز','اسم الحساب','الفئة','مدين','دائن','الرصيد'],
+  <div class="section-note">«مدين/دائن» حركة الفترة المحددة — و«الرصيد الختامي» تراكمي حتى نهايتها بالاتجاه الطبيعي لكل حساب.</div>
+  ${T(['الرمز','اسم الحساب','الفئة','مدين الفترة','دائن الفترة','الرصيد الختامي'],
     (html||'<tr><td colspan="6" class="empty">لا توجد حركات بعد</td></tr>')
     +`<tr class="total-row" style="background:var(--pine-soft);font-weight:800"><td colspan="3">الإجمالي</td><td>${M(tdr)}</td><td>${M(tcr)}</td><td>—</td></tr>`)}
   </div>`;
@@ -5058,19 +5215,23 @@ function glFS(b){
  const opex=opexRows.reduce((s,r)=>s+r.v,0);
  const assets=groupTotal('Asset'), liab=groupTotal('Liability'), eq=groupTotal('Equity');
  const profit=rev-exp;
- const bsOk=Math.abs(assets-(liab+eq+profit))<0.01;
+ /* عند تحديد فترة: أرباح ما قبلها تُدرَج ضمن حقوق الملكية (أرباح مبقاة) حتى تتوازن الميزانية */
+ const prior=priorProfit();
+ const bsOk=Math.abs(assets-(liab+eq+prior+profit))<0.01;
  b.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-ghost btn-sm" onclick="glPrintFS()">🖨 طباعة</button></div>
- <div class="card"><h3>📈 قائمة الدخل</h3>
+ <div class="card"><h3>📈 قائمة الدخل — ${glPeriodLabel()}</h3>
   ${T(['البند','المبلغ'],sec('Revenue').map(line).join('')+tot('إجمالي الإيرادات',rev)
     +cogsRows.map(line).join('')+tot('تكلفة الإيرادات',cogs)+tot('مجمل الربح',rev-cogs)
     +opexRows.map(line).join('')+tot('المصروفات التشغيلية',opex)
     +tot(profit>=0?'صافي الربح':'صافي الخسارة',profit))}</div>
- <div class="card"><h3>🏛 قائمة المركز المالي</h3>
+ <div class="card"><h3>🏛 قائمة المركز المالي — ${glTo?'كما في '+fmt(glTo):'حتى تاريخه'}</h3>
   <span class="tag ${bsOk?'ok':'danger'}" style="margin-bottom:10px;display:inline-block">${bsOk?'✅ الميزانية متوازنة':'⚠️ غير متوازنة — راجع القيود'}</span>
   ${T(['البند','المبلغ'],sec('Asset').map(line).join('')+tot('إجمالي الأصول',assets)
     +sec('Liability').map(line).join('')+tot('إجمالي الخصوم',liab)
-    +sec('Equity').map(line).join('')+`<tr><td>صافي ربح الفترة</td><td style="text-align:left">${M(profit)}</td></tr>`
-    +tot('إجمالي حقوق الملكية',eq+profit)+tot('إجمالي الخصوم وحقوق الملكية',liab+eq+profit))}</div>`;
+    +sec('Equity').map(line).join('')
+    +(Math.abs(prior)>0.001?`<tr><td>أرباح الفترات السابقة (مبقاة)</td><td style="text-align:left">${M(prior)}</td></tr>`:'')
+    +`<tr><td>صافي ربح الفترة</td><td style="text-align:left">${M(profit)}</td></tr>`
+    +tot('إجمالي حقوق الملكية',eq+prior+profit)+tot('إجمالي الخصوم وحقوق الملكية',liab+eq+prior+profit))}</div>`;
 }
 
 /* --- دليل الحسابات --- */
@@ -5397,14 +5558,15 @@ function glPrint(title,inner){
 window.glPrintTB=function(){
  const rows=glTBRows();
  const tdr=rows.reduce((s,r)=>s+r.x.dr,0), tcr=rows.reduce((s,r)=>s+r.x.cr,0);
- glPrint('ميزان المراجعة',`<table><tr><th>الرمز</th><th>الحساب</th><th>الفئة</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
-  ${rows.map(r=>`<tr><td>${r.a.code}</td><td>${r.a.name}</td><td>${TYPE_AR[r.a.type]}</td><td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td>${M(SIGN[r.a.type]*(r.x.dr-r.x.cr))}</td></tr>`).join('')}
+ glPrint('ميزان المراجعة — '+glPeriodLabel(),`<table><tr><th>الرمز</th><th>الحساب</th><th>الفئة</th><th>مدين الفترة</th><th>دائن الفترة</th><th>الرصيد الختامي</th></tr>
+  ${rows.map(r=>`<tr><td>${r.a.code}</td><td>${r.a.name}</td><td>${TYPE_AR[r.a.type]}</td><td>${M(r.x.dr)}</td><td>${M(r.x.cr)}</td><td>${M(r.closing)}</td></tr>`).join('')}
   <tr><th colspan="3">الإجمالي</th><th>${M(tdr)}</th><th>${M(tcr)}</th><th>—</th></tr></table>`);
 };
 window.glPrintFS=function(){
  const rev=groupTotal('Revenue'), exp=groupTotal('Expense');
  const assets=groupTotal('Asset'), liab=groupTotal('Liability'), eq=groupTotal('Equity'), profit=rev-exp;
- glPrint('القوائم المالية',`
+ const prior=priorProfit();
+ glPrint('القوائم المالية — '+glPeriodLabel(),`
   <h2>قائمة الدخل</h2><table>
    <tr><td>إجمالي الإيرادات</td><td>${M(rev)}</td></tr>
    <tr><td>إجمالي المصروفات</td><td>${M(exp)}</td></tr>
@@ -5412,8 +5574,8 @@ window.glPrintFS=function(){
   <h2>قائمة المركز المالي</h2><table>
    <tr><td>إجمالي الأصول</td><td>${M(assets)}</td></tr>
    <tr><td>إجمالي الخصوم</td><td>${M(liab)}</td></tr>
-   <tr><td>حقوق الملكية (شاملة ربح الفترة)</td><td>${M(eq+profit)}</td></tr>
-   <tr><th>إجمالي الخصوم وحقوق الملكية</th><th>${M(liab+eq+profit)}</th></tr></table>`);
+   <tr><td>حقوق الملكية (شاملة أرباح الفترات السابقة وربح الفترة)</td><td>${M(eq+prior+profit)}</td></tr>
+   <tr><th>إجمالي الخصوم وحقوق الملكية</th><th>${M(liab+eq+prior+profit)}</th></tr></table>`);
 };
 
 /* ---------- 6) الحقن في لوحة الإدارة ---------- */
@@ -5572,6 +5734,17 @@ function kAccTotal(p,f,to){let s=0;kLn.forEach(l=>{const a=kAccOf(l.account_code
  s+=SIGN[a.type]*((+l.debit||0)-(+l.credit||0))});return s}
 function kMonths(n){const o=[];for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
  o.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:MONTH_NAMES[d.getMonth()]})}return o}
+/* السنوات التي فيها قيود فعلية — أساس المقارنة السنوية */
+function kYears(){return [...new Set(kJrn.map(j=>String(j.entry_date||'').slice(0,4)).filter(Boolean))].sort()}
+/* إيراد ومصروف سنة كاملة */
+function kYearPL(y){return {rev:kGroup('Revenue',y+'-01',y+'-12'),exp:kGroup('Expense',y+'-01',y+'-12')}}
+/* المركز المالي التراكمي حتى نهاية السنة */
+function kYearPos(y){
+ const to=y+'-12';
+ const as=kGroup('Asset',null,to), li=kGroup('Liability',null,to);
+ const eq=kGroup('Equity',null,to)+(kGroup('Revenue',null,to)-kGroup('Expense',null,to));
+ return {assets:as,liab:li,eq};
+}
 
 function kInject(){
  if(document.getElementById('glKpiSection'))return true;
@@ -5586,10 +5759,10 @@ function kInject(){
   <div id="glKpiContent">
    <div class="stats" id="glKpiProfit"></div>
    <div class="dash-charts-grid">
-     <div class="card"><h3>📈 الإيرادات مقابل المصروفات وصافي الربح — آخر 6 أشهر</h3><div class="chart-box"><canvas id="glChartPL"></canvas></div></div>
-     <div class="card"><h3>🥧 تركيبة المصروفات</h3><div class="chart-box"><canvas id="glChartExp"></canvas></div></div>
-     <div class="card"><h3>💧 اتجاه النقدية — الرصيد الختامي لكل شهر</h3><div class="chart-box"><canvas id="glChartCash"></canvas></div></div>
-     <div class="card"><h3>🏛 المركز المالي</h3><div class="chart-box"><canvas id="glChartBS"></canvas></div></div>
+     <div class="card"><h3>📈 الإيرادات والمصروفات وصافي الربح — مقارنة سنوية</h3><div class="chart-box"><canvas id="glChartPL"></canvas></div></div>
+     <div class="card"><h3>🥧 تركيبة المصروفات — كل السنوات</h3><div class="chart-box"><canvas id="glChartExp"></canvas></div></div>
+     <div class="card"><h3>💧 النقدية في نهاية كل سنة</h3><div class="chart-box"><canvas id="glChartCash"></canvas></div></div>
+     <div class="card"><h3>🏛 المركز المالي في نهاية كل سنة</h3><div class="chart-box"><canvas id="glChartBS"></canvas></div></div>
    </div>
    <div class="stats" id="glKpiPosition"></div>
    <div class="card"><h3>🔝 أكبر بنود المصروفات</h3><div class="tbl-wrap"><table>
@@ -5615,24 +5788,28 @@ function kRender(){
   {n:nf(net),l:net>=0?'صافي الربح':'صافي الخسارة'},{n:pf(gm),l:'هامش مجمل الربح'},{n:pf(nm),l:'هامش صافي الربح'},
  ].map(s=>`<div class="stat"><span class="num" style="font-size:${String(s.n).length>9?'19px':'26px'}">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
 
- const ms=kMonths(6);
- const mRev=ms.map(m=>kGroup('Revenue',m.key,m.key)),mExp=ms.map(m=>kGroup('Expense',m.key,m.key));
- drawChart('glChartPL',{data:{labels:ms.map(m=>m.label),datasets:[
-   {type:'bar',label:'الإيرادات',data:mRev,backgroundColor:CH.ok,borderRadius:6,maxBarThickness:34,order:2},
-   {type:'bar',label:'المصروفات',data:mExp,backgroundColor:CH.danger,borderRadius:6,maxBarThickness:34,order:2},
-   {type:'line',label:'صافي الربح',data:ms.map((m,i)=>mRev[i]-mExp[i]),borderColor:CH.pine,
-    backgroundColor:'rgba(20,48,135,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.pine,order:1}]},
-  options:{responsive:true,maintainAspectRatio:false,
-   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:12,boxWidth:14}}},
-   scales:{y:{beginAtZero:true,ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
+ const ys=kYears();
+ const yPL=ys.map(kYearPL);
+ drawChart('glChartPL',{data:{labels:ys.map(y=>'سنة '+y),datasets:[
+   {type:'bar',label:'الإيرادات',data:yPL.map(p=>p.rev),backgroundColor:CH.ok,borderRadius:7,maxBarThickness:54,order:2},
+   {type:'bar',label:'المصروفات',data:yPL.map(p=>p.exp),backgroundColor:CH.danger,borderRadius:7,maxBarThickness:54,order:2},
+   {type:'line',label:'صافي الربح',data:yPL.map(p=>p.rev-p.exp),borderColor:CH.pine,borderWidth:3,
+    backgroundColor:'rgba(20,48,135,.10)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#fff',
+    pointBorderColor:CH.pine,pointBorderWidth:3,order:1}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'IBM Plex Sans Arabic'},padding:13,boxWidth:14,usePointStyle:true,pointStyle:'rectRounded'}},
+    tooltip:{rtl:true,padding:11,titleFont:{family:'IBM Plex Sans Arabic'},bodyFont:{family:'IBM Plex Sans Arabic'},
+     callbacks:{label:c=>` ${c.dataset.label}: ${nf(c.parsed.y)} ${KCUR}`}}},
+   scales:{y:{beginAtZero:true,ticks:{font:{family:'IBM Plex Sans Arabic'},callback:v=>nf(v)},grid:{color:'#EEF1F6'}},
+    x:{ticks:{font:{family:'IBM Plex Sans Arabic'}},grid:{display:false}}}}});
 
  const expRows=kAcc.filter(a=>a.type==='Expense').map(a=>({name:a.name,v:kAccTotal(x=>x.code===a.code)}))
    .filter(r=>r.v>0.5).sort((a,b)=>b.v-a.v);
  const top=expRows.slice(0,7),others=expRows.slice(7).reduce((s,r)=>s+r.v,0);
  drawChart('glChartExp',{type:'doughnut',data:{labels:top.map(r=>r.name).concat(others>0?['حسابات أخرى']:[]),
-   datasets:[{data:top.map(r=>r.v).concat(others>0?[others]:[]),backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
-  options:{responsive:true,maintainAspectRatio:false,cutout:'56%',
-   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria',size:11},padding:9,boxWidth:12}},
+   datasets:[{data:top.map(r=>r.v).concat(others>0?[others]:[]),backgroundColor:PAL,borderWidth:3,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'IBM Plex Sans Arabic',size:11},padding:9,boxWidth:12}},
     tooltip:{callbacks:{label:c=>` ${c.label}: ${nf(c.parsed)} ${KCUR} (${exp?pf(c.parsed/exp*100):'0%'})`}}}}});
  document.getElementById('glTopExpTbody').innerHTML=expRows.length
   ?expRows.slice(0,10).map(r=>`<tr><td><b>${r.name}</b></td><td>${nf(r.v)} ${KCUR}</td>
@@ -5643,23 +5820,27 @@ function kRender(){
   :'<tr><td colspan="3" class="empty">لا توجد مصروفات مسجّلة</td></tr>';
 
  const cashPred=a=>a.type==='Asset'&&/نقد|بنك|صندوق|كاش/.test(a.name||'');
- drawChart('glChartCash',{type:'line',data:{labels:ms.map(m=>m.label),
-   datasets:[{label:'النقدية',data:ms.map(m=>kAccTotal(cashPred,null,m.key)),borderColor:CH.sand,
-    backgroundColor:'rgba(98,160,246,.15)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:CH.sand}]},
+ drawChart('glChartCash',{type:'bar',data:{labels:ys.map(y=>'نهاية '+y),
+   datasets:[{label:'النقدية',data:ys.map(y=>kAccTotal(cashPred,null,y+'-12')),backgroundColor:CH.sand,
+    borderRadius:7,maxBarThickness:60}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-   tooltip:{callbacks:{label:c=>` ${nf(c.parsed.y)} ${KCUR}`}}},
-   scales:{y:{ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}},x:{ticks:{font:{family:'Alexandria'}}}}}});
+   tooltip:{rtl:true,padding:11,titleFont:{family:'IBM Plex Sans Arabic'},bodyFont:{family:'IBM Plex Sans Arabic'},
+    callbacks:{label:c=>` النقدية: ${nf(c.parsed.y)} ${KCUR}`}}},
+   scales:{y:{beginAtZero:true,ticks:{font:{family:'IBM Plex Sans Arabic'},callback:v=>nf(v)},grid:{color:'#EEF1F6'}},
+    x:{ticks:{font:{family:'IBM Plex Sans Arabic'}},grid:{display:false}}}}});
 
  const assets=kGroup('Asset'),liab=kGroup('Liability'),eq=kGroup('Equity')+net;
- drawChart('glChartBS',{type:'bar',data:{labels:['الأصول','الخصوم وحقوق الملكية'],datasets:[
-   {label:'الأصول',data:[assets,0],backgroundColor:CH.pine,borderRadius:6,maxBarThickness:70},
-   {label:'الخصوم',data:[0,liab],backgroundColor:CH.danger,borderRadius:6,maxBarThickness:70},
-   {label:'حقوق الملكية',data:[0,eq],backgroundColor:CH.ok,borderRadius:6,maxBarThickness:70}]},
-  options:{responsive:true,maintainAspectRatio:false,
-   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'Alexandria'},padding:10,boxWidth:13}},
-    tooltip:{callbacks:{label:c=>c.parsed.y?` ${c.dataset.label}: ${nf(c.parsed.y)} ${KCUR}`:null}}},
-   scales:{x:{stacked:true,ticks:{font:{family:'Alexandria'}}},
-    y:{stacked:true,beginAtZero:true,ticks:{font:{family:'Alexandria'},callback:v=>nf(v)}}}}});
+ const yPos=ys.map(kYearPos);
+ drawChart('glChartBS',{type:'bar',data:{labels:ys.map(y=>'نهاية '+y),datasets:[
+   {label:'الأصول',data:yPos.map(p=>p.assets),backgroundColor:CH.pine,borderRadius:7,maxBarThickness:44},
+   {label:'الخصوم',data:yPos.map(p=>p.liab),backgroundColor:'#C99200',borderRadius:7,maxBarThickness:44},
+   {label:'حقوق الملكية',data:yPos.map(p=>p.eq),backgroundColor:CH.ok,borderRadius:7,maxBarThickness:44}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'bottom',rtl:true,labels:{font:{family:'IBM Plex Sans Arabic'},padding:12,boxWidth:13,usePointStyle:true,pointStyle:'rectRounded'}},
+    tooltip:{rtl:true,padding:11,titleFont:{family:'IBM Plex Sans Arabic'},bodyFont:{family:'IBM Plex Sans Arabic'},
+     callbacks:{label:c=>` ${c.dataset.label}: ${nf(c.parsed.y)} ${KCUR}`}}},
+   scales:{y:{beginAtZero:true,ticks:{font:{family:'IBM Plex Sans Arabic'},callback:v=>nf(v)},grid:{color:'#EEF1F6'}},
+    x:{ticks:{font:{family:'IBM Plex Sans Arabic'}},grid:{display:false}}}}});
 
  const cash=kAccTotal(cashPred);
  const recv=kAccTotal(a=>a.type==='Asset'&&/عملاء|ذمم|مستحق/.test(a.name||''));
