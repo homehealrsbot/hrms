@@ -6664,6 +6664,7 @@ setTimeout(()=>{
 
 const DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const F={from:'',to:'',name:'',dept:'',days:[]};
+let xTab='meetAtt';
 let repFrom='', repTo='';
 
 const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -6726,7 +6727,7 @@ function bindFilters(redraw){
 
 /* ---------- شاشة الحضور ---------- */
 function drawAttendance(body,full){
- const tab=(typeof extraAttTab!=='undefined'&&extraAttTab)||'meetAtt';
+ const tab=xTab;
  const tabs=[['meetAtt','حضور الاجتماعات'],['siteAtt','الحضور في المقر'],['meetAbs','غياب الاجتماعات'],['siteAbs','الغياب في المقر']];
  const redraw=()=>drawAttendance(body,full);
 
@@ -6767,7 +6768,7 @@ function drawAttendance(body,full){
   +T(head,rows||`<tr><td colspan="${head.length}" class="empty">لا توجد سجلات مطابقة للفلاتر</td></tr>`);
 
  body.querySelectorAll('[data-xtab]').forEach(b=>b.onclick=()=>{
-  if(typeof extraAttTab!=='undefined')window.extraAttTab=b.dataset.xtab;
+  xTab=b.dataset.xtab;
   redraw();
  });
  bindFilters(redraw);
