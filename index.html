@@ -6891,3 +6891,12 @@ if(typeof window.renderExtraModuleBody==='function'){
 }
 })();
 </script>
+<script>
+(function(){
+ if(typeof MODULES==='undefined')return;
+ const rename={attendance:'حضور الموظفين',reports:'تقارير النظام',
+               leaves:'إجازات الموظفين',permits:'استئذانات الموظفين',
+               policies:'إدارة السياسات',files:'ملفات النظام'};
+ MODULES.forEach(m=>{ if(rename[m.key])m.label=rename[m.key] });
+})();
+</script>
