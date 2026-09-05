@@ -6640,3 +6640,254 @@ setTimeout(()=>{
 
 })();
 </script>
+<!-- ============================================================
+     ترقية بوابة الموظف: فلترة الحضور + التقارير + الاجتماعات
+     تُلصق في آخر index.html بعد كل شيء.
+     ============================================================ -->
+<style>
+.xf-bar{background:#fff;border:1px solid #E6EAF2;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.xf-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.xf-row .f{display:flex;flex-direction:column;gap:4px}
+.xf-row label{font-size:11.5px;color:#77839C;font-weight:700}
+.xf-row input,.xf-row select{margin:0}
+.xf-days{display:flex;gap:6px;flex-wrap:wrap}
+.xf-day{padding:6px 12px;border:1px solid #E6EAF2;border-radius:18px;font-size:12px;font-weight:700;
+  cursor:pointer;background:#fff;color:#3D4A63;user-select:none;transition:all .13s}
+.xf-day.on{background:var(--pine);color:#fff;border-color:var(--pine)}
+.xf-count{font-size:12.5px;color:#65718A;font-weight:700}
+.xf-count b{color:#101B33}
+</style>
+
+<script>
+(function(){
+"use strict";
+
+const DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const F={from:'',to:'',name:'',dept:'',days:[]};
+let repFrom='', repTo='';
+
+const T=(head,rows)=>`<div class="tbl-wrap"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+
+/* ---------- الفلترة المركّبة ---------- */
+function pass(rec){
+ const d=rec.date||'';
+ if(F.from && d < F.from) return false;
+ if(F.to   && d > F.to)   return false;
+ if(F.dept && (rec.dept||'') !== F.dept) return false;
+ if(F.name && !(rec.emp||'').toLowerCase().includes(F.name.toLowerCase())) return false;
+ if(F.days.length){
+  const t=new Date(d+'T00:00:00');
+  if(isNaN(t) || F.days.indexOf(t.getDay())<0) return false;
+ }
+ return true;
+}
+
+function filterBar(shown,total){
+ const depts=(typeof DEPTS!=='undefined'?DEPTS:[]);
+ return `<div class="xf-bar">
+  <div class="xf-row" style="margin-bottom:12px">
+   <div class="f"><label>من تاريخ</label><input id="xfFrom" type="date" value="${F.from}" style="width:150px"></div>
+   <div class="f"><label>إلى تاريخ</label><input id="xfTo" type="date" value="${F.to}" style="width:150px"></div>
+   <div class="f"><label>اسم الموظف</label><input id="xfName" value="${F.name}" placeholder="ابحث بالاسم" style="width:170px"></div>
+   <div class="f"><label>القسم</label><select id="xfDept" style="width:160px">
+     <option value="">كل الأقسام</option>
+     ${depts.map(d=>`<option value="${d}" ${F.dept===d?'selected':''}>${d}</option>`).join('')}
+   </select></div>
+   <button class="btn btn-ghost btn-sm" id="xfClear">✕ مسح الفلاتر</button>
+  </div>
+  <div class="xf-row">
+   <div class="f" style="flex:1">
+    <label>أيام الأسبوع (اختر يوماً أو أكثر — بلا تحديد تعني كل الأيام)</label>
+    <div class="xf-days">${DAYS.map((d,i)=>`<span class="xf-day ${F.days.indexOf(i)>-1?'on':''}" data-day="${i}">${d}</span>`).join('')}</div>
+   </div>
+   <span class="xf-count">النتائج: <b>${shown}</b> من ${total}</span>
+  </div>
+ </div>`;
+}
+
+function bindFilters(redraw){
+ const g=id=>document.getElementById(id);
+ if(g('xfFrom'))g('xfFrom').onchange=e=>{F.from=e.target.value;redraw()};
+ if(g('xfTo'))  g('xfTo').onchange  =e=>{F.to=e.target.value;redraw()};
+ if(g('xfDept'))g('xfDept').onchange=e=>{F.dept=e.target.value;redraw()};
+ if(g('xfName')){
+  const el=g('xfName');
+  el.oninput=e=>{ F.name=e.target.value;
+   clearTimeout(el._t); el._t=setTimeout(()=>{const p=el.selectionStart;redraw();
+    const n=document.getElementById('xfName'); if(n){n.focus();try{n.setSelectionRange(p,p)}catch(x){}}},400); };
+ }
+ if(g('xfClear'))g('xfClear').onclick=()=>{F.from='';F.to='';F.name='';F.dept='';F.days=[];redraw()};
+ document.querySelectorAll('.xf-day').forEach(el=>el.onclick=()=>{
+  const d=+el.dataset.day, i=F.days.indexOf(d);
+  if(i>-1)F.days.splice(i,1); else F.days.push(d);
+  redraw();
+ });
+}
+
+/* ---------- شاشة الحضور ---------- */
+function drawAttendance(body,full){
+ const tab=(typeof extraAttTab!=='undefined'&&extraAttTab)||'meetAtt';
+ const tabs=[['meetAtt','حضور الاجتماعات'],['siteAtt','الحضور في المقر'],['meetAbs','غياب الاجتماعات'],['siteAbs','الغياب في المقر']];
+ const redraw=()=>drawAttendance(body,full);
+
+ const src={meetAtt:meetAtt,siteAtt:siteAtt,meetAbs:meetAbs,siteAbs:siteAbs}[tab]||[];
+ const data=src.filter(pass);
+
+ let head=[],rows='',addBtn='';
+ if(tab==='meetAtt'){
+  head=['الاجتماع','القسم','التاريخ','اليوم','الوقت','الموظف'];
+  rows=data.map(a=>`<tr><td>${a.title||'—'}</td><td>${a.dept||'—'}</td><td>${fmt(a.date)}</td>
+    <td>${dayName(a.date)}</td><td dir="ltr">${a.time||'—'}</td><td><b>${a.emp}</b></td></tr>`).join('');
+  addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('meetAttModal')">+ تسجيل حضور اجتماع</button>
+    <button class="btn btn-ok btn-sm" onclick="xmNewMeeting()">🔗 إنشاء اجتماع برابط حضور</button>`:'';
+ }else if(tab==='siteAtt'){
+  head=['التاريخ','اليوم','دخول','خروج','الموظف','القسم'];
+  rows=data.map(a=>`<tr><td>${fmt(a.date)}</td><td>${dayName(a.date)}</td><td dir="ltr">${a.in||'—'}</td>
+    <td dir="ltr">${a.out||'—'}</td><td><b>${a.emp}</b></td><td>${a.dept||'—'}</td></tr>`).join('');
+  addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('siteAttModal')">+ تسجيل حضور</button>`:'';
+ }else if(tab==='meetAbs'){
+  head=['الاجتماع','القسم','التاريخ','اليوم','الموظف'];
+  rows=data.map(a=>`<tr><td>${a.title||'—'}</td><td>${a.dept||'—'}</td><td>${fmt(a.date)}</td>
+    <td>${dayName(a.date)}</td><td><b>${a.emp}</b></td></tr>`).join('');
+  addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('meetAbsModal')">+ تسجيل غياب اجتماع</button>`:'';
+ }else{
+  head=['التاريخ','اليوم','السبب','الموظف','القسم'];
+  rows=data.map(a=>`<tr><td>${fmt(a.date)}</td><td>${dayName(a.date)}</td><td>${a.reason||'—'}</td>
+    <td><b>${a.emp}</b></td><td>${a.dept||'—'}</td></tr>`).join('');
+  addBtn=full?`<button class="btn btn-primary btn-sm" onclick="openModal('siteAbsModal')">+ تسجيل غياب</button>`:'';
+ }
+
+ const tabsHtml=`<div class="tabs">${tabs.map(([k,l])=>
+   `<button class="${tab===k?'active':''}" data-xtab="${k}">${l}</button>`).join('')}</div>`;
+
+ const exportBtn=data.length?`<button class="btn btn-ghost btn-sm" id="xfExport">⬇ تصدير النتائج (Excel)</button>`:'';
+
+ body.innerHTML=tabsHtml+filterBar(data.length,src.length)
+  +((addBtn||exportBtn)?`<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">${addBtn}${exportBtn}</div>`:'')
+  +T(head,rows||`<tr><td colspan="${head.length}" class="empty">لا توجد سجلات مطابقة للفلاتر</td></tr>`);
+
+ body.querySelectorAll('[data-xtab]').forEach(b=>b.onclick=()=>{
+  if(typeof extraAttTab!=='undefined')window.extraAttTab=b.dataset.xtab;
+  redraw();
+ });
+ bindFilters(redraw);
+ const ex=document.getElementById('xfExport');
+ if(ex)ex.onclick=()=>{
+  const map={meetAtt:a=>[a.title||'—',a.dept||'—',a.date,dayName(a.date),a.time||'—',a.emp],
+             siteAtt:a=>[a.date,dayName(a.date),a.in||'—',a.out||'—',a.emp,a.dept||'—'],
+             meetAbs:a=>[a.title||'—',a.dept||'—',a.date,dayName(a.date),a.emp],
+             siteAbs:a=>[a.date,dayName(a.date),a.reason||'—',a.emp,a.dept||'—']}[tab];
+  downloadCSV('تقرير_'+tab,head,data.map(map));
+ };
+
+ /* قائمة الاجتماعات المنشأة */
+ if(tab==='meetAtt'&&full&&typeof meetingsList!=='undefined'){
+  const box=document.createElement('div');
+  box.className='card'; box.style.marginTop='16px';
+  box.innerHTML=`<h3>🔗 الاجتماعات المنشأة وروابط الحضور</h3>`+
+   T(['الاجتماع','العنوان','القسم','التاريخ','الوقت','الحضور','إجراء'],
+    meetingsList.map(m=>{const att=meetAtt.filter(r=>r.meeting_id===m.id).length;
+     return `<tr><td><b>${m.meeting_name}</b></td><td>${m.title||'—'}</td><td>${m.department}</td>
+      <td>${fmt(m.meeting_date)}</td><td dir="ltr">${tfmt(m.meeting_time)}</td>
+      <td><span class="tag ok">${att} حاضر</span></td>
+      <td style="white-space:nowrap">
+       <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ الرابط</button>
+       ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="window.open('${m.meet_link}','_blank')">فتح Meet</button>`:''}
+       <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
+      </td></tr>`}).join('')||'<tr><td colspan="7" class="empty">لا توجد اجتماعات — أنشئ أول اجتماع برابط حضور</td></tr>');
+  body.appendChild(box);
+ }
+}
+function dayName(d){ const t=new Date(d+'T00:00:00'); return isNaN(t)?'—':DAYS[t.getDay()] }
+window.xmNewMeeting=function(){
+ ['mgTitle','mgGoal','mgLink'].forEach(i=>{const el=document.getElementById(i);if(el)el.value=''});
+ const dt=document.getElementById('mgDate'); if(dt)dt.value=D(0);
+ openModal('meetingModal');
+};
+
+/* ---------- شاشة التقارير ---------- */
+function inRange(d){ if(!d)return !repFrom&&!repTo; if(repFrom&&d<repFrom)return false; if(repTo&&d>repTo)return false; return true }
+
+function buildReports(){
+ const reps=[
+  {t:'تقرير الموظفين',ic:'👥',data:()=>({headers:['رقم الموظف','الاسم','القسم','الوظيفة','النوع','الحالة'],
+    rows:employees.map(e=>[e.num,e.name,e.dept,e.job,e.type,e.status])})},
+  {t:'تقرير العقود',ic:'✍',data:()=>({headers:['الموظف','البداية','النهاية','المدة'],
+    rows:contracts.map(c=>[c.emp,c.start,c.end,c.dur])})},
+  {t:'تقرير الحضور',ic:'🕐',data:()=>({headers:['الموظف','القسم','التاريخ','اليوم','دخول','خروج'],
+    rows:siteAtt.filter(r=>inRange(r.date)).map(r=>[r.emp,r.dept,r.date,dayName(r.date),r.in,r.out])})},
+  {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','اليوم','سبب الغياب'],
+    rows:siteAbs.filter(r=>inRange(r.date)).map(r=>[r.emp,r.dept,r.date,dayName(r.date),r.reason])})},
+  {t:'تقرير حضور الاجتماعات',ic:'👥',data:()=>({headers:['الاجتماع','القسم','التاريخ','الوقت','الموظف'],
+    rows:meetAtt.filter(r=>inRange(r.date)).map(r=>[r.title||'—',r.dept,r.date,r.time||'—',r.emp])})},
+  {t:'تقرير غياب الاجتماعات',ic:'🚷',data:()=>({headers:['الاجتماع','القسم','التاريخ','الموظف'],
+    rows:meetAbs.filter(r=>inRange(r.date)).map(r=>[r.title||'—',r.dept,r.date,r.emp])})},
+  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],
+    rows:leaves.filter(l=>inRange(l.start)).map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
+  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],
+    rows:permits.filter(p=>inRange(p.date)).map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
+ ];
+ if(hasPerm('custody','view')&&typeof custodyRecords!=='undefined')
+  reps.push({t:'تقرير العهد',ic:'📦',data:()=>({headers:['الموظف','النوع','الوصف','القيمة','التسليم','الاسترجاع','الحالة'],
+   rows:custodyRecords.map(c=>[c.emp,c.type,c.desc,c.amount||'—',fmt(c.dateGiven),c.dateReturned?fmt(c.dateReturned):'—',c.status])})});
+ if(hasPerm('paymentsAdmin','view')&&typeof paymentRequests!=='undefined')
+  reps.push({t:'تقرير طلبات الصرف',ic:'💵',data:()=>({headers:['الموظف','القسم','المبلغ','الفئة','السبب','الحالة'],
+   rows:paymentRequests.map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',p.status])})});
+ return reps;
+}
+
+function drawReports(body,full){
+ const reps=buildReports().map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
+ window.XREPORTS=reps;
+ const label=(!repFrom&&!repTo)?'كل الفترات':`من ${fmt(repFrom)||'البداية'} إلى ${fmt(repTo)||'اليوم'}`;
+ body.innerHTML=`<div class="xf-bar">
+   <div class="xf-row">
+    <button class="btn btn-sand btn-sm" data-p="day">اليوم</button>
+    <button class="btn btn-sand btn-sm" data-p="week">هذا الأسبوع</button>
+    <button class="btn btn-sand btn-sm" data-p="month">هذا الشهر</button>
+    <button class="btn btn-ghost btn-sm" data-p="all">كل الفترات</button>
+    <div class="f"><label>من</label><input id="xrFrom" type="date" value="${repFrom}" style="width:150px"></div>
+    <div class="f"><label>إلى</label><input id="xrTo" type="date" value="${repTo}" style="width:150px"></div>
+    <span class="tag info">${label}</span>
+   </div>
+  </div>
+  <div class="grid-3">${reps.map((r,i)=>`<div class="card" style="margin:0">
+    <h3>${r.ic} ${r.t}</h3>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:10px">${r.data().rows.length} سجل</div>
+    <div style="display:flex;gap:8px">
+     <button class="btn btn-primary btn-sm" onclick="XREPORTS[${i}].fn()">⬇ Excel</button>
+     <button class="btn btn-ghost btn-sm" onclick="xPrintReport(${i})">🖨 PDF</button>
+    </div></div>`).join('')}</div>`;
+
+ const redraw=()=>drawReports(body,full);
+ body.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
+  const p=b.dataset.p, t=new Date();
+  if(p==='all'){repFrom='';repTo=''}
+  else if(p==='day'){repFrom=repTo=D(0)}
+  else if(p==='week'){const s=new Date(t);s.setDate(t.getDate()-t.getDay());repFrom=s.toISOString().slice(0,10);repTo=D(0)}
+  else{repFrom=new Date(t.getFullYear(),t.getMonth(),1).toISOString().slice(0,10);repTo=D(0)}
+  redraw();
+ });
+ const a=document.getElementById('xrFrom'), b2=document.getElementById('xrTo');
+ if(a)a.onchange=e=>{repFrom=e.target.value;redraw()};
+ if(b2)b2.onchange=e=>{repTo=e.target.value;redraw()};
+}
+window.xPrintReport=function(i){
+ const r=window.XREPORTS[i], d=r.data();
+ hhPrint({title:r.t,subtitle:'نظام إدارة الموارد البشرية',
+  meta:[['عدد السجلات',d.rows.length],(repFrom||repTo)?['الفترة',(repFrom?fmt(repFrom):'البداية')+' ← '+(repTo?fmt(repTo):'اليوم')]:null],
+  body:hhTable(d.headers,d.rows),landscape:d.headers.length>6});
+};
+
+/* ---------- الربط ---------- */
+if(typeof window.renderExtraModuleBody==='function'){
+ const _o=window.renderExtraModuleBody;
+ window.renderExtraModuleBody=function(key,full){
+  const body=document.getElementById('extraModuleBody');
+  if(body&&key==='attendance'){ drawAttendance(body,!!full); return }
+  if(body&&key==='reports'){    drawReports(body,!!full);   return }
+  return _o.apply(this,arguments);
+ };
+}
+})();
+</script>
