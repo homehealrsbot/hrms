@@ -512,9 +512,9 @@ tbody tr:hover{background:#FAFCFB}
   <div id="att-meetAtt" class="att-tab">
     <div class="card">
       <div class="page-head" style="margin-bottom:12px"><h3 style="margin:0">🔗 اجتماعات برابط حضور ذاتي</h3>
-        <button class="btn btn-primary btn-sm" onclick="openModal('meetingModal')">+ إنشاء اجتماع برابط حضور</button></div>
+        <button class="btn btn-primary btn-sm" onclick="openMeetingModal()">+ إنشاء اجتماع برابط حضور</button></div>
       <div class="section-note">أنشئ الاجتماع ← انسخ رابط الحضور ← أرسله في شات Google Meet ← كل موظف يضغطه يُسجَّل حضوره تلقائياً. وبنهاية الاجتماع اضغط «توليد الغياب» لتسجيل من لم يحضر.</div>
-      <div class="tbl-wrap"><table><thead><tr><th>الاجتماع</th><th>العنوان</th><th>القسم</th><th>التاريخ</th><th>الوقت</th><th>الحضور</th><th>إجراءات</th></tr></thead><tbody id="meetingsTbody"></tbody></table></div>
+      <div class="tbl-wrap"><table><thead><tr><th>الاجتماع</th><th>العنوان</th><th>القسم</th><th>التاريخ</th><th>الوقت</th><th>المدعوّون</th><th>الحضور</th><th>إجراءات</th></tr></thead><tbody id="meetingsTbody"></tbody></table></div>
     </div>
     <div class="card">
       <div class="page-head" style="margin-bottom:12px"><h3 style="margin:0">سجل حضور الاجتماعات</h3>
@@ -1412,16 +1412,48 @@ tbody tr:hover{background:#FAFCFB}
   <div class="modal-foot"><button class="btn btn-primary" onclick="addSiteAbs()">حفظ</button><button class="btn btn-ghost" onclick="closeModal('siteAbsModal')">إلغاء</button></div>
 </div></div>
 
+<style>
+/* منتقي الحضور المتعدد (قائمة منسدلة بخانات اختيار) */
+.ms-wrap{position:relative}
+.ms-btn{width:100%;text-align:right;padding:10px 12px;border:1px solid var(--line,#d8dee6);border-radius:10px;background:#fff;font:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ms-btn:hover{border-color:var(--pine,#0f6b5c)}
+.ms-caret{opacity:.6;font-size:12px}
+.ms-panel{display:none;position:absolute;z-index:50;top:calc(100% + 4px);right:0;left:0;background:#fff;border:1px solid var(--line,#d8dee6);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:8px}
+.ms-panel.on{display:block}
+.ms-search{width:100%;padding:8px 10px;border:1px solid var(--line,#d8dee6);border-radius:8px;font:inherit;margin-bottom:6px}
+.ms-actions{display:flex;gap:6px;margin-bottom:6px}
+.ms-list{max-height:220px;overflow:auto}
+.ms-row{display:flex;align-items:center;gap:8px;padding:7px 6px;border-radius:8px;cursor:pointer}
+.ms-row:hover{background:rgba(15,107,92,.07)}
+.ms-row input{width:16px;height:16px;cursor:pointer;flex:none}
+.ms-row .ms-dept{margin-inline-start:auto;font-size:11px;opacity:.6}
+.ms-empty{padding:12px;text-align:center;opacity:.6;font-size:13px}
+</style>
+
 <!-- إنشاء اجتماع برابط حضور -->
 <div class="modal-back" id="meetingModal"><div class="modal">
   <div class="modal-head"><h3>إنشاء اجتماع برابط حضور</h3><button class="x-btn" onclick="closeModal('meetingModal')">✕</button></div>
   <div class="grid-2">
     <div><label>الاجتماع</label><select id="mgMeet"><option>اجتماع التقنية</option><option>اجتماع التسويق</option><option>اجتماع المالية</option><option>اجتماع العمليات</option><option>اجتماع الطبي</option><option>اجتماع خدمة العملاء</option><option>اجتماع الإداري</option><option>اجتماع الموارد البشرية</option><option>اجتماع B2B</option></select></div>
-    <div><label>القسم</label><select id="mgDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
+    <div><label>القسم</label><select id="mgDept" onchange="mgDeptChanged()"><option>جميع الأقسام</option><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
     <div><label>عنوان الاجتماع <b style="color:var(--danger)">*</b></label><input id="mgTitle"></div>
     <div><label>الهدف من الاجتماع</label><input id="mgGoal"></div>
     <div><label>التاريخ</label><input id="mgDate" type="date"></div>
     <div><label>الوقت</label><input id="mgTime" type="time"></div>
+    <div style="grid-column:1/-1"><label>إضافة الحضور (المدعوّون لهذا الاجتماع)</label>
+      <div class="ms-wrap">
+        <button type="button" class="ms-btn" id="mgAttBtn" onclick="toggleAttPicker(event)">— لم يُختر أحد بعد —<span class="ms-caret">▾</span></button>
+        <div class="ms-panel" id="mgAttPanel">
+          <input class="ms-search" id="mgAttSearch" placeholder="🔍 بحث بالاسم..." oninput="renderAttendeePicker()">
+          <div class="ms-actions">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllAttendees(true)">تحديد الكل</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllAttendees(false)">إلغاء الكل</button>
+          </div>
+          <div class="ms-list" id="mgAttList"></div>
+        </div>
+      </div>
+      <div class="section-note" style="margin-top:6px">من تختارهم هنا هم من يُحتسب غيابهم عند الضغط على «توليد الغياب» — من لم يسجّل حضوره منهم يُسجَّل غائباً.</div>
+    </div>
     <div style="grid-column:1/-1"><label>رابط Google Meet (اختياري)</label><input id="mgLink" placeholder="https://meet.google.com/..."></div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="createMeeting()">إنشاء وتوليد رابط الحضور</button><button class="btn btn-ghost" onclick="closeModal('meetingModal')">إلغاء</button></div>
@@ -2283,6 +2315,7 @@ function fillEmpSelects(){
  const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
  ['cEmp','lvEmp','prEmp'].forEach(id=>{const el=$(id);if(!el)return;const prev=el.value;el.innerHTML=opts;if(prev&&[...el.options].some(o=>o.value===prev))el.value=prev});
  Object.keys(DEPT_EMP_MAP).forEach(filterEmpByDept);
+ if(typeof renderAttendeePicker==='function'&&$('mgAttList'))renderAttendeePicker();
  syncLeaveEmp();
 }
 /* الحقول المالية داخل نافذة الموظف تُخفى عمّن لا يملك صلاحية الرواتب.
@@ -2665,6 +2698,74 @@ function downloadCSV(name,headers,rows){
 
 /* ================= الاجتماعات برابط الحضور ================= */
 let meetingsList=[];
+
+/* ---- منتقي «إضافة الحضور» ----
+   mgAttendees يحمل معرّفات المدعوّين المختارين لنافذة إنشاء الاجتماع.
+   قائمة الأسماء تُبنى من مصفوفة employees المحمَّلة أصلاً — لا استعلام إضافي. */
+let mgAttendees=new Set();
+const ALL_DEPTS='جميع الأقسام';
+function attCandidates(){
+ const dept=$('mgDept')?$('mgDept').value:ALL_DEPTS;
+ return employees.filter(e=>e.role!=='admin'&&e.status==='نشط'&&(dept===ALL_DEPTS||e.dept===dept))
+                 .sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
+}
+function invitedOf(m){
+ const ids=Array.isArray(m&&m.attendees)?m.attendees.filter(Boolean):[];
+ return ids.map(id=>empById[id]).filter(e=>e&&e.status==='نشط');
+}
+function updateAttBtnLabel(){
+ const b=$('mgAttBtn');if(!b)return;
+ const n=mgAttendees.size;
+ const names=[...mgAttendees].map(id=>empById[id]&&empById[id].name).filter(Boolean);
+ const txt=n===0?'— لم يُختر أحد بعد —':(n<=2?names.join('، '):`${n} موظفين مختارين`);
+ b.innerHTML=`<span>${txt}</span><span class="ms-caret">▾</span>`;
+}
+function renderAttendeePicker(){
+ const box=$('mgAttList');if(!box)return;
+ const q=($('mgAttSearch')&&$('mgAttSearch').value||'').trim();
+ let list=attCandidates();
+ if(q)list=list.filter(e=>String(e.name).includes(q));
+ box.innerHTML=list.length?list.map(e=>`
+  <label class="ms-row">
+   <input type="checkbox" value="${e.id}" ${mgAttendees.has(e.id)?'checked':''} onchange="toggleAttendee('${e.id}',this.checked)">
+   <span>${e.name}</span><span class="ms-dept">${e.dept||''}</span>
+  </label>`).join(''):'<div class="ms-empty">لا يوجد موظفون مطابقون</div>';
+ updateAttBtnLabel();
+}
+function toggleAttendee(id,on){on?mgAttendees.add(id):mgAttendees.delete(id);updateAttBtnLabel()}
+function toggleAllAttendees(on){
+ const q=($('mgAttSearch')&&$('mgAttSearch').value||'').trim();
+ let list=attCandidates();if(q)list=list.filter(e=>String(e.name).includes(q));
+ list.forEach(e=>on?mgAttendees.add(e.id):mgAttendees.delete(e.id));
+ renderAttendeePicker();
+}
+function toggleAttPicker(ev){
+ if(ev)ev.stopPropagation();
+ const p=$('mgAttPanel');if(!p)return;
+ p.classList.toggle('on');
+ if(p.classList.contains('on'))renderAttendeePicker();
+}
+/* تغيير القسم يقصر الاختيار على القسم الجديد — ما عدا «جميع الأقسام» فيُبقي الكل */
+function mgDeptChanged(){
+ if($('mgDept').value!==ALL_DEPTS){
+  const allowed=new Set(attCandidates().map(e=>e.id));
+  [...mgAttendees].forEach(id=>{if(!allowed.has(id))mgAttendees.delete(id)});
+ }
+ renderAttendeePicker();
+}
+function openMeetingModal(){
+ mgAttendees=new Set();
+ ['mgTitle','mgGoal','mgDate','mgTime','mgLink'].forEach(id=>{if($(id))$(id).value=''});
+ if($('mgAttSearch'))$('mgAttSearch').value='';
+ if($('mgAttPanel'))$('mgAttPanel').classList.remove('on');
+ if($('mgDept'))$('mgDept').value=ALL_DEPTS;
+ renderAttendeePicker();
+ openModal('meetingModal');
+}
+document.addEventListener('click',e=>{
+ const p=$('mgAttPanel');if(!p||!p.classList.contains('on'))return;
+ if(!p.contains(e.target)&&e.target.id!=='mgAttBtn'&&!(e.target.closest&&e.target.closest('#mgAttBtn')))p.classList.remove('on');
+});
 async function loadMeetings(){
  const {data,error}=await sb.from('meetings').select('*').order('meeting_date',{ascending:false});
  meetingsList=error?[]:(data||[]);
@@ -2673,20 +2774,27 @@ function renderMeetings(){
  if(!$('meetingsTbody'))return;
  $('meetingsTbody').innerHTML=meetingsList.length?meetingsList.map(m=>{
   const att=meetAtt.filter(r=>r.meeting_id===m.id).length;
+  const inv=invitedOf(m);
+  const invCell=inv.length
+    ? `<span class="tag info" title="${inv.map(e=>e.name).join('، ')}">${inv.length} مدعو</span>`
+    : `<span class="tag sand" title="لم تُحدَّد قائمة حضور — توليد الغياب سيشمل كل موظفي القسم">كل القسم</span>`;
   return `<tr><td><b>${m.meeting_name}</b></td><td>${m.title||'—'}</td><td>${m.department}</td><td>${fmt(m.meeting_date)}</td><td>${tfmt(m.meeting_time)}</td>
+  <td>${invCell}</td>
   <td><span class="tag ok">${att} حاضر</span></td>
   <td style="white-space:nowrap">
    <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ رابط الحضور</button>
    ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="openExt('${m.meet_link}')">فتح Meet</button>`:''}
    <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
-  </td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد اجتماعات منشأة — أنشئ أول اجتماع برابط حضور</td></tr>';
+  </td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد اجتماعات منشأة — أنشئ أول اجتماع برابط حضور</td></tr>';
 }
 async function createMeeting(){
  if(!$('mgTitle').value.trim()){toast('أدخل عنوان الاجتماع');return}
  const code=Math.random().toString(36).slice(2,10);
  const link=normUrl($('mgLink').value);
  if($('mgLink').value.trim()&&!link){toast('رابط الاجتماع غير صالح — أدخل رابطاً يبدأ بـ https://');return}
- const {error}=await sb.from('meetings').insert({meeting_name:$('mgMeet').value,department:$('mgDept').value,title:$('mgTitle').value,goal:$('mgGoal').value,meeting_date:$('mgDate').value||D(0),meeting_time:$('mgTime').value||null,meet_link:link||null,code,created_by:me?me.id:null});
+ const att=[...mgAttendees];
+ if(!att.length&&!confirm('لم تختر أحداً في «إضافة الحضور». عند توليد الغياب سيُحتسب كل موظفي القسم المختار. متابعة؟'))return;
+ const {error}=await sb.from('meetings').insert({meeting_name:$('mgMeet').value,department:$('mgDept').value,title:$('mgTitle').value,goal:$('mgGoal').value,meeting_date:$('mgDate').value||D(0),meeting_time:$('mgTime').value||null,meet_link:link||null,code,created_by:me?me.id:null,attendees:att.length?att:null});
  if(error){err(error);return}
  closeModal('meetingModal');await loadMeetings();renderMeetings();
  copyCheckinLink(code);
@@ -2697,12 +2805,18 @@ function copyCheckinLink(code){
 }
 async function generateAbsence(mid){
  const m=meetingsList.find(x=>x.id===mid);if(!m)return;
- if(!confirm('سيتم تسجيل غياب لكل موظفي قسم '+m.department+' الذين لم يسجلوا حضورهم. متابعة؟'))return;
+ /* الغائبون يُشتقّون من قائمة «إضافة الحضور» المحفوظة مع الاجتماع.
+    الاجتماعات القديمة بلا قائمة ترجع للسلوك السابق: كل موظفي القسم. */
+ const invited=invitedOf(m);
+ const pool=invited.length?invited:employees.filter(e=>e.dept===m.department&&e.status==='نشط'&&e.role!=='admin');
+ if(!pool.length){toast('لا توجد أسماء في قائمة الحضور لهذا الاجتماع');return}
+ const scope=invited.length?`قائمة الحضور المحددة (${pool.length} موظف)`:`كل موظفي قسم ${m.department}`;
+ if(!confirm('سيتم تسجيل غياب لمن لم يسجّل حضوره من '+scope+'. متابعة؟'))return;
  const attended=new Set(meetAtt.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
  const alreadyAbsent=new Set(meetAbs.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
- const absentees=employees.filter(e=>e.dept===m.department&&e.status==='نشط'&&e.role!=='admin'&&!attended.has(e.id)&&!alreadyAbsent.has(e.id));
+ const absentees=pool.filter(e=>!attended.has(e.id)&&!alreadyAbsent.has(e.id));
  if(!absentees.length){toast('لا يوجد غائبون جدد — الجميع بين حاضر أو مسجَّل غيابه مسبقاً');return}
- const rows=absentees.map(e=>({employee_id:e.id,record_type:'غياب',meeting_name:m.meeting_name,department:m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:m.meeting_time,meeting_id:mid,notes:'غياب مولد تلقائياً'}));
+ const rows=absentees.map(e=>({employee_id:e.id,record_type:'غياب',meeting_name:m.meeting_name,department:e.dept||m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:m.meeting_time,meeting_id:mid,notes:'غياب مولد تلقائياً'}));
  const {error}=await sb.from('meeting_records').insert(rows);
  if(error){err(error);return}
  await refresh();renderMeetings();toast('تم تسجيل غياب '+absentees.length+' موظف');
