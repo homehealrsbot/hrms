@@ -1317,15 +1317,15 @@ tbody tr:hover{background:#FAFCFB}
       <div><label>المسمى الوظيفي</label><input id="eJob"></div>
       <div><label>القسم</label><select id="eDept"><option>التقنية</option><option>التسويق</option><option>المالية</option><option>العمليات</option><option>الطبي</option><option>خدمة العملاء</option><option>الإداري</option><option>الموارد البشرية</option><option>B2B</option></select></div>
       <div><label>نوع التوظيف</label><select id="eType"><option>حضوري وعن بعد</option><option>حضوري</option><option>عن بعد</option></select></div>
-      <div><label>الراتب الشهري</label><input id="eSalary" type="number"></div>
-      <div><label>عملة الراتب</label><select id="eCurrency"><option>ريال سعودي</option><option>جنيه مصري</option><option>دولار أمريكي</option><option>يورو</option></select></div>
+      <div data-payfield="1"><label>الراتب الشهري</label><input id="eSalary" type="number"></div>
+      <div data-payfield="1"><label>عملة الراتب</label><select id="eCurrency"><option>ريال سعودي</option><option>جنيه مصري</option><option>دولار أمريكي</option><option>يورو</option></select></div>
       <div><label>نوع العمل</label><select id="eWork"><option>كامل</option><option>جزئي</option></select></div>
       <div><label>مدة العقد</label><input id="eContractDur" placeholder="مثال: سنة"></div>
       <div><label>حالة الموظف</label><select id="eStatus"><option>نشط</option><option>غير نشط</option></select></div>
       <div><label>الدور في النظام</label><select id="eRole"><option value="employee">موظف</option><option value="manager">رئيس قسم</option><option value="accountant">محاسب</option></select></div>
       <div><label>موقع الحضور الذاتي (GPS)</label><select id="eLocation"><option value="">— بلا تخصيص —</option></select></div>
-      <div><label>رقم الحساب البنكي (IBAN)</label><input id="eIban" placeholder="SA0000000000000000000000" style="direction:ltr;text-align:left"></div>
-      <div><label>رمز البنك</label><input id="eBankCode" placeholder="مثال: RJHI" style="direction:ltr;text-align:left"></div>
+      <div data-payfield="1"><label>رقم الحساب البنكي (IBAN)</label><input id="eIban" placeholder="SA0000000000000000000000" style="direction:ltr;text-align:left"></div>
+      <div data-payfield="1"><label>رمز البنك</label><input id="eBankCode" placeholder="مثال: RJHI" style="direction:ltr;text-align:left"></div>
     </div>
   </fieldset>
   <fieldset><legend>المستندات المطلوبة</legend>
@@ -1642,7 +1642,7 @@ async function enterApp(){
  try{await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'login'})}catch(e){}
  $('loginScreen').style.display='none';
  await loadAll();await loadMeetings();
- if(me.role==='admin'){$('app').classList.add('on');initAll();renderMeetings()}
+ if(isBackoffice()){$('app').classList.add('on');initAll();renderMeetings()}
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
  runCheckin();
  initRealtime();
@@ -1664,9 +1664,9 @@ function initRealtime(){
      rtTimer=setTimeout(()=>{refresh().catch(()=>{})},700);
      try{
       if(payload.eventType==='INSERT'&&t==='leaves'&&me.role!=='employee')toast('🔔 وصل طلب إجازة جديد الآن');
-      else if(payload.eventType==='INSERT'&&t==='permits'&&me.role==='admin')toast('🔔 وصل طلب استئذان جديد الآن');
+      else if(payload.eventType==='INSERT'&&t==='permits'&&isBackoffice())toast('🔔 وصل طلب استئذان جديد الآن');
       else if(payload.eventType==='UPDATE'&&t==='leaves'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد طلباتك');
-      else if(payload.eventType==='INSERT'&&t==='meeting_records'&&me.role==='admin')toast('✋ موظف سجّل حضوره الآن');
+      else if(payload.eventType==='INSERT'&&t==='meeting_records'&&isBackoffice())toast('✋ موظف سجّل حضوره الآن');
       else if(payload.eventType==='INSERT'&&t==='form_submissions'&&me.role!=='employee')toast('📄 وصل تقديم نموذج جديد الآن');
       else if(payload.eventType==='UPDATE'&&t==='form_submissions'&&me.role==='employee')toast('🔔 تحدّثت حالة أحد نماذجك');
       else if(payload.eventType==='INSERT'&&t==='payment_requests'&&me.role!=='employee'&&hasPerm('paymentsAdmin','view'))toast('💵 وصل طلب صرف جديد الآن');
@@ -1708,6 +1708,34 @@ function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.national
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
+
+/* ================= بوابة الدخول: النظام الإداري مقابل بوابة الموظف =================
+   قبل هذا التعديل كانت البوابة مشروطة بـ role==='admin' وحده، فأي شخص يُنزع عنه
+   الأدمن يسقط إلى بوابة الموظف مهما كانت صلاحياته. صارت الآن مشروطة بمنح صريح
+   عبر مفتاح 'backoffice' في جدول permissions — لا بالدور ولا بمجموع الصلاحيات،
+   حتى لا يُنقل أحد إلى شاشات لم يُقصد نقله إليها بمجرد منحه وحدة إضافية. */
+function isBackoffice(emp){
+ const e=emp||(typeof me!=='undefined'?me:null);
+ if(!e)return false;
+ if(e.role==='admin')return true;
+ const lvl=(typeof permLevel==='function')?permLevel(e.id,'backoffice'):'none';
+ return lvl==='view'||lvl==='full';
+}
+/* تطبيع الروابط الخارجية: رابط بلا بروتوكول (meet.google.com/xxx) يعامله المتصفح
+   كمسار نسبي داخل الموقع فيعطي 404 من GitHub Pages. نضيف https:// عند غيابه،
+   ونرفض أي مخطط غير http/https (javascript: مثلاً) حتى لا يُحقن عبر حقل الرابط. */
+function normUrl(u){
+ const s=String(u||'').trim();
+ if(!s)return '';
+ if(/^https?:\/\//i.test(s))return s;
+ if(/^[a-z][a-z0-9+.-]*:/i.test(s))return '';   // مخطط آخر: مرفوض
+ return 'https://'+s.replace(/^\/+/,'');
+}
+function openExt(u){
+ const s=normUrl(u);
+ if(!s){toast('رابط الاجتماع غير صالح');return}
+ window.open(s,'_blank','noopener');
+}
 const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
@@ -1744,10 +1772,10 @@ async function loadAll(){
  officeLocation=officeLocations[0]||null; // للتوافق مع أي كود قديم يعتمد على موقع واحد (احتياط)
  const CS=await sb.from('company_settings').select('*').eq('id',1).maybeSingle();
  companySettings=CS.data||null;
- if(me&&me.role!=='admin'){
+ if(me&&!isBackoffice()){
   const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
   attendanceEvents=AE.data||[];
- }else if(me&&me.role==='admin'){
+ }else if(me&&isBackoffice()){
   const AEA=await sb.from('attendance_events').select('*').order('event_date',{ascending:false});
   allAttendanceEvents=AEA.data||[]; // RLS نفسها تحدد ما يُرجَّع فعلياً حسب صلاحية الحضور
  }
@@ -1779,7 +1807,7 @@ async function loadAll(){
  const WRN=await sb.from('warnings').select('*').order('created_at',{ascending:false});
  warnings=(WRN.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),level:r.level,reason:r.reason,description:r.description,attachment:r.attachment_url,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,finalApprover:r.final_approver,acknowledged:r.acknowledged_by_employee,acknowledgedAt:r.acknowledged_at,createdAt:r.created_at}));
 }
-async function refresh(){await loadAll();await loadMeetings();if(me.role==='admin'){renderAll();renderMeetings()}else epRenderAll()}
+async function refresh(){await loadAll();await loadMeetings();if(isBackoffice()){renderAll();renderMeetings()}else epRenderAll()}
 
 /* ================= رفع الملفات الفعلي ================= */
 async function uploadToStorage(file,folder){
@@ -1857,12 +1885,12 @@ async function loadReads(){
 async function markRead(key){
  readKeys.add(key);
  await sb.from('alert_reads').upsert({employee_id:me.id,alert_key:key}).then(()=>{});
- if(me.role==='admin'){renderAlerts()}else{epRenderAlerts()}
+ if(isBackoffice()){renderAlerts()}else{epRenderAlerts()}
 }
 async function markAllRead(keys){
  keys.forEach(k=>readKeys.add(k));
  if(keys.length)await sb.from('alert_reads').upsert(keys.map(k=>({employee_id:me.id,alert_key:k}))).then(()=>{});
- if(me.role==='admin'){renderAlerts()}else{epRenderAlerts()}
+ if(isBackoffice()){renderAlerts()}else{epRenderAlerts()}
 }
 function alertItem(a,i){
  const k=alertKey(a),unread=!readKeys.has(k);
@@ -1944,7 +1972,7 @@ function buildAlerts(){
    if(sla){a.sla=sla;a.d+=' — '+sla.label;if(sla.overdue)a.k='danger'}
   }
  });
- if(me&&me.role==='admin'){
+ if(me&&isBackoffice()){
   A.filter(a=>a.kind===TASK&&a.sla&&a.sla.overdue).forEach(a=>{
    A.push({sid:'esc-'+a.sid,t:'🚨 طلب متأخر عن الموعد المحدد',d:`تصعيد: "${a.t}" — ${a.d.split(' — ')[0]} — متأخر ولم يُتخذ فيه إجراء حتى الآن`,k:'danger',ic:'🚨',nav:a.nav,kind:TASK});
   });
@@ -2186,7 +2214,7 @@ function alertGo(i){
  const a=_alertsList[i];if(!a)return;
  const k=alertKey(a);if(!readKeys.has(k))markRead(k);
  const n=a.nav||{};
- if(me.role!=='admin'){
+ if(!isBackoffice()){
    const map={contracts:'contracts',employees:'profile',leaves:'leaves',permits:'permits',attendance:'attendance',policies:'policies',approvals:'approvals'};
    epGo(map[n.p]||'alerts');return;
  }
@@ -2257,6 +2285,14 @@ function fillEmpSelects(){
  Object.keys(DEPT_EMP_MAP).forEach(filterEmpByDept);
  syncLeaveEmp();
 }
+/* الحقول المالية داخل نافذة الموظف تُخفى عمّن لا يملك صلاحية الرواتب.
+   RLS تحمي الصفوف لا الأعمدة، فهذه طبقة واجهة فقط — لا تُغني عن حجب
+   الأعمدة على مستوى قاعدة البيانات، لكنها تمنع العرض العابر. */
+function canSeePay(){return hasPerm('payroll','view')}
+function applyEmpPayGate(){
+ const show=canSeePay();
+ document.querySelectorAll('#empModal [data-payfield]').forEach(d=>{d.style.display=show?'':'none'});
+}
 function fillLocationSelect(){
  $('eLocation').innerHTML='<option value="">— بلا تخصيص —</option>'+officeLocations.map(l=>`<option value="${l.id}">${l.name}${l.active?'':' (معطَّل)'}</option>`).join('');
 }
@@ -2264,12 +2300,14 @@ function openEmpModal(){editId=null;$('empModalTitle').textContent='إضافة �
  ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eHire','eProbStart','eProbEnd','eJob','eSalary','eContractDur','eIban','eBankCode'].forEach(id=>$(id).value='');
  fillLocationSelect();$('eLocation').value='';
  $('empSaveBtn').disabled=false;
+ applyEmpPayGate();
  openModal('empModal')}
 function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textContent='تعديل بيانات الموظف';
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
  fillLocationSelect();$('eLocation').value=e.locationId||'';
  $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';
+ applyEmpPayGate();
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
 function empFormSnapshot(){return ['eNum','eName','eNat','eId','eBirth','eCity','eEmail','ePhone','eGender','eHire','eProbStart','eProbEnd','eJob','eDept','eType','eSalary','eCurrency','eWork','eContractDur','eStatus','eRole','eLocation','eIban','eBankCode'].map(id=>$(id).value).join('|')}
@@ -2281,6 +2319,8 @@ async function saveEmployee(){
  if(!/^\S+@\S+\.\S+$/.test($('eEmail').value.trim())){toast('صيغة البريد الإلكتروني غير صحيحة');return}
  if($('eProbStart').value&&$('eProbEnd').value&&$('eProbEnd').value<$('eProbStart').value){toast('نهاية فترة التجربة لا يمكن أن تسبق بدايتها');return}
  const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null,bank_iban:$('eIban').value.trim().toUpperCase()||null,bank_code:$('eBankCode').value.trim().toUpperCase()||null};
+ /* حماية من المسح الصامت: من لا يرى الحقول المالية لا يرسلها أصلاً */
+ if(!canSeePay()){delete row.salary;delete row.currency;delete row.bank_iban;delete row.bank_code}
  const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
  const {error}=await q;
  if(error){err(error);return}
@@ -2637,14 +2677,16 @@ function renderMeetings(){
   <td><span class="tag ok">${att} حاضر</span></td>
   <td style="white-space:nowrap">
    <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ رابط الحضور</button>
-   ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="window.open('${m.meet_link}','_blank')">فتح Meet</button>`:''}
+   ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="openExt('${m.meet_link}')">فتح Meet</button>`:''}
    <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
   </td></tr>`}).join(''):'<tr><td colspan="7" class="empty">لا توجد اجتماعات منشأة — أنشئ أول اجتماع برابط حضور</td></tr>';
 }
 async function createMeeting(){
  if(!$('mgTitle').value.trim()){toast('أدخل عنوان الاجتماع');return}
  const code=Math.random().toString(36).slice(2,10);
- const {error}=await sb.from('meetings').insert({meeting_name:$('mgMeet').value,department:$('mgDept').value,title:$('mgTitle').value,goal:$('mgGoal').value,meeting_date:$('mgDate').value||D(0),meeting_time:$('mgTime').value||null,meet_link:$('mgLink').value||null,code});
+ const link=normUrl($('mgLink').value);
+ if($('mgLink').value.trim()&&!link){toast('رابط الاجتماع غير صالح — أدخل رابطاً يبدأ بـ https://');return}
+ const {error}=await sb.from('meetings').insert({meeting_name:$('mgMeet').value,department:$('mgDept').value,title:$('mgTitle').value,goal:$('mgGoal').value,meeting_date:$('mgDate').value||D(0),meeting_time:$('mgTime').value||null,meet_link:link||null,code,created_by:me?me.id:null});
  if(error){err(error);return}
  closeModal('meetingModal');await loadMeetings();renderMeetings();
  copyCheckinLink(code);
@@ -2678,7 +2720,7 @@ async function runCheckin(){
   $('checkinBody').innerHTML=`
    <div class="section-note">📅 <b>${m.meeting_name}</b> — ${m.title||''}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
    <p style="text-align:center;font-weight:700;color:var(--ok);padding:10px">✅ حضورك مسجّل مسبقاً لهذا الاجتماع</p>
-   ${m.meet_link?`<button class="btn btn-primary btn-block" onclick="window.location.href='${m.meet_link}'">↗ الانتقال للاجتماع الآن</button>`:''}`;
+   ${m.meet_link?`<button class="btn btn-primary btn-block" onclick="openExt('${m.meet_link}')">↗ الانتقال للاجتماع الآن</button>`:''}`;
   return;
  }
  $('checkinBody').innerHTML=`
@@ -2693,7 +2735,7 @@ async function confirmCheckin(mid,mObj){
  if(error){err(error);return}
  $('checkinBody').innerHTML=`<p style="text-align:center;font-weight:800;color:var(--ok);font-size:17px;padding:16px">✅ تم تسجيل حضورك بنجاح${m.meet_link?'<br><small style=\"font-weight:600;color:var(--muted)\">جاري تحويلك للاجتماع...</small>':''}</p>`;
  await refresh();
- if(m.meet_link){setTimeout(()=>{window.location.href=m.meet_link},1200)}
+ if(m.meet_link){const L=normUrl(m.meet_link);if(L)setTimeout(()=>{window.location.href=L},1200)}
 }
 
 /* ================= الإجازات ================= */
@@ -3401,7 +3443,7 @@ function renderPermissionsPage(){
   $('permissionsTbody').innerHTML='<tr><td colspan="14" class="empty">هذه الصفحة تحتاج صلاحية خاصة — تحتاج منح صريح من مدير النظام</td></tr>';
   return;
  }
- $('permMatrixHead').innerHTML='<tr><th>الموظف</th><th>الدور</th>'+MODULES.map(m=>`<th>${m.label}</th>`).join('')+'</tr>';
+ $('permMatrixHead').innerHTML='<tr><th>الموظف</th><th>الدور</th><th style="background:#FFF6E5">بوابة النظام الإداري</th>'+MODULES.map(m=>`<th>${m.label}</th>`).join('')+'</tr>';
  const q=($('permSearchName')?$('permSearchName').value:'').trim();
  const rows=employees.filter(e=>e.role!=='admin'||true).filter(e=>!q||e.name.includes(q));
  const roleLabel=r=>r==='admin'?'أدمن':r==='manager'?'رئيس قسم':r==='accountant'?'محاسب':'موظف';
@@ -3416,7 +3458,17 @@ function renderPermissionsPage(){
     <option value="full" ${explicit==='full'?'selected':''}>تحكم كامل</option>
    </select></td>`;
   }).join('');
-  return `<tr><td><b>${e.name}</b><br><small style="color:var(--muted)">${e.num}</small></td><td><span class="tag info">${roleLabel(e.role)}</span></td>${cells}</tr>`;
+  /* عمود مستقل عن MODULES: يحدد أي بوابة يدخلها الموظف، لا أي صفحة يراها.
+     الأدمن دائماً داخل النظام الإداري ولا يُسحب منه هنا. */
+  const boLvl=permLevel(e.id,'backoffice'),boExp=permsMap[e.id]&&permsMap[e.id]['backoffice'];
+  const boCell=e.role==='admin'
+   ?`<td style="background:#FFF6E5"><span class="tag info">دائماً</span></td>`
+   :`<td style="background:#FFF6E5"><select onchange="savePermission('${e.id}','backoffice',this.value)" style="min-width:130px;font-size:12px">
+      <option value="__default__" ${!boExp?'selected':''}>افتراضي (بوابة الموظف)</option>
+      <option value="none" ${boExp==='none'?'selected':''}>بوابة الموظف</option>
+      <option value="full" ${boExp==='full'?'selected':''}>النظام الإداري</option>
+     </select></td>`;
+  return `<tr><td><b>${e.name}</b><br><small style="color:var(--muted)">${e.num}</small></td><td><span class="tag info">${roleLabel(e.role)}</span></td>${boCell}${cells}</tr>`;
  }).join(''):'<tr><td colspan="14" class="empty">لا يوجد موظفون</td></tr>';
 }
 function initAll(){
@@ -3433,7 +3485,8 @@ let docsEmpId=null;
 function openDocsModal(eid){docsEmpId=eid;renderDocsModal();openModal('docsModal')}
 function renderDocsModal(){
  const e=empById[docsEmpId];if(!e)return;
- const isAdmin=me.role==='admin';
+ /* استبدال المستندات عمل موارد بشرية لا عمل أدمن — يُربط بصلاحية الملفات */
+ const isAdmin=me.role==='admin'||hasPerm('files','full');
  $('docsModalTitle').textContent='مستندات الموظف: '+e.name;
  const myFiles=filesData.filter(f=>f.employee_id===docsEmpId);
  $('docsModalBody').innerHTML=(isAdmin?'':'<div class="section-note">ترفع كل مستند مرة واحدة — لتعديل مستند مرفوع تواصل مع الموارد البشرية.</div>')+DOC_TYPES.map(t=>{
@@ -3453,7 +3506,7 @@ async function delEmpDoc(fileId,path,docType){
  try{await sb.storage.from('hrms-files').remove([path])}catch(e){}
  const {error}=await sb.from('files_registry').delete().eq('id',fileId);
  if(error){err(error);return}
- await loadAll();renderDocsModal();if(me.role==='admin')renderFiles();
+ await loadAll();renderDocsModal();if(isBackoffice())renderFiles();
  toast('تم حذف المستند');
 }
 async function uploadEmpDoc(docType){
@@ -4535,7 +4588,7 @@ async function saveSelfEdit(){
  const {error}=await sb.rpc('update_my_profile',{p_phone:$('sePhone').value,p_city:$('seCity').value});
  if(error){err(error);return}
  closeModal('selfEditModal');await loadAll();
- if(me.role==='admin'){renderAll();}else{currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();}
+ if(isBackoffice()){renderAll();}else{currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();}
  toast('تم تحديث بياناتك بنجاح');
 }
 /* ================= أدوات ذاتية لأي حساب أدمن (إبراهيم وغيره) — نفس تجربة الموظف تماماً ================= */
@@ -5952,7 +6005,7 @@ function kRender(){
 window.glKpiRefresh=function(){kLoad(true).then(kRender).catch(()=>{})};
 window.__kpiTick=function(){
  if(!kInject())return;
- if(!(typeof me!=='undefined'&&me&&me.role==='admin'))return;
+ if(!(typeof me!=='undefined'&&me&&typeof isBackoffice==='function'&&isBackoffice()))return;
  if(!(typeof hasPerm==='function'&&hasPerm('accounting','view')))return;
  kLoad(false).then(kRender).catch(()=>{});
 };
@@ -6793,7 +6846,7 @@ function drawAttendance(body,full){
       <td><span class="tag ok">${att} حاضر</span></td>
       <td style="white-space:nowrap">
        <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ الرابط</button>
-       ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="window.open('${m.meet_link}','_blank')">فتح Meet</button>`:''}
+       ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="openExt('${m.meet_link}')">فتح Meet</button>`:''}
        <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
       </td></tr>`}).join('')||'<tr><td colspan="7" class="empty">لا توجد اجتماعات — أنشئ أول اجتماع برابط حضور</td></tr>');
   body.appendChild(box);
