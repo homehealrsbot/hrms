@@ -6005,8 +6005,14 @@ function kRender(){
 window.glKpiRefresh=function(){kLoad(true).then(kRender).catch(()=>{})};
 window.__kpiTick=function(){
  if(!kInject())return;
- if(!(typeof me!=='undefined'&&me&&typeof isBackoffice==='function'&&isBackoffice()))return;
- if(!(typeof hasPerm==='function'&&hasPerm('accounting','view')))return;
+ const sec=document.getElementById('glKpiSection');
+ /* الوسم يُضبط دائماً — سابقاً كان يُضبط داخل kRender وحدها، فإن فشل الفحص
+    لم تُستدعَ kRender أصلاً وبقي الوسم غير مضبوط والزر ظاهراً بمحتوى فارغ. */
+ const ok=(typeof me!=='undefined'&&me)
+   &&(typeof isBackoffice==='function'&&isBackoffice())
+   &&(typeof hasPerm==='function'&&hasPerm('accounting','view'));
+ if(sec){sec.dataset.allowed=ok?'1':'0';sec.style.display=ok?'':'none'}
+ if(!ok)return;
  kLoad(false).then(kRender).catch(()=>{});
 };
 })();
@@ -6151,7 +6157,18 @@ function badges(){
  const bad=s=>!!document.querySelector('#'+s+' .stat.st-bad');
  const kpiSec=document.getElementById('glKpiSection');
  const kpiBtn=document.querySelector('#dashNav .dn-item[data-sec="glKpiSection"]');
- if(kpiBtn)kpiBtn.style.display=(kpiSec&&kpiSec.dataset.allowed==='0')?'none':'';
+ const kpiOK=(typeof hasPerm==='function')&&hasPerm('accounting','view');
+ if(kpiBtn)kpiBtn.style.display=(!kpiOK||(kpiSec&&kpiSec.dataset.allowed==='0'))?'none':'';
+ /* والنظرة المالية كذلك: إخفاء زرها لمن لا يملك أي وحدة مالية */
+ const finBtn=document.querySelector('#dashNav .dn-item[data-sec="dashFinanceSection"]');
+ const finOK=(typeof hasFinance==='function')&&hasFinance();
+ if(finBtn)finBtn.style.display=finOK?'':'none';
+ /* لو كان القسم المفتوح صار محجوباً، انتقل لأول قسم مسموح */
+ const cur=document.querySelector('#dashNav .dn-item.on');
+ if(cur&&cur.style.display==='none'){
+  const first=[...document.querySelectorAll('#dashNav .dn-item')].find(b=>b.style.display!=='none');
+  if(first)first.click();
+ }
  set('glKpiSection','',bad('glKpiSection'));
  set('dashFinanceSection','',bad('dashFinanceSection'));
  try{set('dashEmpGroup',(typeof employees!=='undefined'?employees:[]).filter(e=>e.status==='نشط').length||null,bad('dashEmpGroup'))}
