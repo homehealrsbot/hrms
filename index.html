@@ -401,7 +401,7 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="card">
     <h3>🚪 استئذانات بانتظار الاعتماد</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>الساعات</th><th>النوع</th><th>الحالة</th><th>إجراء</th></tr></thead>
     <tbody id="apvPermitsTbody"></tbody></table></div>
   </div>
   <div class="card">
@@ -640,7 +640,7 @@ tbody tr:hover{background:#FAFCFB}
       <select id="fPermStatus" onchange="renderPermits()"><option value="">الحالة: الكل</option><option>بانتظار موافقة رئيس القسم</option><option>بانتظار الاعتماد النهائي</option><option>معتمد</option><option>مرفوض</option></select>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>الموظف</th><th>التاريخ</th><th>موعد الاستئذان</th><th>نوع الاستئذان</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+      <thead><tr><th>الموظف</th><th>التاريخ</th><th>موعد الاستئذان</th><th>عدد الساعات</th><th>نوع الاستئذان</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
       <tbody id="permitTbody"></tbody>
     </table></div>
   </div>
@@ -729,7 +729,9 @@ tbody tr:hover{background:#FAFCFB}
       <div><label>رقم المنشأة لدى البنك</label><input id="csEstablishmentId" style="direction:ltr;text-align:left"></div>
       <div><label>رقم حساب الشركة (IBAN)</label><input id="csBankAccount" style="direction:ltr;text-align:left"></div>
       <div><label>رقم المنشأة بوزارة الموارد البشرية</label><input id="csMolId" style="direction:ltr;text-align:left"></div>
+      <div><label>رصيد ساعات الاستئذان الشهري لكل موظف</label><input id="csPermitHours" type="number" min="0" step="0.5" placeholder="4"></div>
     </div>
+    <div class="section-note">رصيد الاستئذان الشهري يُطبَّق على كل الموظفين — إذا تجاوز الموظف ساعاته الشهرية لا يسمح له النظام بتقديم استئذان جديد. اتركه فارغاً ليعمل بالقيمة الافتراضية (4 ساعات).</div>
     <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveCompanySettings()">💾 حفظ بيانات المنشأة</button></div>
   </div>
 
@@ -980,7 +982,7 @@ tbody tr:hover{background:#FAFCFB}
   </div>
   <div class="stats" id="epLeaveStats"></div>
   <div class="card"><h3>سجل طلباتي</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>البديل</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
     <tbody id="epLeaveTbody"></tbody></table></div></div>
 </section>
 
@@ -1020,8 +1022,9 @@ tbody tr:hover{background:#FAFCFB}
     <div><h1>طلبات الاستئذان</h1><p>طلبات الاستئذان الخاصة بك</p></div>
     <button class="btn btn-primary" onclick="epNewPermit()">+ طلب استئذان جديد</button>
   </div>
+  <div class="stats" id="epPermitStats"></div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>التاريخ</th><th>موعد الاستئذان</th><th>النوع</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>التاريخ</th><th>موعد الاستئذان</th><th>عدد الساعات</th><th>النوع</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
     <tbody id="epPermitTbody"></tbody></table></div></div>
 </section>
 
@@ -1063,7 +1066,7 @@ tbody tr:hover{background:#FAFCFB}
     <thead><tr><th>الموظف</th><th>النوع</th><th>الفترة</th><th>الحالة</th></tr></thead>
     <tbody id="mgrHistoryTbody"></tbody></table></div></div>
   <div class="card"><h3>🚪 استئذانات بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>الموظف</th><th>التاريخ</th><th>الموعد</th><th>الساعات</th><th>رصيد الشهر</th><th>النوع</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
     <tbody id="mgrPermitsTbody"></tbody></table></div></div>
   <div class="card"><h3>📄 نماذج بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النموذج</th><th>تاريخ التقديم</th><th>إجراء</th></tr></thead>
@@ -1201,6 +1204,7 @@ tbody tr:hover{background:#FAFCFB}
 <!-- طلب إجازة (موظف) -->
 <div class="modal-back" id="epLeaveModal"><div class="modal">
   <div class="modal-head"><h3>طلب إجازة جديد</h3><button class="x-btn" onclick="closeModal('epLeaveModal')">✕</button></div>
+  <div class="section-note" style="margin-bottom:12px">📌 لازم يُقدَّم طلب الإجازة قبل تاريخ بدايتها بـ24 ساعة على الأقل — والتقديم لإجازة تبدأ نفس اليوم غير مسموح. والإجازة السنوية ما تُعتمد إلا بعد ما رئيس قسمك يحدد لك بديلاً يمسك مكانك.</div>
   <div class="grid-2">
     <div><label>نوع الإجازة</label>
       <select id="eplType" onchange="epLeaveTypeChanged(this.value)">
@@ -1228,11 +1232,13 @@ tbody tr:hover{background:#FAFCFB}
 <!-- طلب استئذان (موظف) -->
 <div class="modal-back" id="epPermitModal"><div class="modal sm">
   <div class="modal-head"><h3>طلب استئذان جديد</h3><button class="x-btn" onclick="closeModal('epPermitModal')">✕</button></div>
+  <div class="section-note" id="eppBalanceNote" style="margin-bottom:12px"></div>
   <div class="grid-2">
-    <div><label>التاريخ</label><input id="eppDate" type="date"></div>
-    <div><label>موعد الاستئذان</label><input id="eppTime" type="time"></div>
+    <div><label>التاريخ <b style="color:var(--danger)">*</b></label><input id="eppDate" type="date" dir="ltr" onchange="epPermitRecalc()"></div>
+    <div><label>موعد الاستئذان <b style="color:var(--danger)">*</b></label><input id="eppTime" type="time" dir="ltr"></div>
+    <div><label>عدد الساعات <b style="color:var(--danger)">*</b></label><input id="eppHours" type="number" min="0.5" step="0.5" value="1" oninput="epPermitRecalc()"></div>
     <div><label>نوع الاستئذان</label><select id="eppType"><option>اجتماع</option><option>مقر العمل</option></select></div>
-    <div><label>ملاحظات</label><input id="eppNotes"></div>
+    <div style="grid-column:1/-1"><label>ملاحظات</label><input id="eppNotes"></div>
   </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPermit()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingPermitId=null;closeModal('epPermitModal')">إلغاء</button></div>
 </div></div>
@@ -1471,7 +1477,8 @@ tbody tr:hover{background:#FAFCFB}
   <div class="grid-2">
     <div><label>اسم الموظف</label><select id="prEmp"></select></div>
     <div><label>التاريخ</label><input id="prDate" type="date"></div>
-    <div><label>موعد الاستئذان</label><input id="prTime" type="time"></div>
+    <div><label>موعد الاستئذان</label><input id="prTime" type="time" dir="ltr"></div>
+    <div><label>عدد الساعات <b style="color:var(--danger)">*</b></label><input id="prHours" type="number" min="0.5" step="0.5" value="1"></div>
     <div><label>نوع الاستئذان</label><select id="prType"><option>اجتماع</option><option>مقر العمل</option></select></div>
     <div><label>الحالة</label><select id="prStatus"><option>بانتظار الموافقة</option><option>معتمد</option><option>مرفوض</option></select></div>
     <div><label>ملاحظات</label><input id="prNotes"></div>
@@ -1533,6 +1540,15 @@ tbody tr:hover{background:#FAFCFB}
 <!-- تفاصيل إجازات موظف -->
 <div class="modal-back" id="leaveDetailModal"><div class="modal lg" id="leaveDetailBody"></div></div>
 
+<!-- تعيين البديل — إلزامي قبل اعتماد أي إجازة سنوية -->
+<div class="modal-back" id="substituteModal"><div class="modal sm">
+  <div class="modal-head"><h3>👥 تعيين بديل للإجازة السنوية</h3><button class="x-btn" onclick="closeSubstitute()">✕</button></div>
+  <div class="section-note" id="subNote" style="margin-bottom:12px"></div>
+  <div class="field"><label>الموظف البديل <b style="color:var(--danger)">*</b></label><select id="subEmp"></select></div>
+  <div class="field"><label>مهام التسليم للبديل (اختياري)</label><input id="subNotes" placeholder="المهام التي سيتسلمها البديل خلال الإجازة"></div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="confirmSubstitute()">حفظ البديل ومتابعة الاعتماد</button><button class="btn btn-ghost" onclick="closeSubstitute()">إلغاء</button></div>
+</div></div>
+
 <!-- تعيين كلمة مرور جديدة (بعد رابط الاستعادة) -->
 <div class="modal-back" id="newPassModal"><div class="modal sm">
   <div class="modal-head"><h3>تعيين كلمة مرور جديدة</h3><button class="x-btn" onclick="closeModal('newPassModal')">✕</button></div>
@@ -1575,6 +1591,25 @@ const today = new Date();
 const D = o=>{const d=new Date(today);d.setDate(d.getDate()+o);return d.toISOString().slice(0,10)};
 const DEPTS = ['التقنية', 'التسويق', 'المالية', 'العمليات', 'الطبي', 'خدمة العملاء', 'الإداري', 'الموارد البشرية', 'B2B'];
 const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظار الاعتماد النهائي';
+/* ============================================================
+   🚪 سياسة الاستئذان + مهلة الـ24 ساعة + البديل في الإجازة السنوية
+   ------------------------------------------------------------
+   1) الإجازة السنوية: ما تنعتمد أبداً إلا بعد ما رئيس القسم يحدد
+      موظفاً بديلاً يمسك مكان صاحب الإجازة خلال فترتها.
+   2) الاستئذان: لكل موظف رصيد ساعات شهري (الافتراضي 4 ساعات)،
+      وتقدر تغيّره من صفحة «الرواتب» ← بطاقة بيانات المنشأة،
+      ويُحفظ في company_settings.permit_monthly_hours.
+      لو تجاوز الرصيد الشهري — النظام يرفض الطلب.
+   3) أي طلب (إجازة أو استئذان) لازم يُقدَّم قبل موعده بـ24 ساعة
+      على الأقل، والتقديم لنفس اليوم ممنوع نهائياً.
+   ⚠️ لازم تنفّذ هذا الـ SQL مرة واحدة على قاعدة البيانات (Supabase):
+      alter table permits add column if not exists permit_hours numeric(4,2) default 1;
+      alter table leaves  add column if not exists substitute_id uuid references employees(id);
+      alter table leaves  add column if not exists substitute_name text;
+      alter table company_settings add column if not exists permit_monthly_hours numeric(4,2) default 4;
+   ============================================================ */
+const PERMIT_MONTHLY_HOURS_DEFAULT = 4;   // رصيد ساعات الاستئذان الشهري الافتراضي
+const REQUEST_MIN_LEAD_HOURS = 24;        // أقل مهلة مسموحة بين تقديم الطلب وموعده
 /* ============================================================
    🔧 مفتاح تشغيل النظام المالي للموظف العادي
    حالياً: false = مخفي عن الموظف العادي (تجربة داخلية بس لك
@@ -1794,7 +1829,7 @@ async function loadAll(){
   const maxVersion=Math.max(...rows.map(r=>+r.version||0),0);
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,maxVersion,file:cur.pdf_url,history:rows}});
  contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
- leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,notes:r.notes}));
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,substituteId:r.substitute_id,substitute:r.substitute_name,notes:r.notes}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
@@ -1811,7 +1846,7 @@ async function loadAll(){
   const AEA=await sb.from('attendance_events').select('*').order('event_date',{ascending:false});
   allAttendanceEvents=AEA.data||[]; // RLS نفسها تحدد ما يُرجَّع فعلياً حسب صلاحية الحضور
  }
- permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
@@ -1966,10 +2001,11 @@ function buildAlerts(){
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp},kind:INFO});
   if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp},kind:INFO});
   if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1},kind:TASK,createdAt:l.req});
+  if(l.status===LV_P2&&needsSubstitute(l))A.push({sid:'lvsub-'+l.id,t:'إجازة سنوية بدون بديل',d:`إجازة ${l.emp} السنوية وصلت للاعتماد النهائي بدون تحديد بديل يمسك مكانه — لازم تحديد البديل قبل الاعتماد`,k:'danger',ic:'👥',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK,createdAt:l.req});
   if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK,createdAt:l.req})});
  permits.forEach(p=>{
-  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
-  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
+  if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) بـ${fmtHours(permitHoursOf(p))} مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
+  if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) بـ${fmtHours(permitHoursOf(p))} من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
  });
  employees.forEach(e=>{const b=balance(e.name);
   if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name},kind:INFO});
@@ -2905,6 +2941,8 @@ async function addLeave(){
  const lvEmpName=(empById[$('lvEmp').value]||{}).name||'';
  const balErr2=checkLeaveBalance(lvEmpName,$('lvType').value,+$('lvDays').value||1);
  if(balErr2){toast(balErr2);return}
+ const leadAdm=leadTimeError($('lvStart').value,null,'طلب الإجازة');
+ if(leadAdm&&!(await showConfirm(leadAdm+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب خارج مهلة الـ24 ساعة',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
  try{
   const fsA=takeStaged('leaveAdminSick','lvSickBox','📎 إرفاق التقرير الطبي');
   if(fsA){toast('جاري رفع التقرير الطبي...');const spA=await uploadToStorage(fsA,'employees/'+$('lvEmp').value+'/sick');
@@ -2917,7 +2955,9 @@ async function addLeave(){
   ['lvStart','lvEnd','lvDays','lvNotes','lvReason'].forEach(id=>$(id).value='');
  }catch(e){err(e)}
 }
-async function setLeaveStatus(id,status){
+async function setLeaveStatus(id,status,subDone){
+ // نفس القاعدة حتى في الاعتماد المباشر/النهائي: ما في إجازة سنوية معتمدة بدون بديل
+ if(status==='تمت الموافقة'&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>setLeaveStatus(id,status,true));return}
  const patch={status};
  if(me.role==='manager'){patch.dept_head=me.name}else{patch.admin_manager=me.name}
  const {error}=await sb.from('leaves').update(patch).eq('id',id);
@@ -2960,8 +3000,8 @@ function openLeaveDetail(emp){
    <div class="mini-stat"><div class="num" style="color:var(--ok)">${b.sickAvail}</div><div class="lbl">المرضي المتاح (بعد المحجوز)</div></div>
   </div>
   <div class="tbl-wrap"><table>
-   <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
-   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة - ${l.emp}')">📎</button>`:'—'} ${l.notes||''}</td>
+   <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>الحالة</th><th>البديل</th><th>رئيس القسم</th><th>المدير الإداري</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+   <tbody>${list.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.substitute||(l.type==='سنوية'?'<span style="color:var(--danger)">لم يُحدَّد بعد</span>':'—')}</td><td>${l.head||'—'}</td><td>${l.manager||'—'}</td><td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة - ${l.emp}')">📎</button>`:'—'} ${l.notes||''}</td>
    <td style="white-space:nowrap">${l.employee_id===me.id&&(l.status===LV_P1||l.status===LV_P2)?'<span style="color:var(--muted);font-size:12px">طلبك — بانتظار مدير آخر</span>':l.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:l.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:'—'}</td></tr>`).join('')}</tbody>
   </table></div>`;
  openModal('leaveDetailModal');
@@ -2975,6 +3015,80 @@ function renderLeaveTypes(){
  $('leaveTypeTbody').innerHTML=rows.length?rows.map(l=>`<tr><td><b>${l.emp}</b></td><td>${l.dept}</td><td>${l.job}</td><td>${l.days}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span>${l.employee_id===me.id?' <span style="color:var(--muted);font-size:12px">(طلبك)</span>':l.status===LV_P2?` <button class="btn btn-ok btn-sm" onclick="setLeaveStatus('${l.id}','تمت الموافقة')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setLeaveStatus('${l.id}','تم الرفض')">رفض</button>`:''}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد إجازات من هذا النوع</td></tr>';
 }
 
+/* ===== سياسة التقديم: مهلة 24 ساعة قبل الموعد + منع التقديم لنفس اليوم ===== */
+function leadTimeError(dateStr,timeStr,label){
+ label=label||'الطلب';
+ if(!dateStr)return 'حدد التاريخ أولاً';
+ const todayStr=D(0);
+ if(dateStr<todayStr)return `لا يمكن تقديم ${label} بتاريخ ماضٍ`;
+ if(dateStr===todayStr)return `ممنوع تقديم ${label} في نفس اليوم — لازم يوصل الطلب قبل موعده بـ${REQUEST_MIN_LEAD_HOURS} ساعة على الأقل`;
+ const t=(timeStr&&/^\d{1,2}:\d{2}/.test(String(timeStr)))?String(timeStr).slice(0,5):'00:00';
+ const target=new Date(dateStr+'T'+(t.length===4?'0'+t:t)+':00');
+ const diffH=(target-new Date())/36e5;
+ if(diffH<REQUEST_MIN_LEAD_HOURS){
+  const left=Math.max(0,Math.floor(diffH));
+  return `لازم تقديم ${label} قبل موعده بـ${REQUEST_MIN_LEAD_HOURS} ساعة على الأقل — الباقي على الموعد ${left} ساعة فقط`;
+ }
+ return null;
+}
+/* ===== رصيد ساعات الاستئذان الشهري ===== */
+function permitMonthlyLimit(){const v=+((companySettings||{}).permit_monthly_hours);return v>0?v:PERMIT_MONTHLY_HOURS_DEFAULT}
+const permitHoursOf=p=>{const h=+((p||{}).hours);return h>0?h:1};
+const hoursNum=h=>Math.round((+h||0)*100)/100;
+const fmtHours=h=>{const n=hoursNum(h);
+ if(n===1)return 'ساعة واحدة';
+ if(n===2)return 'ساعتان';
+ if(Number.isInteger(n)&&n>=3&&n<=10)return n+' ساعات';
+ return n+' ساعة'};
+/* الشهر = أول 7 خانات من تاريخ الاستئذان (YYYY-MM) */
+function permitBalance(empId,month,excludeId){
+ const limit=permitMonthlyLimit();
+ const mine=permits.filter(p=>p.employee_id===empId&&p.id!==excludeId&&String(p.date||'').slice(0,7)===month);
+ const used=mine.filter(p=>p.status==='معتمد').reduce((n,p)=>n+permitHoursOf(p),0);
+ const pend=mine.filter(p=>p.status===LV_P1||p.status===LV_P2).reduce((n,p)=>n+permitHoursOf(p),0);
+ return {limit,used,pend,left:Math.max(0,limit-used),avail:Math.max(0,limit-used-pend)};
+}
+function checkPermitBalance(empId,month,hours,excludeId){
+ if(!(hours>0))return 'حدد عدد ساعات الاستئذان';
+ const b=permitBalance(empId,month,excludeId);
+ if(hours>b.avail)return `رصيد الاستئذان الشهري ${fmtHours(b.limit)} — المتبقي ${fmtHours(b.avail)} فقط (مستخدم: ${fmtHours(b.used)} + قيد الطلب: ${fmtHours(b.pend)}) ولا يسمح النظام بطلب ${fmtHours(hours)}`;
+ return null;
+}
+/* ===== البديل الإلزامي في الإجازة السنوية ===== */
+function needsSubstitute(l){return !!l&&l.type==='سنوية'&&!(l.substituteId||l.substitute)}
+let _subCtx=null;
+function openSubstitutePicker(leaveId,after){
+ const l=leaves.find(x=>x.id===leaveId);if(!l){toast('تعذّر العثور على الطلب');return}
+ const overlaps=e=>leaves.some(x=>x.employee_id===e.id&&x.status==='تمت الموافقة'&&String(x.start)<=String(l.end)&&String(x.end)>=String(l.start));
+ let pool=employees.filter(e=>e.id!==l.employee_id&&e.status==='نشط'&&e.dept===l.dept);
+ let sameDept=true;
+ if(!pool.length){pool=employees.filter(e=>e.id!==l.employee_id&&e.status==='نشط');sameDept=false}
+ if(!pool.length){toast('لا يوجد موظف نشط آخر يصلح كبديل');return}
+ _subCtx={leaveId,after};
+ $('subNote').innerHTML=`إجازة <b>${l.type}</b> لـ<b>${l.emp}</b> (${l.dept||'—'}) من ${fmt(l.start)} إلى ${fmt(l.end)} — ${l.days} يوم.<br>لازم تحدد الموظف الي بيمسك مكانه خلال الفترة قبل ما تعتمد الطلب.${sameDept?'':'<br><small>لا يوجد زملاء في نفس القسم — القائمة تعرض كل الموظفين النشطين.</small>'}`;
+ $('subEmp').innerHTML=pool.map(e=>`<option value="${e.id}"${overlaps(e)?' disabled':''}>${e.name} — ${e.job||e.dept||''}${overlaps(e)?' (في إجازة خلال نفس الفترة)':''}</option>`).join('');
+ $('subNotes').value='';
+ openModal('substituteModal');
+}
+function closeSubstitute(){_subCtx=null;closeModal('substituteModal')}
+async function confirmSubstitute(){
+ if(!_subCtx)return;
+ const sel=$('subEmp'),id=sel.value;
+ if(!id){toast('اختر الموظف البديل');return}
+ const opt=sel.options[sel.selectedIndex];
+ if(opt&&opt.disabled){toast('هذا الموظف في إجازة خلال نفس الفترة — اختر بديلاً غيره');return}
+ const e=empById[id]||{},l=leaves.find(x=>x.id===_subCtx.leaveId)||{};
+ const patch={substitute_id:id,substitute_name:e.name||''};
+ const extra=$('subNotes').value.trim();
+ if(extra)patch.notes=(l.notes?l.notes+' — ':'')+'تسليم للبديل: '+extra;
+ const {error}=await sb.from('leaves').update(patch).eq('id',_subCtx.leaveId);
+ if(error){err(error);return}
+ l.substituteId=id;l.substitute=e.name||'';
+ const after=_subCtx.after;_subCtx=null;closeModal('substituteModal');
+ toast('تم تعيين '+(e.name||'')+' بديلاً عن '+(l.emp||'الموظف'));
+ if(after)await after();
+}
+
 /* ================= الاستئذانات ================= */
 function renderPermits(){
  const q=$('fPermName').value.trim(),tp=$('fPermType').value,st=$('fPermStatus').value;
@@ -2983,21 +3097,40 @@ function renderPermits(){
  const prBtn=p=>p.employee_id===me.id?'<span style="color:var(--muted);font-size:12px">طلبك — بانتظار مدير آخر</span>':p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td>
+  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td>
   <td><span class="tag ${stTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td>${p.notes||'—'}</td>
-  <td style="white-space:nowrap">${prBtn(p)}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+  <td style="white-space:nowrap">${prBtn(p)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد استئذانات</td></tr>';
+}
+/* حارس إضافي عند الاعتماد: طلبان معلّقان قد يتجاوزان الرصيد مجتمعين */
+function permitApprovalError(p){
+ if(!p)return 'تعذّر العثور على الطلب';
+ const b=permitBalance(p.employee_id,String(p.date||'').slice(0,7),p.id),h=permitHoursOf(p);
+ if(b.used+h>b.limit)return `لا يمكن الاعتماد: ${p.emp} استهلك ${fmtHours(b.used)} من رصيد ${fmtHours(b.limit)} لهذا الشهر، وهذا الطلب (${fmtHours(h)}) يتجاوز الرصيد`;
+ return null;
 }
 async function setPermit(id,status){
+ if(status==='معتمد'){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
  const {error}=await sb.from('permits').update({status}).eq('id',id);
  if(error){err(error);return} await refresh();toast('تم تحديث حالة الاستئذان')}
 async function mgrDecidePermit(id,approve){
+ if(approve){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
  const {error}=await sb.from('permits').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
 async function addPermit(){
- if(!$('prEmp').value){toast('اختر الموظف');return}
- const {error}=await sb.from('permits').insert({employee_id:$('prEmp').value,permit_date:$('prDate').value||D(0),permit_time:$('prTime').value||null,permit_type:$('prType').value,status:LV_P1,notes:$('prNotes').value});
+ const empId=$('prEmp').value;
+ if(!empId){toast('اختر الموظف');return}
+ const date=$('prDate').value||D(0),time=$('prTime').value,hours=+$('prHours').value;
+ if(!(hours>0)){toast('حدد عدد ساعات الاستئذان');return}
+ let notes=$('prNotes').value;
+ // الموظف نفسه ممنوع يتجاوز السياسة، أما الإدارة فتقدر تسجّل استثناءً موثّقاً في الملاحظات
+ const issues=[checkPermitBalance(empId,date.slice(0,7),hours),leadTimeError(date,time,'الاستئذان')].filter(Boolean);
+ if(issues.length){
+  if(!(await showConfirm(issues.join(' — ')+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب يخالف سياسة الاستئذان',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
+  notes=(notes?notes+' — ':'')+'⚠️ استثناء إداري خارج سياسة الاستئذان (بواسطة '+me.name+')';
+ }
+ const {error}=await sb.from('permits').insert({employee_id:empId,permit_date:date,permit_time:time||null,permit_hours:hours,permit_type:$('prType').value,status:LV_P1,notes});
  if(error){err(error);return}
  closeModal('permitModal');await refresh();toast('تم إنشاء طلب الاستئذان');
 }
@@ -3015,7 +3148,7 @@ function runGlobalSearch(q){
  const lvs=leaves.filter(l=>hit(l.emp)||hit(l.type)||hit(l.dept));
  if(lvs.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">🌴 الإجازات (${lvs.length})</h3>`+lvs.map(l=>`<div class="alert-item"><div class="aic sand">🌴</div><div><b>${l.emp} — إجازة ${l.type}</b><small>${fmt(l.start)} → ${fmt(l.end)} · ${l.status}</small></div></div>`).join('');
  const prs=permits.filter(p=>hit(p.emp)||hit(p.type));
- if(prs.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">🚪 الاستئذانات (${prs.length})</h3>`+prs.map(p=>`<div class="alert-item"><div class="aic sand">🚪</div><div><b>${p.emp}</b><small>${p.type} · ${fmt(p.date)} · ${p.status}</small></div></div>`).join('');
+ if(prs.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">🚪 الاستئذانات (${prs.length})</h3>`+prs.map(p=>`<div class="alert-item"><div class="aic sand">🚪</div><div><b>${p.emp}</b><small>${p.type} · ${fmt(p.date)} · ${fmtHours(permitHoursOf(p))} · ${p.status}</small></div></div>`).join('');
  const pls=policies.filter(p=>hit(p.name));
  if(pls.length)html+=`<h3 style="font-size:15px;margin:14px 0 8px">§ السياسات (${pls.length})</h3>`+pls.map(p=>`<div class="alert-item"><div class="aic info">§</div><div><b>${p.name}</b><small>آخر تحديث ${fmt(p.updated)} · ${p.status}</small></div></div>`).join('');
  $('searchResults').innerHTML=html||'<div class="empty">لا توجد نتائج مطابقة في النظام</div>';
@@ -3106,8 +3239,8 @@ function renderReports(){
    rows:allAttendanceEvents.filter(e=>inReportRange(e.event_date)).map(e=>{const emp=empById[e.employee_id]||{};
     return [emp.name||'—',e.event_date,e.event_time,EVENT_TYPE_LABELS[e.event_type]||e.event_type,e.status_after,e.distance_m!=null?e.distance_m+' م':'—']})})},
   {t:'تقرير الغياب',ic:'🚫',data:()=>({headers:['الموظف','القسم','التاريخ','سبب الغياب'],rows:siteAbs.filter(r=>inReportRange(r.date)).map(r=>[r.emp,r.dept,r.date,r.reason])})},
-  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','الحالة'],rows:leaves.filter(l=>inReportRange(l.start)).map(l=>[l.emp,l.type,l.start,l.end,l.days,l.status])})},
-  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','النوع','الحالة'],rows:permits.filter(p=>inReportRange(p.date)).map(p=>[p.emp,p.date,p.time,p.type,p.status])})},
+  {t:'تقرير الإجازات',ic:'🌴',data:()=>({headers:['الموظف','النوع','البداية','النهاية','الأيام','البديل','الحالة'],rows:leaves.filter(l=>inReportRange(l.start)).map(l=>[l.emp,l.type,l.start,l.end,l.days,l.substitute||'—',l.status])})},
+  {t:'تقرير الاستئذانات',ic:'🚪',data:()=>({headers:['الموظف','التاريخ','الموعد','عدد الساعات','النوع','الحالة'],rows:permits.filter(p=>inReportRange(p.date)).map(p=>[p.emp,p.date,p.time,permitHoursOf(p),p.type,p.status])})},
  ];
  if(hasPerm('payroll','view'))reps.push({t:'تقرير الرواتب',ic:'📑',data:()=>({headers:['الموظف','الشهر','السنة','الأساسي','الإضافات','الخصومات','الصافي'],
   rows:payrollItems.map(it=>{const run=payrollRuns.find(r=>r.id===it.runId)||{};const e=empById[it.employee_id]||{};
@@ -3309,9 +3442,9 @@ function renderApprovalsPage(){
    :`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`;
  };
  $('apvPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td>
+  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td>
   <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
-  <td style="white-space:nowrap">${prBtn2(p)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات بانتظار اعتماد 🎉</td></tr>';
+  <td style="white-space:nowrap">${prBtn2(p)}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات بانتظار اعتماد 🎉</td></tr>';
  const fmBtn=s=>{
   if(s.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
   return s.status===LV_P2
@@ -3775,7 +3908,10 @@ function epRenderDashboard(){
  const myLv=leaves.filter(l=>l.employee_id===e.id);
  const myPr=permits.filter(p=>p.employee_id===e.id);
  const pendingLv=myLv.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
- const pendingPr=myPr.filter(p=>p.status==='بانتظار الموافقة').length;
+ const pendingPr=myPr.filter(p=>p.status===LV_P1||p.status===LV_P2).length;
+ const prBal=permitBalance(e.id,D(0).slice(0,7));
+ // الإجازات التي عُيّن فيها الموظف بديلاً عن زميله ولم تنتهِ بعد
+ const subFor=leaves.filter(l=>l.substituteId===e.id&&l.status==='تمت الموافقة'&&daysTo(l.end)>=0);
  const myContract=contracts.find(c=>c.employee_id===e.id);
  const contractDays=myContract?daysTo(myContract.end):null;
  const probDays=e.probEnd?daysTo(e.probEnd):null;
@@ -3788,12 +3924,14 @@ function epRenderDashboard(){
   {n:b.annualAvail,l:'الرصيد السنوي المتاح',k:'ok'},
   {n:b.sickAvail,l:'الرصيد المرضي المتاح',k:'ok'},
   {n:pendingLv+pendingPr,l:'طلباتي المعلّقة',k:'sand'},
+  {n:hoursNum(prBal.avail),l:'ساعات استئذان متاحة هذا الشهر',k:prBal.avail>0?'ok':'danger'},
   {n:unreadCount,l:'إشعارات غير مقروءة',k:unreadCount?'danger':''},
  ];
  if(myContract&&contractDays!==null)S.push({n:contractDays>=0?contractDays:'منتهي',l:'أيام حتى نهاية العقد',k:contractDays!==null&&contractDays<=30?'sand':'info'});
  if(e.probEnd&&probDays!==null&&probDays>=0)S.push({n:probDays,l:'أيام حتى نهاية فترة التجربة',k:'info'});
  $('epDashStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
- $('epDashAlerts').innerHTML=A.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد إشعارات حالياً</div>';
+ const subHtml=subFor.map(l=>`<div class="alert-item"><div class="aic info">👥</div><div><b>أنت البديل عن ${l.emp} خلال إجازته</b><small>${fmt(l.start)} → ${fmt(l.end)} · ${l.days} يوم — أنت من يمسك مهامه خلال الفترة</small></div></div>`).join('');
+ $('epDashAlerts').innerHTML=(subHtml+A.slice(0,4).map((a,i)=>alertItem(a,i)).join(''))||'<div class="empty">لا توجد إشعارات حالياً</div>';
 }
 /* ================= النظام المالي: طلبات الصرف ================= */
 let editingPaymentId=null;
@@ -4189,9 +4327,10 @@ function fillCompanySettingsForm(){
  $('csEstablishmentId').value=cs.establishment_id||'';
  $('csBankAccount').value=cs.bank_account_number||'';
  $('csMolId').value=cs.mol_establishment_id||'';
+ if($('csPermitHours'))$('csPermitHours').value=cs.permit_monthly_hours!=null?cs.permit_monthly_hours:'';
 }
 async function saveCompanySettings(){
- const row={id:1,bank_code:$('csBankCode').value.trim().toUpperCase(),establishment_id:$('csEstablishmentId').value.trim(),bank_account_number:$('csBankAccount').value.trim(),mol_establishment_id:$('csMolId').value.trim(),updated_by:me.name,updated_at:new Date().toISOString()};
+ const row={id:1,bank_code:$('csBankCode').value.trim().toUpperCase(),establishment_id:$('csEstablishmentId').value.trim(),bank_account_number:$('csBankAccount').value.trim(),mol_establishment_id:$('csMolId').value.trim(),permit_monthly_hours:(+$('csPermitHours').value>0?+$('csPermitHours').value:PERMIT_MONTHLY_HOURS_DEFAULT),updated_by:me.name,updated_at:new Date().toISOString()};
  const {error}=await sb.from('company_settings').upsert(row);
  if(error){err(error);return}
  await refresh();toast('تم حفظ بيانات المنشأة ✅');
@@ -4374,6 +4513,8 @@ async function extraAddLeave(){
  const empName=(empById[$('xlvEmp').value]||{}).name||'';
  const balErr=checkLeaveBalance(empName,$('xlvType').value,days);
  if(balErr){toast(balErr);return}
+ const leadX=leadTimeError($('xlvStart').value,null,'طلب الإجازة');
+ if(leadX&&!(await showConfirm(leadX+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب خارج مهلة الـ24 ساعة',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
  if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empName}؟`,{icon:'🌴',title:'تأكيد إضافة الإجازة',okText:'نعم، أضف الإجازة',okClass:'btn-primary'})))return;
  const {error}=await sb.from('leaves').insert({employee_id:$('xlvEmp').value,leave_type:$('xlvType').value,start_date:$('xlvStart').value,end_date:$('xlvEnd').value,days,reason:$('xlvReason').value,status:LV_P1});
  if(error){err(error);return}
@@ -4504,20 +4645,23 @@ function mgrRenderApprovals(){
  const pendingForms=formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id);
  const pendingPr=permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
  $('mgrBadge').textContent=pending.length+pendingForms.length+pendingPr.length+pendingPay.length;
- $('mgrPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${p.type}</td><td>${p.notes||'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePermit('${p.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePermit('${p.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات بانتظار اعتمادك 🎉</td></tr>';
+ $('mgrPermitsTbody').innerHTML=pendingPr.length?pendingPr.map(p=>{const pb=permitBalance(p.employee_id,String(p.date||'').slice(0,7),p.id);return `<tr>
+  <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time||'—'}</td><td>${hoursNum(permitHoursOf(p))}</td>
+  <td><span class="tag ${pb.used+permitHoursOf(p)>pb.limit?'danger':'ok'}">${hoursNum(pb.used)} من ${hoursNum(pb.limit)} ساعة</span></td><td>${p.type}</td><td>${p.notes||'—'}</td>
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePermit('${p.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePermit('${p.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد استئذانات بانتظار اعتمادك 🎉</td></tr>';
  $('mgrFormsTbody').innerHTML=pendingForms.length?pendingForms.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr>
   <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
   <td><b>${l.emp}</b></td><td>${l.type}${l.reason?' — '+l.reason:''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${l.reason||'—'}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
  $('mgrHistoryTbody').innerHTML=hist.length?hist.map(l=>`<tr><td>${l.emp}</td><td>${l.type}</td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد سجل بعد</td></tr>';
 }
-async function mgrDecide(id,approve){
+async function mgrDecide(id,approve,subDone){
+ // الإجازة السنوية لا تُعتمد إلا بعد تحديد بديل يمسك مكان الموظف خلال إجازته
+ if(approve&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>mgrDecide(id,true,true));return}
  const {error}=await sb.from('leaves').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
@@ -4575,13 +4719,14 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.notes||'—'}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${l.substitute||'—'}</td><td>${l.notes||'—'}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 let editingLeaveId=null;
 function epNewLeave(){
  editingLeaveId=null;
  ['eplType','eplStart','eplEnd','eplDays','eplReason','eplNotes'].forEach(id=>$(id).value='');
  $('eplCommit').checked=false;epLeaveTypeChanged('سنوية');
+ $('eplStart').min=D(1);$('eplEnd').min=D(1);
  document.querySelector('#epLeaveModal .modal-head h3').textContent='طلب إجازة جديد';
  document.querySelector('#epLeaveModal .btn-primary').textContent='إرسال الطلب';
  openModal('epLeaveModal');
@@ -4595,6 +4740,7 @@ function epEditLeave(id){
  $('eplPhone').value=l.contact_phone||currentEmp.phone||'';
  $('eplEmail').value=l.contact_email||currentEmp.email||'';
  $('eplCommit').checked=!!l.commitAccepted;
+ $('eplStart').min=D(1);$('eplEnd').min=D(1);
  document.querySelector('#epLeaveModal .modal-head h3').textContent='تعديل طلب إجازة';
  document.querySelector('#epLeaveModal .btn-primary').textContent='حفظ التعديل';
  openModal('epLeaveModal');
@@ -4608,6 +4754,8 @@ async function epAddLeave(){
  if($('eplEnd').value<$('eplStart').value){toast('تاريخ نهاية الإجازة لا يمكن أن يسبق بدايتها');return}
  if(!(+$('eplDays').value>0)){toast('أدخل عدد الأيام');return}
  if(!$('eplReason').value.trim()){toast('سبب الإجازة إلزامي');return}
+ const leadLv=leadTimeError($('eplStart').value,null,'طلب الإجازة');
+ if(leadLv){toast(leadLv);return}
  if($('eplType').value==='مرضية'&&!staged['leaveEmpSick']&&!(editingLeaveId&&(leaves.find(x=>x.id===editingLeaveId)||{}).type==='مرضية')){toast('إرفاق التقرير الطبي إلزامي للإجازة المرضية');return}
  if(!$('eplPhone').value.trim()){toast('رقم الجوال إلزامي للتواصل أثناء الإجازة');return}
  if(!$('eplEmail').value.trim()){toast('البريد الإلكتروني إلزامي للتواصل أثناء الإجازة');return}
@@ -4661,12 +4809,35 @@ function epRenderAttendance(){
 }
 function epRenderPermits(){
  const rows=permits.filter(p=>p.employee_id===currentEmp.id);
- $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد استئذانات</td></tr>';
+ const b=permitBalance(currentEmp.id,D(0).slice(0,7));
+ if($('epPermitStats')){
+  const S=[
+   {n:hoursNum(b.limit),l:'رصيد الاستئذان الشهري (ساعات)',k:''},
+   {n:hoursNum(b.used),l:'مستخدم هذا الشهر — معتمد (ساعات)',k:''},
+   {n:hoursNum(b.pend),l:'قيد الطلب — محجوز (ساعات)',k:'sand'},
+   {n:hoursNum(b.avail),l:'المتاح لك هذا الشهر (ساعات)',k:b.avail>0?'ok':'danger'},
+  ];
+  $('epPermitStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
+ }
+ $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.notes||'—'}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+}
+const monthLabel=m=>{const p=String(m||'').split('-');return (MONTH_NAMES[+p[1]-1]||'')+' '+(p[0]||'')};
+/* تحديث ملخّص الرصيد داخل مودال الاستئذان لحظة بلحظة */
+function epPermitRecalc(){
+ const note=$('eppBalanceNote');if(!note||!currentEmp)return;
+ const date=$('eppDate').value||D(1),month=date.slice(0,7);
+ const b=permitBalance(currentEmp.id,month,editingPermitId);
+ const hours=+$('eppHours').value||0;
+ const over=hours>b.avail;
+ note.innerHTML=`رصيد استئذانك لشهر <b>${monthLabel(month)}</b>: ${fmtHours(b.limit)} — مستخدم ${fmtHours(b.used)} · قيد الطلب ${fmtHours(b.pend)} · <b style="color:var(--ok)">المتاح ${fmtHours(b.avail)}</b>`+
+  (hours>0?(over?` → <b style="color:var(--danger)">هذا الطلب يتجاوز رصيدك ❌</b>`:` → المتبقي بعد هذا الطلب <b>${fmtHours(b.avail-hours)}</b>`):'')+
+  `<br><small>لازم يوصل الطلب قبل موعده بـ${REQUEST_MIN_LEAD_HOURS} ساعة على الأقل — والتقديم لنفس اليوم غير مسموح.</small>`;
 }
 let editingPermitId=null;
 function epNewPermit(){
  editingPermitId=null;
  ['eppDate','eppTime','eppNotes'].forEach(id=>$(id).value='');$('eppType').value='اجتماع';
+ $('eppHours').value=1;$('eppDate').min=D(1);epPermitRecalc();
  document.querySelector('#epPermitModal .modal-head h3').textContent='طلب استئذان جديد';
  document.querySelector('#epPermitModal .btn-primary').textContent='إرسال الطلب';
  openModal('epPermitModal');
@@ -4675,15 +4846,25 @@ function epEditPermit(id){
  const p=permits.find(x=>x.id===id);if(!p)return;
  editingPermitId=id;
  $('eppDate').value=p.date;$('eppTime').value=p.time&&p.time!=='—'?p.time:'';$('eppType').value=p.type;$('eppNotes').value=p.notes||'';
+ $('eppHours').value=permitHoursOf(p);$('eppDate').min=D(1);epPermitRecalc();
  document.querySelector('#epPermitModal .modal-head h3').textContent='تعديل طلب استئذان';
  document.querySelector('#epPermitModal .btn-primary').textContent='حفظ التعديل';
  openModal('epPermitModal');
 }
 async function epAddPermit(){
- if(!$('eppDate').value){toast('حدد تاريخ الاستئذان');return}
- const confirmMsg=editingPermitId?'هل تريد حفظ التعديل على طلب الاستئذان؟':'هل تريد إرسال طلب الاستئذان؟';
+ const date=$('eppDate').value,time=$('eppTime').value,hours=+$('eppHours').value;
+ if(!date){toast('حدد تاريخ الاستئذان');return}
+ if(!time){toast('حدد موعد الاستئذان');return}
+ if(!(hours>0)){toast('حدد عدد ساعات الاستئذان');return}
+ // (1) مهلة 24 ساعة — وممنوع نفس اليوم
+ const lead=leadTimeError(date,time,'الاستئذان');
+ if(lead){toast(lead);return}
+ // (2) رصيد ساعات الاستئذان الشهري
+ const balErr=checkPermitBalance(currentEmp.id,date.slice(0,7),hours,editingPermitId);
+ if(balErr){toast(balErr);return}
+ const confirmMsg=editingPermitId?'هل تريد حفظ التعديل على طلب الاستئذان؟':`هل تريد إرسال طلب استئذان بـ${fmtHours(hours)}؟`;
  if(!(await showConfirm(confirmMsg,{icon:'🚪',title:editingPermitId?'تأكيد حفظ التعديل':'تأكيد إرسال الطلب',okText:editingPermitId?'نعم، احفظ التعديل':'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
- const payload={permit_date:$('eppDate').value,permit_time:$('eppTime').value||null,permit_type:$('eppType').value,notes:$('eppNotes').value};
+ const payload={permit_date:date,permit_time:time,permit_hours:hours,permit_type:$('eppType').value,notes:$('eppNotes').value};
  let error;
  if(editingPermitId){
   ({error}=await sb.from('permits').update(payload).eq('id',editingPermitId));
