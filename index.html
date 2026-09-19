@@ -203,6 +203,19 @@ tbody tr:hover{background:#FAFCFB}
 .upload-box{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;background:#FBFCFB}
 .upload-box:hover{border-color:var(--pine);color:var(--pine)}
 .section-note{background:var(--info-soft);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--info);margin-bottom:14px}
+/* بطاقة تعليمات السياسة أعلى صفحات الإجازات والاستئذانات */
+.rules-card h3{font-size:15px;margin-bottom:4px}
+.rules-card>p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.rules{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px}
+.rules li{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.rules .ri{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--pine-soft)}
+.rules .ri.ok{background:var(--ok-soft)}
+.rules .ri.sand{background:var(--sand-soft)}
+.rules .ri.info{background:var(--info-soft)}
+.rules .ri.danger{background:var(--danger-soft)}
+.rules b{display:block;font-size:13.5px;margin-bottom:3px}
+.rules small{display:block;color:var(--muted);font-size:12.5px;line-height:1.7}
+.rules em{font-style:normal;font-weight:700;color:var(--pine)}
 
 @media(max-width:1024px){
   aside{transform:translateX(100%);transition:.2s}
@@ -556,6 +569,18 @@ tbody tr:hover{background:#FAFCFB}
 <!-- ===== الإجازات ===== -->
 <section class="page" id="page-leaves">
   <div class="page-head"><div><h1>الإجازات</h1><p>الرصيد السنوي 21 يوماً — الرصيد المرضي 21 يوماً — تنبيه عند تبقّي 5 أيام</p></div></div>
+  <div class="card rules-card">
+    <h3>📋 تعليمات وسياسة الإجازات</h3>
+    <p>القواعد المطبَّقة آلياً على كل طلب إجازة داخل النظام</p>
+    <ul class="rules">
+      <li><span class="ri ok">👥</span><div><b>الإجازة السنوية: بديل إلزامي</b><small>ما تُعتمد أي إجازة سنوية إلا بعد ما رئيس القسم يحدد <em>موظفاً بديلاً</em> يمسك مكان صاحب الإجازة طوال فترتها. الزميل الي عنده إجازة معتمدة في نفس الفترة ما يصلح بديلاً، والنظام يمنع اختياره.</small></div></li>
+      <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الإجازة قبل تاريخ بدايتها بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم لإجازة تبدأ نفس اليوم ممنوع</em>، والتقويم نفسه ما يسمح باختيار تاريخ قبل بكرة.</small></div></li>
+      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
+      <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> أولاً، وبعدها <em>الاعتماد النهائي من الإدارة</em>. ما يقدر أحد يعتمد طلبه الشخصي.</small></div></li>
+      <li><span class="ri danger">📎</span><div><b>مستندات وبيانات إلزامية</b><small>سبب الإجازة ورقم الجوال والبريد إلزامية، والتقرير الطبي إلزامي للإجازة المرضية، مع التعهد بإنجاز مستهدف الشهر بعد العودة.</small></div></li>
+      <li><span class="ri danger">⚠️</span><div><b>الاستثناء الإداري</b><small>الإدخال من لوحة التحكم يقدر يسجّل حالة خارج المهلة أو خارج الرصيد بعد تأكيد صريح، ويُوثَّق تلقائياً في ملاحظات الطلب باسم من سجّله.</small></div></li>
+    </ul>
+  </div>
   <div class="stats" id="leaveStats"></div>
   <div class="tabs">
     <button class="active" onclick="setLeaveTab('add',this)">إضافة إجازة للموظف</button>
@@ -632,6 +657,18 @@ tbody tr:hover{background:#FAFCFB}
   <div class="page-head">
     <div><h1>الاستئذانات</h1><p>سجل الاستئذانات كاملة مع فلاتر للبحث</p></div>
     <button class="btn btn-primary" onclick="openModal('permitModal')">+ إنشاء طلب استئذان</button>
+  </div>
+  <div class="card rules-card">
+    <h3>📋 تعليمات وسياسة الاستئذان</h3>
+    <p>القواعد المطبَّقة آلياً على كل طلب استئذان داخل النظام</p>
+    <ul class="rules">
+      <li><span class="ri ok">⏳</span><div><b>رصيد <em class="js-permit-limit">4 ساعات</em> استئذان شهرياً</b><small>لكل موظف <em class="js-permit-limit">4 ساعات</em> استئذان في الشهر، يحددها مدير النظام من صفحة الرواتب ← بيانات المنشأة. الرصيد يتجدد مع بداية كل شهر ميلادي.</small></div></li>
+      <li><span class="ri danger">🚫</span><div><b>تجاوز الساعات = رفض تلقائي</b><small>النظام يحسب المعتمد + قيد الطلب، وإذا تعدّى الموظف رصيده الشهري <em>ما يسمح له بتقديم استئذان جديد</em>، ويمنع كذلك اعتماد أي طلب يتجاوز الرصيد.</small></div></li>
+      <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الاستئذان قبل موعده بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم في نفس اليوم ممنوع</em> مهما كان السبب.</small></div></li>
+      <li><span class="ri info">🕐</span><div><b>تحديد الموعد والساعات</b><small>تاريخ الاستئذان وموعده وعدد ساعاته حقول إلزامية — وعدد الساعات هو الي يُخصم من رصيدك الشهري.</small></div></li>
+      <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> ثم <em>الاعتماد النهائي من الإدارة</em>. الطلب المرفوض لا يُخصم من الرصيد.</small></div></li>
+      <li><span class="ri danger">⚠️</span><div><b>الاستثناء الإداري</b><small>الإدخال من لوحة التحكم يقدر يسجّل حالة خارج المهلة أو خارج الرصيد بعد تأكيد صريح، ويُوثَّق تلقائياً في ملاحظات الطلب باسم من سجّله.</small></div></li>
+    </ul>
   </div>
   <div class="card">
     <div class="filters">
@@ -980,6 +1017,17 @@ tbody tr:hover{background:#FAFCFB}
     <div><h1>الاجازات</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
     <button class="btn btn-primary" onclick="epNewLeave()">+ طلب إجازة جديد</button>
   </div>
+  <div class="card rules-card">
+    <h3>📋 تعليمات تقديم الإجازة</h3>
+    <p>اقرأها قبل ما تقدّم طلبك — النظام يطبّقها آلياً</p>
+    <ul class="rules">
+      <li><span class="ri ok">👥</span><div><b>الإجازة السنوية: بديل إلزامي</b><small>ما تُعتمد أي إجازة سنوية إلا بعد ما رئيس القسم يحدد <em>موظفاً بديلاً</em> يمسك مكان صاحب الإجازة طوال فترتها. الزميل الي عنده إجازة معتمدة في نفس الفترة ما يصلح بديلاً، والنظام يمنع اختياره.</small></div></li>
+      <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الإجازة قبل تاريخ بدايتها بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم لإجازة تبدأ نفس اليوم ممنوع</em>، والتقويم نفسه ما يسمح باختيار تاريخ قبل بكرة.</small></div></li>
+      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
+      <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> أولاً، وبعدها <em>الاعتماد النهائي من الإدارة</em>. ما يقدر أحد يعتمد طلبه الشخصي.</small></div></li>
+      <li><span class="ri danger">📎</span><div><b>مستندات وبيانات إلزامية</b><small>سبب الإجازة ورقم الجوال والبريد إلزامية، والتقرير الطبي إلزامي للإجازة المرضية، مع التعهد بإنجاز مستهدف الشهر بعد العودة.</small></div></li>
+    </ul>
+  </div>
   <div class="stats" id="epLeaveStats"></div>
   <div class="card"><h3>سجل طلباتي</h3><div class="tbl-wrap"><table>
     <thead><tr><th>النوع</th><th>تاريخ الطلب</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>البديل</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
@@ -1021,6 +1069,17 @@ tbody tr:hover{background:#FAFCFB}
   <div class="page-head">
     <div><h1>طلبات الاستئذان</h1><p>طلبات الاستئذان الخاصة بك</p></div>
     <button class="btn btn-primary" onclick="epNewPermit()">+ طلب استئذان جديد</button>
+  </div>
+  <div class="card rules-card">
+    <h3>📋 تعليمات تقديم الاستئذان</h3>
+    <p>اقرأها قبل ما تقدّم طلبك — النظام يطبّقها آلياً</p>
+    <ul class="rules">
+      <li><span class="ri ok">⏳</span><div><b>رصيد <em class="js-permit-limit">4 ساعات</em> استئذان شهرياً</b><small>لكل موظف <em class="js-permit-limit">4 ساعات</em> استئذان في الشهر، يحددها مدير النظام من صفحة الرواتب ← بيانات المنشأة. الرصيد يتجدد مع بداية كل شهر ميلادي.</small></div></li>
+      <li><span class="ri danger">🚫</span><div><b>تجاوز الساعات = رفض تلقائي</b><small>النظام يحسب المعتمد + قيد الطلب، وإذا تعدّى الموظف رصيده الشهري <em>ما يسمح له بتقديم استئذان جديد</em>، ويمنع كذلك اعتماد أي طلب يتجاوز الرصيد.</small></div></li>
+      <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الاستئذان قبل موعده بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم في نفس اليوم ممنوع</em> مهما كان السبب.</small></div></li>
+      <li><span class="ri info">🕐</span><div><b>تحديد الموعد والساعات</b><small>تاريخ الاستئذان وموعده وعدد ساعاته حقول إلزامية — وعدد الساعات هو الي يُخصم من رصيدك الشهري.</small></div></li>
+      <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> ثم <em>الاعتماد النهائي من الإدارة</em>. الطلب المرفوض لا يُخصم من الرصيد.</small></div></li>
+    </ul>
   </div>
   <div class="stats" id="epPermitStats"></div>
   <div class="card"><div class="tbl-wrap"><table>
@@ -3031,6 +3090,11 @@ function leadTimeError(dateStr,timeStr,label){
  }
  return null;
 }
+/* تعبئة الأرقام المتغيّرة داخل بطاقات التعليمات (الرصيد الشهري + مهلة التقديم) */
+function syncPolicyTexts(){
+ document.querySelectorAll('.js-permit-limit').forEach(el=>el.textContent=fmtHours(permitMonthlyLimit()));
+ document.querySelectorAll('.js-lead-hours').forEach(el=>el.textContent=REQUEST_MIN_LEAD_HOURS);
+}
 /* ===== رصيد ساعات الاستئذان الشهري ===== */
 function permitMonthlyLimit(){const v=+((companySettings||{}).permit_monthly_hours);return v>0?v:PERMIT_MONTHLY_HOURS_DEFAULT}
 const permitHoursOf=p=>{const h=+((p||{}).hours);return h>0?h:1};
@@ -3096,6 +3160,7 @@ function renderPermits(){
  const rows=permits.filter(p=>(!q||p.emp.includes(q))&&(!tp||p.type===tp)&&(!st||p.status===st));
  const prBtn=p=>p.employee_id===me.id?'<span style="color:var(--muted);font-size:12px">طلبك — بانتظار مدير آخر</span>':p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد نهائي</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
+ syncPolicyTexts();
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
   <td><b>${p.emp}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td>
   <td><span class="tag ${stTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td>${p.notes||'—'}</td>
@@ -4810,6 +4875,7 @@ function epRenderAttendance(){
 function epRenderPermits(){
  const rows=permits.filter(p=>p.employee_id===currentEmp.id);
  const b=permitBalance(currentEmp.id,D(0).slice(0,7));
+ syncPolicyTexts();
  if($('epPermitStats')){
   const S=[
    {n:hoursNum(b.limit),l:'رصيد الاستئذان الشهري (ساعات)',k:''},
