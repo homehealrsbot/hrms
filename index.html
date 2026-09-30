@@ -216,6 +216,11 @@ tbody tr:hover{background:#FAFCFB}
 .rules b{display:block;font-size:13.5px;margin-bottom:3px}
 .rules small{display:block;color:var(--muted);font-size:12.5px;line-height:1.7}
 .rules em{font-style:normal;font-weight:700;color:var(--pine)}
+/* جدول ملخّص أمر الصرف داخل شاشة التوقيع */
+table.pay-kv{width:100%;border-collapse:collapse;font-size:13px}
+table.pay-kv td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.pay-kv tr:last-child td{border-bottom:none}
+table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white-space:nowrap}
 
 @media(max-width:1024px){
   aside{transform:translateX(100%);transition:.2s}
@@ -423,8 +428,8 @@ tbody tr:hover{background:#FAFCFB}
     <tbody id="apvFormsTbody"></tbody></table></div>
   </div>
   <div class="card">
-    <h3>💵 طلبات صرف بانتظار الاعتماد</h3>
-    <div class="tbl-wrap"><table><thead><tr><th>الموظف</th><th>المبلغ</th><th>الفئة</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <h3>💵 أوامر صرف بانتظار الاعتماد</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>المستفيد</th><th>المبلغ</th><th>الفئة</th><th>الفاتورة</th><th>الحالة</th><th>التواقيع</th><th>إجراء</th></tr></thead>
     <tbody id="apvPaymentsTbody"></tbody></table></div>
   </div>
 </section>
@@ -809,9 +814,22 @@ tbody tr:hover{background:#FAFCFB}
 </section>
 
 <section class="page" id="page-paymentsAdmin">
-  <div class="page-head"><div><h1>طلبات الصرف</h1><p>كل طلبات الصرف بمختلف حالاتها — اعتماد، رفض، وطباعة أوامر الصرف</p></div></div>
+  <div class="page-head">
+    <div><h1>أوامر الصرف</h1><p>تعتمدها المالية، والاعتماد النهائي من مدير النظام — بتوقيع إلكتروني في كل مرحلة</p></div>
+    <button class="btn btn-primary" id="payOrderBtnAdmin" onclick="openPayOrder()">+ إصدار أمر صرف</button>
+  </div>
+  <div class="card rules-card">
+    <h3>📋 دورة أمر الصرف</h3>
+    <p>القواعد المطبَّقة آلياً على كل أمر صرف داخل النظام</p>
+    <ul class="rules">
+      <li><span class="ri info">🧾</span><div><b>فاتورة مع كل أمر</b><small>إصدار أمر الصرف من الإدارة يتطلب <em>إرفاق الفاتورة</em>، وأي طلب يصل بلا فاتورة يظهر للمالية بعلامة حمراء «بدون فاتورة».</small></div></li>
+      <li><span class="ri sand">🏦</span><div><b>اعتماد المالية أولاً</b><small>المالية تراجع الأمر وتوقّعه وتسجّل مرجع الصرف، وبعدها يرتفع الأمر لمدير النظام — ما تقدر تغلقه بنفسها.</small></div></li>
+      <li><span class="ri ok">✅</span><div><b>الاعتماد النهائي عند مدير النظام</b><small>الصرف الفعلي وإصدار المستند ما يصير إلا بتوقيع <em>مدير النظام</em> وحده، ولا أحد يعتمد أمراً هو المستفيد منه.</small></div></li>
+      <li><span class="ri danger">✍</span><div><b>توقيع إلكتروني في كل مرحلة</b><small>مقدّم الطلب، رئيس القسم، المالية، ومدير النظام — كل واحد يوقّع، والتواقيع الأربعة تُطبع داخل أمر الصرف النهائي باسم كل موقّع وتاريخه.</small></div></li>
+    </ul>
+  </div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>الحالة</th><th>المرجع</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>المستفيد</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>الفاتورة</th><th>الحالة</th><th>التواقيع</th><th>المرجع</th><th>إجراء</th></tr></thead>
     <tbody id="paymentsAdminTbody"></tbody></table></div></div>
 </section>
 
@@ -1130,8 +1148,8 @@ tbody tr:hover{background:#FAFCFB}
   <div class="card"><h3>📄 نماذج بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النموذج</th><th>تاريخ التقديم</th><th>إجراء</th></tr></thead>
     <tbody id="mgrFormsTbody"></tbody></table></div></div>
-  <div class="card"><h3>💵 طلبات صرف بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>إجراء</th></tr></thead>
+  <div class="card"><h3>💵 أوامر صرف بانتظار اعتمادك</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>الموظف</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>الفاتورة</th><th>إجراء</th></tr></thead>
     <tbody id="mgrPaymentsTbody"></tbody></table></div></div>
 </section>
 
@@ -1140,7 +1158,7 @@ tbody tr:hover{background:#FAFCFB}
   <div class="page-head"><div><h1>طلبات الصرف</h1><p>سلف، مصاريف تشغيلية، أو استرداد نفقات — تمر على رئيس القسم ثم المحاسب</p></div>
    <button class="btn btn-primary" onclick="epNewPayment()">+ طلب صرف جديد</button></div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الفئة</th><th>المبلغ</th><th>تاريخ الطلب</th><th>الحالة</th><th>مرجع الصرف</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>الفئة</th><th>المبلغ</th><th>تاريخ الطلب</th><th>الفاتورة</th><th>الحالة</th><th>التواقيع</th><th>مرجع الصرف</th><th>إجراء</th></tr></thead>
     <tbody id="epPaymentsTbody"></tbody></table></div></div>
 </section>
 
@@ -1183,12 +1201,16 @@ tbody tr:hover{background:#FAFCFB}
 
 <!-- ================= اعتماد الصرف (محاسب) ================= -->
 <section class="page" id="ep-payApprovals">
-  <div class="page-head"><div><h1>اعتماد الصرف</h1><p>طلبات الصرف بانتظار الاعتماد النهائي والصرف الفعلي</p></div></div>
+  <div class="page-head">
+    <div><h1>اعتماد الصرف</h1><p>مراجعة المالية وتوقيعها — وبعدها يرتفع الأمر لمدير النظام للاعتماد النهائي</p></div>
+    <button class="btn btn-primary" id="payOrderBtnAcct" onclick="openPayOrder()">+ إصدار أمر صرف</button>
+  </div>
+  <div class="section-note">دورك هنا مراجعة الأمر والفاتورة وتسجيل مرجع الصرف والتوقيع عليه. الصرف الفعلي وإصدار المستند النهائي يتمّان بتوقيع مدير النظام.</div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>رئيس القسم</th><th>إجراء</th></tr></thead>
+    <thead><tr><th>المستفيد</th><th>القسم</th><th>المبلغ</th><th>الفئة</th><th>السبب</th><th>الفاتورة</th><th>الحالة</th><th>التواقيع</th><th>إجراء</th></tr></thead>
     <tbody id="acctPayApprovalsTbody"></tbody></table></div></div>
-  <div class="card"><h3>🖨 سجل أوامر الصرف المُصدرة</h3><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>المبلغ</th><th>الفئة</th><th>تاريخ الصرف</th><th>المرجع</th><th>إجراء</th></tr></thead>
+  <div class="card"><h3>🖨 سجل أوامر الصرف المعتمدة نهائياً</h3><div class="tbl-wrap"><table>
+    <thead><tr><th>المستفيد</th><th>المبلغ</th><th>الفئة</th><th>تاريخ الصرف</th><th>المرجع</th><th>اعتمده نهائياً</th><th>إجراء</th></tr></thead>
     <tbody id="acctPayHistoryTbody"></tbody></table></div></div>
 </section>
 
@@ -1305,11 +1327,50 @@ tbody tr:hover{background:#FAFCFB}
 <!-- طلب صرف (موظف) -->
 <div class="modal-back" id="epPaymentModal"><div class="modal sm">
   <div class="modal-head"><h3 id="epPayModalTitle">طلب صرف جديد</h3><button class="x-btn" onclick="closeModal('epPaymentModal')">✕</button></div>
+  <div class="section-note">طلبك يمر على رئيس القسم ← المالية ← الاعتماد النهائي من مدير النظام. كل مرحلة تتطلب توقيعاً إلكترونياً، وتوقيعك أنت شرط لإرسال الطلب.</div>
   <div class="field"><label>الفئة</label><select id="eppayCategory"><option>سلفة</option><option>مصاريف تشغيلية</option><option>استرداد نفقات</option><option>أخرى</option></select></div>
   <div class="field"><label>المبلغ (ريال) <b style="color:var(--danger)">*</b></label><input id="eppayAmount" type="number" min="1"></div>
   <div class="field"><label>السبب <b style="color:var(--danger)">*</b></label><textarea id="eppayReason" rows="2"></textarea></div>
+  <div class="grid-2">
+    <div><label>رقم الفاتورة</label><input id="eppayInvNo" placeholder="اختياري"></div>
+    <div><label>المورّد / الجهة</label><input id="eppayVendor" placeholder="اختياري"></div>
+  </div>
+  <div class="upload-box" id="eppayInvBox" style="margin-top:10px" onclick="stageFile('paymentInvoice','.pdf,.jpg,.jpeg,.png','eppayInvBox')">🧾 إرفاق الفاتورة (اختياري — لكن أي طلب بلا فاتورة يوصل للمالية بعلامة «بدون فاتورة»)</div>
   <div class="upload-box" id="eppayFileBox" onclick="stageFile('paymentReceipt','.pdf,.jpg,.jpeg,.png','eppayFileBox')">📎 إرفاق إيصال/مستند داعم (اختياري)</div>
-  <div class="modal-foot"><button class="btn btn-primary" onclick="epAddPayment()">إرسال الطلب</button><button class="btn btn-ghost" onclick="editingPaymentId=null;closeModal('epPaymentModal')">إلغاء</button></div>
+  <div id="eppaySigWrap" style="margin-top:12px"></div>
+  <div class="modal-foot"><button class="btn btn-primary" id="eppayOkBtn" onclick="epAddPayment()">إرسال الطلب موقّعاً</button><button class="btn btn-ghost" onclick="editingPaymentId=null;closeModal('epPaymentModal')">إلغاء</button></div>
+</div></div>
+
+<!-- إصدار أمر صرف (مدير النظام / من له تحكم كامل على طلبات الصرف) -->
+<div class="modal-back" id="payOrderModal"><div class="modal">
+  <div class="modal-head"><h3>💵 إصدار أمر صرف</h3><button class="x-btn" onclick="closeModal('payOrderModal')">✕</button></div>
+  <div class="section-note">الأمر الي تصدره هنا يبدأ من <b>المالية</b> مباشرة (بلا مرحلة رئيس القسم)، وبعد اعتمادها يرتفع لمدير النظام للاعتماد النهائي والصرف.</div>
+  <div class="grid-2">
+    <div><label>المستفيد <b style="color:var(--danger)">*</b></label><select id="poEmp"></select></div>
+    <div><label>فئة الصرف</label><select id="poCategory"><option>مصاريف تشغيلية</option><option>سلفة</option><option>استرداد نفقات</option><option>مشتريات</option><option>خدمات ومقاولات</option><option>أخرى</option></select></div>
+    <div><label>المبلغ <b style="color:var(--danger)">*</b></label><input id="poAmount" type="number" min="1"></div>
+    <div><label>مرجع الصرف (تحويل/شيك)</label><input id="poRef" placeholder="اختياري — يمكن استكماله عند الصرف"></div>
+    <div style="grid-column:1/-1"><label>سبب الصرف <b style="color:var(--danger)">*</b></label><textarea id="poReason" rows="2" placeholder="وصف ما يُصرف مقابله"></textarea></div>
+  </div>
+  <h3 style="font-size:14px;margin:14px 0 8px">🧾 بيانات الفاتورة</h3>
+  <div class="grid-2">
+    <div><label>رقم الفاتورة</label><input id="poInvNo"></div>
+    <div><label>تاريخ الفاتورة</label><input id="poInvDate" type="date" dir="ltr"></div>
+    <div style="grid-column:1/-1"><label>المورّد / الجهة</label><input id="poVendor" placeholder="اسم المورّد أو الجهة مُصدِرة الفاتورة"></div>
+  </div>
+  <div class="upload-box" id="poInvBox" onclick="stageFile('payOrderInvoice','.pdf,.jpg,.jpeg,.png','poInvBox')">🧾 إرفاق الفاتورة (إلزامية لأمر الصرف)</div>
+  <div id="poSigWrap" style="margin-top:12px"></div>
+  <div class="modal-foot"><button class="btn btn-primary" id="poOkBtn" onclick="submitPayOrder()">إصدار الأمر موقّعاً</button><button class="btn btn-ghost" onclick="closeModal('payOrderModal')">إلغاء</button></div>
+</div></div>
+
+<!-- اعتماد أمر صرف بالتوقيع الإلكتروني (كل المراحل) -->
+<div class="modal-back" id="paySignModal"><div class="modal sm">
+  <div class="modal-head"><h3 id="paySignTitle">اعتماد أمر الصرف</h3><button class="x-btn" onclick="closePaySign()">✕</button></div>
+  <div id="paySignSummary" style="margin-bottom:12px"></div>
+  <div class="field" id="paySignRefWrap"><label>مرجع الصرف (رقم تحويل / شيك)</label><input id="paySignRef" placeholder="اختياري"></div>
+  <div id="paySignPadWrap"></div>
+  <div class="section-note" style="margin-top:10px">توقيعك يُحفظ على أمر الصرف ويظهر في المستند النهائي باسمك وتاريخه — ما في اعتماد بدون توقيع.</div>
+  <div class="modal-foot"><button class="btn btn-ok" id="paySignOkBtn" onclick="submitPaySign()">اعتماد وتوقيع</button><button class="btn btn-ghost" onclick="closePaySign()">إلغاء</button></div>
 </div></div>
 
 <!-- طلب إنذار جديد (رئيس القسم أو الإدارة) -->
@@ -1670,6 +1731,35 @@ const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظ
 const PERMIT_MONTHLY_HOURS_DEFAULT = 4;   // رصيد ساعات الاستئذان الشهري الافتراضي
 const REQUEST_MIN_LEAD_HOURS = 24;        // أقل مهلة مسموحة بين تقديم الطلب وموعده
 /* ============================================================
+   💵 دورة أمر الصرف: توقيع إلكتروني في كل مرحلة + فاتورة + اعتماد نهائي
+   ------------------------------------------------------------
+   المراحل بالترتيب:
+     1) مقدّم الطلب / مُصدِر الأمر — يوقّع عند الإرسال
+     2) رئيس القسم                — يوقّع عند الاعتماد (يُتخطّى لو أصدره الأدمن أو من له صلاحية كاملة)
+     3) المالية (المحاسب)         — توقّع وتعتمد، ثم يرتفع لمدير النظام
+     4) مدير النظام               — الاعتماد النهائي والصرف، يوقّع ويُصدر أمر الصرف كملف
+   لا مرحلة تمر بدون توقيع إلكتروني محفوظ، وأمر الصرف النهائي يحمل التواقيع الأربعة
+   مضمّنة داخله (base64) فيبقى صالحاً للأرشفة والطباعة إلى الأبد.
+   ⚠️ لازم تنفّذ هذا الـSQL مرة واحدة على قاعدة البيانات (Supabase):
+     alter table payment_requests add column if not exists invoice_url text;
+     alter table payment_requests add column if not exists invoice_no text;
+     alter table payment_requests add column if not exists invoice_date date;
+     alter table payment_requests add column if not exists vendor text;
+     alter table payment_requests add column if not exists created_by_name text;
+     alter table payment_requests add column if not exists sig_requester_url text;
+     alter table payment_requests add column if not exists sig_head_url text;
+     alter table payment_requests add column if not exists sig_finance_url text;
+     alter table payment_requests add column if not exists sig_admin_url text;
+     alter table payment_requests add column if not exists head_at timestamptz;
+     alter table payment_requests add column if not exists finance_by text;
+     alter table payment_requests add column if not exists finance_at timestamptz;
+     alter table payment_requests add column if not exists admin_by text;
+     alter table payment_requests add column if not exists admin_at timestamptz;
+   ولو كان على عمود status قيد CHECK يحصر القيم، لازم يسمح بالقيمة الجديدة:
+     'بانتظار الاعتماد النهائي من مدير النظام'
+   ============================================================ */
+const PAY_P3='بانتظار الاعتماد النهائي من مدير النظام';
+/* ============================================================
    🔧 مفتاح تشغيل النظام المالي للموظف العادي
    حالياً: false = مخفي عن الموظف العادي (تجربة داخلية بس لك
    وللمحاسب ورئيس القسم). لما تخلص التجربة وتبي تفعّله لكل
@@ -1917,7 +2007,10 @@ async function loadAll(){
   sb.from('payroll_runs').select('*').order('year',{ascending:false}),
   sb.from('payroll_items').select('*'),
  ]);
- paymentRequests=(PR.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:r.amount,category:r.category,reason:r.reason,file:r.attachment_url,status:r.status,head:r.dept_head,paidAt:r.paid_at,paymentRef:r.payment_ref,created_at:r.created_at}));
+ paymentRequests=(PR.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:r.amount,category:r.category,reason:r.reason,file:r.attachment_url,status:r.status,head:r.dept_head,paidAt:r.paid_at,paymentRef:r.payment_ref,created_at:r.created_at,
+  invoice:r.invoice_url,invoiceNo:r.invoice_no,invoiceDate:r.invoice_date,vendor:r.vendor,createdBy:r.created_by_name,
+  sigReq:r.sig_requester_url,sigHead:r.sig_head_url,sigFin:r.sig_finance_url,sigAdm:r.sig_admin_url,
+  headAt:r.head_at,financeBy:r.finance_by,financeAt:r.finance_at,adminBy:r.admin_by,adminAt:r.admin_at}));
  custodyRecords=(CU.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),type:r.custody_type,desc:r.description,amount:r.amount,dateGiven:r.date_given,dateReturned:r.date_returned,status:r.status,notes:r.notes}));
  payrollRuns=(PRUN.data||[]).map(r=>({id:r.id,month:r.month,year:r.year,status:r.status}));
  payrollItems=(PIT.data||[]).map(r=>({id:r.id,runId:r.run_id,employee_id:r.employee_id,base:+r.base_salary||0,additions:+r.additions||0,addNote:r.additions_note,deductions:+r.deductions||0,dedNote:r.deductions_note,net:+r.net_pay||0}));
@@ -2081,7 +2174,8 @@ function buildAlerts(){
  });
  paymentRequests.forEach(p=>{
   if(p.status===LV_P1)A.push({sid:'pay1-'+p.id,t:'طلب صرف بانتظار موافقة رئيس القسم',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'💵',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
-  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'طلب صرف بانتظار الاعتماد النهائي',d:`طلب صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
+  if(p.status===LV_P2)A.push({sid:'pay2-'+p.id,t:'أمر صرف بانتظار اعتماد المالية',d:`أمر صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) لـ${p.emp} — بانتظار مراجعة المالية وتوقيعها${p.invoice?'':' ⚠️ بدون فاتورة مرفقة'}`,k:'info',ic:'🏦',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
+  if(p.status===PAY_P3)A.push({sid:'pay3-'+p.id,t:'أمر صرف بانتظار اعتمادك النهائي',d:`أمر صرف (${p.category}، ${p.amount} ${empCurrency(p.employee_id)}) لـ${p.emp} اعتمدته المالية${p.financeBy?' ('+p.financeBy+')':''} — بانتظار توقيعك النهائي والصرف`,k:'danger',ic:'✍',nav:{p:'paymentsAdmin'},kind:TASK,createdAt:p.created_at});
  });
  deductionRequests.forEach(d=>{
   if(d.status===DED_P1)A.push({sid:'ded1-'+d.id,t:'طلب خصم بانتظار مراجعة الموارد البشرية',d:`طلب خصم ${money(d.amount,d.employee_id)} من ${d.emp} — مقدَّم من ${d.requestedBy}`,k:'sand',ic:'⚠️',nav:{p:'deductionsHR'},kind:TASK,createdAt:d.createdAt});
@@ -2119,7 +2213,8 @@ function alertTabSwitch(kind,btn){alertTabActive=kind;document.querySelectorAll(
 function renderAlerts(){
  const Afull=sortAlerts(buildAlerts().filter(a=>{
   if(a.empOnly)return false; // تنبيه شخصي للموظف المتأثر فقط، لا يظهر بقائمة مهام الإدارة العامة
-  if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-'))&&!hasPerm('paymentsAdmin','view'))return false;
+  if(a.sid&&(a.sid.startsWith('pay1-')||a.sid.startsWith('pay2-')||a.sid.startsWith('pay3-'))&&!hasPerm('paymentsAdmin','view'))return false;
+  if(a.sid&&a.sid.startsWith('pay3-')&&!canFinalApprovePay())return false; // الاعتماد النهائي شغل مدير النظام وحده
   if(a.sid&&a.sid.startsWith('ded1-')&&!hasPerm('deductionsHR','view'))return false;
   if(a.sid&&a.sid.startsWith('ded2-')&&!hasPerm('paymentsAdmin','full'))return false;
   if(a.sid&&a.sid.startsWith('wrn1-')&&!hasPerm('warnings','view'))return false;
@@ -2182,7 +2277,7 @@ function renderDashboard(){
   {l:'استئذانات',v:permits.filter(p=>p.status===LV_P1||p.status===LV_P2).length},
   {l:'نماذج',v:formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2).length},
  ];
- if(hasPerm('paymentsAdmin','view'))pendCats.push({l:'طلبات صرف',v:paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2).length});
+ if(hasPerm('paymentsAdmin','view'))pendCats.push({l:'أوامر صرف',v:paymentRequests.filter(payPending).length});
  drawChart('chartPending',{type:'bar',data:{labels:pendCats.map(c=>c.l),datasets:[{data:pendCats.map(c=>c.v),backgroundColor:CH.sand,borderRadius:8,maxBarThickness:52}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
 
@@ -2215,7 +2310,7 @@ function renderDashboard(){
   const openCustody=custodyRecords.filter(c=>c.status!=='مُرجعة').length;
   const mNow2=D(0).slice(0,7);
   const spentTotals=sumByCurrency(paymentRequests.filter(p=>p.status==='معتمد'&&String(p.paidAt||'').startsWith(mNow2)),p=>p.employee_id,p=>p.amount);
-  const pendingTotals=sumByCurrency(paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2),p=>p.employee_id,p=>p.amount);
+  const pendingTotals=sumByCurrency(paymentRequests.filter(payPending),p=>p.employee_id,p=>p.amount);
   const FS=[
    {n:latestRun?fmtCurrencyMap(payrollTotals):'—',l:'إجمالي رواتب آخر كشف ('+(latestRun?MONTH_NAMES[latestRun.month-1]:'')+')',k:''},
    {n:fmtCurrencyMap(spentTotals),l:'إجمالي المصروف هذا الشهر',k:'ok'},
@@ -3310,8 +3405,8 @@ function renderReports(){
  if(hasPerm('payroll','view'))reps.push({t:'تقرير الرواتب',ic:'📑',data:()=>({headers:['الموظف','الشهر','السنة','الأساسي','الإضافات','الخصومات','الصافي'],
   rows:payrollItems.map(it=>{const run=payrollRuns.find(r=>r.id===it.runId)||{};const e=empById[it.employee_id]||{};
    return [e.name||'—',MONTH_NAMES[(run.month||1)-1],run.year||'—',it.base,it.additions,it.deductions,it.net]})})});
- if(hasPerm('paymentsAdmin','view'))reps.push({t:'تقرير طلبات وأوامر الصرف',ic:'💵',data:()=>({headers:['الموظف','القسم','المبلغ','الفئة','السبب','الحالة','مرجع الصرف','تاريخ الصرف'],
-  rows:paymentRequests.filter(p=>inReportRange(p.paidAt)).map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',p.status,p.paymentRef||'—',p.paidAt?fmt(p.paidAt):'—'])})});
+ if(hasPerm('paymentsAdmin','view'))reps.push({t:'تقرير طلبات وأوامر الصرف',ic:'💵',data:()=>({headers:['المستفيد','القسم','المبلغ','الفئة','السبب','الحالة','مرجع الصرف','تاريخ الصرف'],
+  rows:paymentRequests.filter(p=>inReportRange(p.paidAt)).map(p=>[p.emp,p.dept||'—',p.amount,p.category,p.reason||'—',payStatusLabel(p.status),p.paymentRef||'—',p.paidAt?fmt(p.paidAt):'—'])})});
  if(hasPerm('custody','view'))reps.push({t:'تقرير العهد',ic:'📦',data:()=>({headers:['الموظف','النوع','الوصف','المبلغ/القيمة','تاريخ التسليم','تاريخ الاسترجاع','الحالة'],
   rows:custodyRecords.map(c=>[c.emp,c.type,c.desc,c.amount||'—',fmt(c.dateGiven),c.dateReturned?fmt(c.dateReturned):'—',c.status])})});
  const repsFinal=reps.map(r=>({...r,fn:()=>{const d=r.data();downloadCSV(r.t.replace(/ /g,'_'),d.headers,d.rows)}}));
@@ -3488,7 +3583,7 @@ function renderApprovalsPage(){
  const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const pendingPr=permits.filter(p=>p.status===LV_P1||p.status===LV_P2);
  const pendingFm=formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2);
- const pendingPay=paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2);
+ const pendingPay=paymentRequests.filter(payPending);
  $('approvalsCount').textContent=pendingLv.length+pendingPr.length+pendingFm.length+pendingPay.length;
  const lvBtn=l=>{
   if(l.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
@@ -3520,19 +3615,14 @@ function renderApprovalsPage(){
   <td><b>${s.emp}</b></td><td>${fm.name||'—'}</td>
   <td><span class="tag ${lvTag(s.status)}">${s.status}</span>${s.dept_head?' — '+s.dept_head:''}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> ${fmBtn(s)}</td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتماد 🎉</td></tr>';
- const payBtn=p=>{
-  if(p.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
-  return p.status===LV_P2
-   ?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
-   :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
- };
  if(!hasPerm('paymentsAdmin','view')){
-  $('apvPaymentsTbody').innerHTML='<tr><td colspan="5" class="empty">تحتاج صلاحية على قسم «طلبات الصرف» لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
+  $('apvPaymentsTbody').innerHTML='<tr><td colspan="7" class="empty">تحتاج صلاحية على قسم «طلبات الصرف» لعرض هذا القسم — راجع صفحة الصلاحيات</td></tr>';
  }else{
  $('apvPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${p.amount} ر.س</td><td>${p.category}</td>
-  <td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td>
-  <td style="white-space:nowrap">${payBtn(p)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات صرف بانتظار اعتماد 🎉</td></tr>';
+  <td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${payInvoiceCell(p)}</td>
+  <td><span class="tag ${payTag(p.status)}">${payStatusLabel(p.status)}</span>${p.status===LV_P1&&p.head?' — '+p.head:''}${p.status===PAY_P3&&p.financeBy?' — اعتمدتها المالية ('+p.financeBy+')':''}</td>
+  <td>${paySigTrail(p)}</td>
+  <td style="white-space:nowrap">${payActionBtns(p)}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد أوامر صرف بانتظار اعتماد 🎉</td></tr>';
  }
 }
 async function sendMonthlyReportNow(testOnly){
@@ -3605,12 +3695,10 @@ function renderPaymentFiles(tbodyId){
 }
 function renderPaymentsAdmin(){
  if(!$('paymentsAdminTbody'))return;
- $('paymentsAdminTbody').innerHTML=paymentRequests.length?paymentRequests.map(p=>{
-  const btn=p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
-   :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
-   :p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:'—';
-  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${btn}</td></tr>`;
- }).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات صرف بعد</td></tr>';
+ if($('payOrderBtnAdmin'))$('payOrderBtnAdmin').style.display=canIssuePayOrder()?'inline-flex':'none';
+ $('paymentsAdminTbody').innerHTML=paymentRequests.length?paymentRequests.map(p=>
+  `<tr><td><b>${p.emp}</b>${p.createdBy&&p.createdBy!==p.emp?`<br><small style="color:var(--muted)">أصدره: ${p.createdBy}</small>`:''}</td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td>${payInvoiceCell(p)}</td><td><span class="tag ${payTag(p.status)}">${payStatusLabel(p.status)}</span></td><td>${paySigTrail(p)}</td><td>${p.paymentRef||'—'}</td><td style="white-space:nowrap">${payActionBtns(p)}</td></tr>`
+ ).join(''):'<tr><td colspan="10" class="empty">لا توجد أوامر صرف بعد</td></tr>';
 }
 /* ================= نظام الصلاحيات الشامل ================= */
 const MODULES=[
@@ -3998,49 +4086,245 @@ function epRenderDashboard(){
  const subHtml=subFor.map(l=>`<div class="alert-item"><div class="aic info">👥</div><div><b>أنت البديل عن ${l.emp} خلال إجازته</b><small>${fmt(l.start)} → ${fmt(l.end)} · ${l.days} يوم — أنت من يمسك مهامه خلال الفترة</small></div></div>`).join('');
  $('epDashAlerts').innerHTML=(subHtml+A.slice(0,4).map((a,i)=>alertItem(a,i)).join(''))||'<div class="empty">لا توجد إشعارات حالياً</div>';
 }
+/* ================= دورة أمر الصرف: حالات + تواقيع + فاتورة ================= */
+/* أي أمر صرف لم يُغلق بعد — يشمل المراحل الثلاث */
+const payPending=p=>p.status===LV_P1||p.status===LV_P2||p.status===PAY_P3;
+/* القيمة المخزّنة للمرحلة الثانية لم تتغير (توافقاً مع الأوامر القديمة)، بس نعرضها باسمها الصحيح */
+const payStatusLabel=st=>st===LV_P2?'بانتظار اعتماد المالية':st;
+const payTag=st=>st==='معتمد'?'ok':st==='مرفوض'?'danger':(st===LV_P2||st===PAY_P3)?'info':'sand';
+/* من يقدر يصدر أمر صرف: مدير النظام + أي حساب ممنوح «تحكم كامل» على طلبات الصرف (سلامة مثلاً) */
+function canIssuePayOrder(){return hasPerm('paymentsAdmin','full')}
+/* الاعتماد النهائي مقصور على مدير النظام وحده */
+function canFinalApprovePay(){return !!(me&&me.role==='admin')}
+const PAY_STAGE_META={
+ head   :{t:'اعتماد رئيس القسم',       sig:'توقيع رئيس القسم',   ok:'✍ اعتماد ورفع للمالية',            next:'رُفع الأمر للمالية'},
+ finance:{t:'اعتماد المالية',           sig:'توقيع المالية',       ok:'✍ اعتماد ورفع لمدير النظام',        next:'رُفع الأمر لمدير النظام للاعتماد النهائي'},
+ admin  :{t:'الاعتماد النهائي والصرف',  sig:'توقيع مدير النظام',   ok:'✍ اعتماد نهائي وإصدار أمر الصرف',  next:'تم الاعتماد النهائي وصدر أمر الصرف'},
+};
+/* أثر التواقيع: نقطة خضراء لكل مرحلة موقّعة */
+function paySigTrail(p){
+ const d=(ok,label)=>`<span title="${label}${ok?' ✓':' — لم يوقّع بعد'}" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-start:4px;vertical-align:middle;background:${ok?'var(--ok)':'var(--line)'}"></span>`;
+ return `<span style="white-space:nowrap">${d(p.sigReq,'مقدّم الطلب')}${d(p.sigHead,'رئيس القسم')}${d(p.sigFin,'المالية')}${d(p.sigAdm,'مدير النظام')}</span>`;
+}
+const payInvoiceCell=p=>p.invoice
+ ? `<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.invoice}','فاتورة ${p.invoiceNo||''}')">🧾 ${p.invoiceNo||'عرض'}</button>`
+ : '<span class="tag danger">بدون فاتورة</span>';
+/* أزرار الإجراء حسب المرحلة الحالية للأمر */
+function payActionBtns(p){
+ if(p.status==='معتمد')return `<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`;
+ if(p.status==='مرفوض')return '—';
+ if(p.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">أنت المستفيد — بانتظار قرار مدير آخر</span>';
+ const rej=`<button class="btn btn-danger btn-sm" onclick="rejectPayment('${p.id}')">رفض</button>`;
+ if(p.status===LV_P1)return `<button class="btn btn-sand btn-sm" title="اعتماد المالية مباشرة بتجاوز مرحلة رئيس القسم" onclick="openPaySign('${p.id}','finance')">✍ اعتماد المالية (تجاوز)</button> ${rej}`;
+ if(p.status===LV_P2)return `<button class="btn btn-ok btn-sm" onclick="openPaySign('${p.id}','finance')">✍ اعتماد المالية</button> ${rej}`;
+ if(p.status===PAY_P3)return canFinalApprovePay()
+   ? `<button class="btn btn-ok btn-sm" title="الاعتماد النهائي وإصدار أمر الصرف" onclick="openPaySign('${p.id}','admin')">✍ اعتماد نهائي وصرف</button> ${rej}`
+   : '<span style="color:var(--muted);font-size:12px">بانتظار مدير النظام</span>';
+ return '—';
+}
+/* ---------- شاشة التوقيع الإلكتروني لكل مرحلة ---------- */
+let _paySign=null;
+function openPaySign(id,stage){
+ const p=paymentRequests.find(x=>x.id===id);
+ if(!p){toast('تعذّر العثور على أمر الصرف');return}
+ if(stage==='admin'&&!canFinalApprovePay()){toast('الاعتماد النهائي مقصور على مدير النظام');return}
+ if(p.employee_id===me.id){toast('ما تقدر تعتمد أمر صرف أنت المستفيد منه — لازم مدير آخر');return}
+ const M=PAY_STAGE_META[stage];
+ _paySign={id,stage};
+ $('paySignTitle').textContent=M.t;
+ $('paySignOkBtn').textContent=M.ok;
+ $('paySignSummary').innerHTML=`
+  <table class="pay-kv"><tbody>
+   <tr><td>المستفيد</td><td><b>${p.emp}</b>${p.dept?' — '+p.dept:''}</td></tr>
+   <tr><td>المبلغ</td><td><b>${money(p.amount,p.employee_id)}</b></td></tr>
+   <tr><td>الفئة</td><td>${p.category}</td></tr>
+   <tr><td>السبب</td><td>${p.reason||'—'}</td></tr>
+   <tr><td>الفاتورة</td><td>${p.invoice?`رقم ${p.invoiceNo||'—'}${p.vendor?' — '+p.vendor:''} <button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.invoice}','الفاتورة')">🧾 عرض الفاتورة</button>`:'<span style="color:var(--danger);font-weight:700">لا توجد فاتورة مرفقة</span>'}</td></tr>
+   <tr><td>مُصدِر الأمر</td><td>${p.createdBy||p.emp}</td></tr>
+   ${p.head?`<tr><td>رئيس القسم</td><td>${p.head}${p.headAt?' — '+fmtGreg(p.headAt):''}</td></tr>`:''}
+   ${p.financeBy?`<tr><td>المالية</td><td>${p.financeBy}${p.financeAt?' — '+fmtGreg(p.financeAt):''}</td></tr>`:''}
+  </tbody></table>`;
+ $('paySignRefWrap').style.display=(stage==='finance'||stage==='admin')?'block':'none';
+ $('paySignRef').value=p.paymentRef||'';
+ $('paySignPadWrap').innerHTML=sigPadHtml('paySigPad',M.sig);
+ openModal('paySignModal');
+ mountSigPad('paySigPad');
+}
+function closePaySign(){_paySign=null;closeModal('paySignModal')}
+async function submitPaySign(){
+ if(!_paySign)return;
+ const {id,stage}=_paySign;
+ const p=paymentRequests.find(x=>x.id===id);if(!p){toast('تعذّر العثور على أمر الصرف');return}
+ if(sigIsEmpty('paySigPad')){toast('التوقيع الإلكتروني إلزامي — ما في اعتماد بدون توقيع');return}
+ const M=PAY_STAGE_META[stage];
+ if(!(await showConfirm(`${M.t}: ${money(p.amount,p.employee_id)} لـ${p.emp}؟ سيُحفظ توقيعك على الأمر.`,{icon:'✍',title:'تأكيد الاعتماد بالتوقيع',okText:'نعم، اعتمد ووقّع',okClass:'btn-ok'})))return;
+ const btn=$('paySignOkBtn');btn.disabled=true;
+ try{
+  toast('جاري حفظ التوقيع...');
+  const blob=await sigToBlob('paySigPad');
+  const sigPath=await uploadToStorage(new File([blob],'sig-'+stage+'.png',{type:'image/png'}),'payment-orders/signatures/'+id);
+  const now=new Date().toISOString();
+  const patch={};
+  if(stage==='head'){patch.status=LV_P2;patch.dept_head=me.name;patch.head_at=now;patch.sig_head_url=sigPath}
+  else if(stage==='finance'){patch.status=PAY_P3;patch.finance_by=me.name;patch.finance_at=now;patch.sig_finance_url=sigPath;
+   const r=$('paySignRef').value.trim();if(r)patch.payment_ref=r}
+  else{patch.status='معتمد';patch.admin_by=me.name;patch.admin_at=now;patch.sig_admin_url=sigPath;patch.paid_at=D(0);
+   const r=$('paySignRef').value.trim();patch.payment_ref=r||p.paymentRef||null}
+  const {error}=await sb.from('payment_requests').update(patch).eq('id',id);
+  if(error)throw error;
+  closePaySign();
+  if(stage==='admin')await archivePaymentOrder({...p,...{paidAt:patch.paid_at,paymentRef:patch.payment_ref,sigAdm:sigPath,adminBy:me.name,adminAt:now,status:'معتمد'}});
+  await refresh();toast('✅ '+M.next);
+ }catch(e){err(e)}
+ finally{btn.disabled=false}
+}
+async function rejectPayment(id){
+ const p=paymentRequests.find(x=>x.id===id);if(!p)return;
+ if(!(await showConfirm(`رفض أمر الصرف (${money(p.amount,p.employee_id)} لـ${p.emp})؟`,{icon:'🚫',title:'تأكيد رفض أمر الصرف',okText:'نعم، ارفض الأمر',okClass:'btn-danger'})))return;
+ const now=new Date().toISOString(),patch={status:'مرفوض'};
+ if(p.status===LV_P1){patch.dept_head=me.name;patch.head_at=now}
+ else if(p.status===LV_P2){patch.finance_by=me.name;patch.finance_at=now}
+ else{patch.admin_by=me.name;patch.admin_at=now}
+ const {error}=await sb.from('payment_requests').update(patch).eq('id',id);
+ if(error){err(error);return}
+ await refresh();toast('تم رفض أمر الصرف');
+}
+/* ---------- إصدار أمر صرف جديد (مدير النظام / من له تحكم كامل) ---------- */
+function openPayOrder(){
+ if(!canIssuePayOrder()){toast('تحتاج صلاحية «تحكم كامل» على طلبات الصرف');return}
+ const pool=employees.filter(e=>e.status==='نشط');
+ $('poEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ ['poAmount','poReason','poInvNo','poVendor','poRef'].forEach(i=>$(i).value='');
+ $('poInvDate').value=D(0);$('poCategory').value='مصاريف تشغيلية';
+ delete staged['payOrderInvoice'];
+ $('poInvBox').innerHTML='🧾 إرفاق الفاتورة (إلزامية لأمر الصرف)';
+ $('poSigWrap').innerHTML=sigPadHtml('poSig','توقيع مُصدِر الأمر ('+me.name+')');
+ openModal('payOrderModal');
+ mountSigPad('poSig');
+}
+async function submitPayOrder(){
+ if(!canIssuePayOrder()){toast('تحتاج صلاحية «تحكم كامل» على طلبات الصرف');return}
+ const empId=$('poEmp').value,amt=+$('poAmount').value;
+ if(!empId){toast('اختر المستفيد');return}
+ if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
+ if(!$('poReason').value.trim()){toast('سبب الصرف إلزامي');return}
+ if(!staged['payOrderInvoice']){toast('إرفاق الفاتورة إلزامي لإصدار أمر الصرف');return}
+ if(sigIsEmpty('poSig')){toast('توقيعك الإلكتروني إلزامي لإصدار الأمر');return}
+ if(!(await showConfirm(`إصدار أمر صرف بـ${money(amt,empId)} لـ${(empById[empId]||{}).name||''}؟ سيمر على المالية ثم الاعتماد النهائي.`,{icon:'💵',title:'تأكيد إصدار أمر الصرف',okText:'نعم، أصدر الأمر',okClass:'btn-primary'})))return;
+ const btn=$('poOkBtn');btn.disabled=true;
+ try{
+  toast('جاري رفع الفاتورة والتوقيع...');
+  const inv=takeStaged('payOrderInvoice','poInvBox','🧾 إرفاق الفاتورة (إلزامية لأمر الصرف)');
+  const invPath=await uploadToStorage(inv,'payment-orders/invoices');
+  try{await sb.from('files_registry').insert({file_name:'فاتورة '+($('poInvNo').value||'')+' — '+((empById[empId]||{}).name||''),file_type:(inv.name.split('.').pop()||'').toUpperCase(),file_size:(inv.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',subcategory:'فواتير',source:'أمر صرف أصدره '+me.name,uploaded_by:me.name,storage_path:invPath,employee_id:empId})}catch(e){}
+  const sigBlob=await sigToBlob('poSig');
+  const sigPath=await uploadToStorage(new File([sigBlob],'sig-issuer.png',{type:'image/png'}),'payment-orders/signatures/new');
+  const {error}=await sb.from('payment_requests').insert({
+   employee_id:empId,amount:amt,category:$('poCategory').value,reason:$('poReason').value,
+   invoice_url:invPath,invoice_no:$('poInvNo').value.trim()||null,invoice_date:$('poInvDate').value||null,
+   vendor:$('poVendor').value.trim()||null,payment_ref:$('poRef').value.trim()||null,
+   created_by_name:me.name,sig_requester_url:sigPath,status:LV_P2});
+  if(error)throw error;
+  closeModal('payOrderModal');await refresh();
+  toast('✅ صدر أمر الصرف موقّعاً — عند المالية الآن ثم الاعتماد النهائي');
+ }catch(e){err(e)}
+ finally{btn.disabled=false}
+}
+/* ---------- تضمين التواقيع داخل ملف أمر الصرف حتى يبقى مستقلاً للأبد ---------- */
+async function pathToDataUrl(path){
+ if(!path)return null;
+ try{
+  const {data,error}=await sb.storage.from('hrms-files').createSignedUrl(path,3600);
+  if(error||!data)return null;
+  const blob=await (await fetch(data.signedUrl)).blob();
+  return await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>res(null);fr.readAsDataURL(blob)});
+ }catch(e){return null}
+}
+/* حفظ أمر الصرف النهائي كملف مؤرشف في «ملفات الصرف» */
+async function archivePaymentOrder(p){
+ try{
+  const html=await paymentOrderHtml(p);
+  const orderNo='PO-'+String(p.id).slice(0,8).toUpperCase();
+  const file=new File([new Blob([html],{type:'text/html'})],orderNo+'.html',{type:'text/html'});
+  const path=await uploadToStorage(file,'payment-orders');
+  await sb.from('files_registry').insert({file_name:orderNo+' — '+(p.emp||''),file_type:'HTML',file_size:(file.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',source:'أمر صرف معتمد نهائياً بتواقيع كل المراحل',uploaded_by:me.name,storage_path:path,employee_id:p.employee_id});
+ }catch(e){console.error('تعذّر حفظ ملف أمر الصرف',e)}
+}
+
 /* ================= النظام المالي: طلبات الصرف ================= */
 let editingPaymentId=null;
 function epNewPayment(){
  editingPaymentId=null;
  $('eppayCategory').value='سلفة';$('eppayAmount').value='';$('eppayReason').value='';
+ $('eppayInvNo').value='';$('eppayVendor').value='';
+ delete staged['paymentInvoice'];delete staged['paymentReceipt'];
+ $('eppayInvBox').innerHTML='🧾 إرفاق الفاتورة (اختياري — لكن أي طلب بلا فاتورة يوصل للمالية بعلامة «بدون فاتورة»)';
+ $('eppayFileBox').innerHTML='📎 إرفاق إيصال/مستند داعم (اختياري)';
+ $('eppaySigWrap').innerHTML=sigPadHtml('eppaySig','توقيعك الإلكتروني ('+currentEmp.name+')');
  $('epPayModalTitle').textContent='طلب صرف جديد';
  openModal('epPaymentModal');
+ mountSigPad('eppaySig');
 }
 async function epAddPayment(){
  const amt=+$('eppayAmount').value;
  if(!(amt>0)){toast('أدخل مبلغاً صحيحاً');return}
  if(!$('eppayReason').value.trim()){toast('سبب الطلب إلزامي');return}
- if(!(await showConfirm('هل تريد إرسال طلب الصرف؟ سيمر على رئيس القسم ثم المحاسب.',{icon:'📤',title:'تأكيد إرسال الطلب',okText:'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
+ if(sigIsEmpty('eppaySig')){toast('توقيعك الإلكتروني إلزامي لإرسال طلب الصرف');return}
+ if(!(await showConfirm('هل تريد إرسال طلب الصرف موقّعاً؟ سيمر على رئيس القسم ← المالية ← الاعتماد النهائي من مدير النظام.',{icon:'📤',title:'تأكيد إرسال الطلب',okText:'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
+ const btn=$('eppayOkBtn');btn.disabled=true;
  try{
   let path=null;const f=takeStaged('paymentReceipt','eppayFileBox','📎 إرفاق إيصال/مستند داعم (اختياري)');
   if(f){toast('جاري رفع المرفق...');path=await uploadToStorage(f,'employees/'+currentEmp.id+'/payments')}
-  const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,status:(currentEmp.role==='manager'||currentEmp.role==='admin')?LV_P2:LV_P1});
+  let invPath=null;const iv=takeStaged('paymentInvoice','eppayInvBox','🧾 إرفاق الفاتورة (اختياري — لكن أي طلب بلا فاتورة يوصل للمالية بعلامة «بدون فاتورة»)');
+  if(iv){toast('جاري رفع الفاتورة...');invPath=await uploadToStorage(iv,'payment-orders/invoices')}
+  toast('جاري حفظ التوقيع...');
+  const sigBlob=await sigToBlob('eppaySig');
+  const sigPath=await uploadToStorage(new File([sigBlob],'sig-requester.png',{type:'image/png'}),'employees/'+currentEmp.id+'/payments');
+  const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,
+   invoice_url:invPath,invoice_no:$('eppayInvNo').value.trim()||null,vendor:$('eppayVendor').value.trim()||null,
+   created_by_name:currentEmp.name,sig_requester_url:sigPath,
+   status:(currentEmp.role==='manager'||currentEmp.role==='admin')?LV_P2:LV_P1});
   if(error)throw error;
-  closeModal('epPaymentModal');await refresh();toast('تم إرسال طلب الصرف — سيمر على رئيس القسم ثم المحاسب');
+  closeModal('epPaymentModal');await refresh();toast('تم إرسال طلب الصرف موقّعاً — سيمر على رئيس القسم ثم المالية ثم مدير النظام');
  }catch(e){err(e)}
+ finally{btn.disabled=false}
 }
 function epRenderPayments(){
  const mine=paymentRequests.filter(p=>p.employee_id===currentEmp.id);
- const pendCount=mine.filter(p=>p.status===LV_P1||p.status===LV_P2).length;
+ const pendCount=mine.filter(payPending).length;
  const badge=$('epPayBadge');if(badge){badge.textContent=pendCount;badge.style.display=pendCount?'inline-block':'none'}
- $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${money(p.amount,currentEmp.id)}</td><td>${fmt(p.created_at)}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:''} ${p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات صرف</td></tr>';
+ $('epPaymentsTbody').innerHTML=mine.length?mine.map(p=>`<tr><td>${p.category}</td><td>${money(p.amount,currentEmp.id)}</td><td>${fmt(p.created_at)}</td><td>${p.invoice?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.invoice}','الفاتورة')">🧾</button>`:'—'}</td><td><span class="tag ${payTag(p.status)}">${payStatusLabel(p.status)}</span></td><td>${paySigTrail(p)}</td><td>${p.paymentRef||'—'}</td><td>${p.file?`<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.file}','مرفق')">📎</button>`:''} ${p.status==='معتمد'?`<button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 أمر الصرف</button>`:''}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات صرف</td></tr>';
 }
-async function mgrDecidePayment(id,approve){
- const {error}=await sb.from('payment_requests').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
- if(error){err(error);return}
- await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للمحاسب':'تم رفض الطلب');
-}
-function paymentOrderHtml(p){
+/* كل اعتماد صار يمر عبر شاشة التوقيع الإلكتروني — ما في موافقة بدون توقيع */
+function mgrDecidePayment(id,approve){return approve?openPaySign(id,'head'):rejectPayment(id)}
+async function paymentOrderHtml(p){
  const e=empById[p.employee_id]||{};
  const orderNo='PO-'+String(p.id).slice(0,8).toUpperCase();
  const amountWords=numToArabicWords(p.amount);
  const cur=empCurrency(p.employee_id);
+ // نضمّن صور التواقيع داخل الملف نفسه (base64) حتى يبقى المستند صالحاً بعد انتهاء روابط التخزين
+ const [sReq,sHead,sFin,sAdm]=await Promise.all([pathToDataUrl(p.sigReq),pathToDataUrl(p.sigHead),pathToDataUrl(p.sigFin),pathToDataUrl(p.sigAdm)]);
+ const box=(role,name,img,at)=>`<div style="flex:1;min-width:130px;text-align:center">
+   <div style="height:52px;display:flex;align-items:flex-end;justify-content:center">${img?`<img src="${img}" alt="توقيع" style="max-height:52px;max-width:100%">`:''}</div>
+   <div style="border-top:1.5px solid #17251F;padding-top:6px;font-size:11px;line-height:1.6">
+     <b style="display:block;color:#17251F;font-size:11.5px">${role}</b>${name||'—'}
+     ${at?`<br><span style="font-size:10px;color:#6B7A73">${fmtGreg(at)}</span>`:''}
+     ${img?'<br><span style="font-size:10px;color:#2E8B62">✓ موقّع إلكترونياً</span>':'<br><span style="font-size:10px;color:#C34A3C">لم يوقّع</span>'}
+   </div></div>`;
+ const invRows=(p.invoice||p.invoiceNo||p.vendor)?`
+   <h2 class="hh-s">بيانات الفاتورة</h2>
+   <table class="hh-kv">
+    <tr><td class="k">رقم الفاتورة</td><td>${p.invoiceNo||'—'}</td></tr>
+    <tr><td class="k">تاريخ الفاتورة</td><td>${p.invoiceDate?fmt(p.invoiceDate):'—'}</td></tr>
+    <tr><td class="k">المورّد / الجهة</td><td>${p.vendor||'—'}</td></tr>
+    <tr><td class="k">صورة الفاتورة</td><td>${p.invoice?'مرفقة في ملفات الصرف بالنظام':'غير مرفقة'}</td></tr>
+   </table>`:'<div class="hh-note">⚠️ لم تُرفق فاتورة بهذا الأمر.</div>';
  return hhPrintDoc({
   title:'أمر صرف',
-  subtitle:'مستند مالي معتمد — نظام إدارة الموارد البشرية',
-  meta:[['رقم الأمر',orderNo],['تاريخ الصرف',fmt(p.paidAt||D(0))],['فئة الصرف',p.category]],
+  subtitle:'مستند مالي معتمد إلكترونياً — نظام إدارة الموارد البشرية',
+  meta:[['رقم الأمر',orderNo],['تاريخ الصرف',fmt(p.paidAt||D(0))],['فئة الصرف',p.category],['الحالة',p.status||'معتمد']],
   body:`<div class="hh-box">
-    <div class="num">${p.amount.toLocaleString('en-US')} ${cur}</div>
+    <div class="num">${(+p.amount).toLocaleString('en-US')} ${cur}</div>
     <div class="words">فقط ${amountWords} ${cur} لا غير</div></div>
    <h2 class="hh-s">بيانات المستفيد</h2>
    <table class="hh-kv">
@@ -4050,20 +4334,28 @@ function paymentOrderHtml(p){
     <tr><td class="k">فئة الصرف</td><td>${p.category}</td></tr>
     <tr><td class="k">السبب</td><td>${p.reason||'—'}</td></tr>
     <tr><td class="k">مرجع الصرف</td><td>${p.paymentRef||'—'}</td></tr>
+    <tr><td class="k">مُصدِر الأمر</td><td>${p.createdBy||e.name||p.emp}</td></tr>
    </table>
-   <div class="hh-sigs">
-    <div class="hh-sig">الموظف (${e.name||p.emp})</div>
-    <div class="hh-sig">رئيس القسم (${p.head||'—'})</div>
-    <div class="hh-sig">المحاسب (${me.name})</div>
-   </div>`
+   ${invRows}
+   <h2 class="hh-s">التواقيع الإلكترونية — مراحل الاعتماد</h2>
+   <div style="display:flex;gap:14px;margin-top:14px;flex-wrap:wrap;page-break-inside:avoid">
+    ${box('مقدّم الطلب / مُصدِر الأمر',p.createdBy||e.name||p.emp,sReq,p.created_at)}
+    ${box('رئيس القسم',p.head,sHead,p.headAt)}
+    ${box('المالية',p.financeBy,sFin,p.financeAt)}
+    ${box('الاعتماد النهائي — مدير النظام',p.adminBy,sAdm,p.adminAt)}
+   </div>
+   <div class="hh-note">هذا المستند موقّع إلكترونياً عبر النظام، وكل توقيع مرتبط باسم صاحبه وتاريخ اعتماده. رقم الأمر ${orderNo}.</div>`
  });
 }
 async function printPaymentOrder(id){
  const p=paymentRequests.find(x=>x.id===id);if(!p)return;
  const w=window.open('','_blank');
  if(!w){toast('المتصفح منع فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة');return}
- w.document.write(paymentOrderHtml(p));
- w.document.close();
+ w.document.write('<!DOCTYPE html><html dir="rtl"><body style="font-family:Tahoma;padding:40px;text-align:center">⏳ جاري تجهيز أمر الصرف والتواقيع...</body></html>');
+ try{
+  const html=await paymentOrderHtml(p);
+  w.document.open();w.document.write(html);w.document.close();
+ }catch(e){w.close();err(e)}
 }
 function numToArabicWords(n){
  n=Math.round(+n||0);
@@ -4095,40 +4387,22 @@ function numToArabicWords(n){
  if(rest)parts.push(under1000(rest));
  return parts.join(' و')||'صفر';
 }
-async function acctDecidePayment(id,approve){
- if(approve){
-  const ref=prompt('مرجع الصرف (رقم تحويل/شيك) — اختياري:');
-  const paidAt=D(0);
-  const {error}=await sb.from('payment_requests').update({status:'معتمد',paid_at:paidAt,payment_ref:ref||null}).eq('id',id);
-  if(error){err(error);return}
-  // توليد أمر الصرف كملف فعلي وحفظه في إدارة الملفات (قسم "ملفات الصرف")
-  try{
-   const p=paymentRequests.find(x=>x.id===id)||{};
-   const pFull={...p,paidAt,paymentRef:ref||null};
-   const html=paymentOrderHtml(pFull);
-   const orderNo='PO-'+String(id).slice(0,8).toUpperCase();
-   const blob=new Blob([html],{type:'text/html'});
-   const file=new File([blob],orderNo+'.html',{type:'text/html'});
-   const path=await uploadToStorage(file,'payment-orders');
-   await sb.from('files_registry').insert({file_name:orderNo+' — '+(p.emp||''),file_type:'HTML',file_size:(file.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',source:'أمر صرف معتمد آلياً',uploaded_by:me.name,storage_path:path,employee_id:p.employee_id});
-  }catch(e){console.error('تعذّر حفظ ملف أمر الصرف',e)}
-  await refresh();toast('تم اعتماد الطلب وتسجيله كمصروف، وحُفظ أمر الصرف في إدارة الملفات');
- }else{
-  const {error}=await sb.from('payment_requests').update({status:'مرفوض'}).eq('id',id);
-  if(error){err(error);return}
-  await refresh();toast('تم رفض الطلب');
- }
+/* يوجّه للمرحلة الصحيحة: المالية، أو الاعتماد النهائي لو الأمر عند مدير النظام */
+function acctDecidePayment(id,approve){
+ if(!approve)return rejectPayment(id);
+ const p=paymentRequests.find(x=>x.id===id)||{};
+ return openPaySign(id,p.status===PAY_P3?'admin':'finance');
 }
 function acctRenderPayApprovals(){
- const pend=paymentRequests.filter(p=>p.status===LV_P1||p.status===LV_P2);
- $('acctPayBadge').textContent=pend.length;
- $('acctPayApprovalsTbody').innerHTML=pend.length?pend.map(p=>{
-  const btn=p.status===LV_P2?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد نهائي وصرف</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`
-   :`<button class="btn btn-sand btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`;
-  return `<tr><td><b>${p.emp}</b></td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td style="white-space:nowrap">${btn}</td></tr>`;
- }).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات صرف بانتظار اعتمادك 🎉</td></tr>';
+ if($('payOrderBtnAcct'))$('payOrderBtnAcct').style.display=canIssuePayOrder()?'inline-flex':'none';
+ const pend=paymentRequests.filter(payPending);
+ // شارة المالية تعد ما ينتظر قرارها فعلاً (بدون ما هو عند مدير النظام)
+ $('acctPayBadge').textContent=pend.filter(p=>p.status!==PAY_P3).length;
+ $('acctPayApprovalsTbody').innerHTML=pend.length?pend.map(p=>
+  `<tr><td><b>${p.emp}</b>${p.createdBy&&p.createdBy!==p.emp?`<br><small style="color:var(--muted)">أصدره: ${p.createdBy}</small>`:''}</td><td>${p.dept||'—'}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td>${payInvoiceCell(p)}</td><td><span class="tag ${payTag(p.status)}">${payStatusLabel(p.status)}</span>${p.status===LV_P1&&p.head?' — '+p.head:''}</td><td>${paySigTrail(p)}</td><td style="white-space:nowrap">${payActionBtns(p)}</td></tr>`
+ ).join(''):'<tr><td colspan="9" class="empty">لا توجد أوامر صرف بانتظار اعتمادك 🎉</td></tr>';
  const done=paymentRequests.filter(p=>p.status==='معتمد');
- if($('acctPayHistoryTbody'))$('acctPayHistoryTbody').innerHTML=done.length?done.map(p=>`<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${fmt(p.paidAt)}</td><td>${p.paymentRef||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 طباعة أمر الصرف</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد أوامر صرف مُصدرة بعد</td></tr>';
+ if($('acctPayHistoryTbody'))$('acctPayHistoryTbody').innerHTML=done.length?done.map(p=>`<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${fmt(p.paidAt)}</td><td>${p.paymentRef||'—'}</td><td>${p.adminBy||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="printPaymentOrder('${p.id}')">🖨 طباعة أمر الصرف</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد أوامر صرف معتمدة نهائياً بعد</td></tr>';
 }
 
 /* ================= النظام المالي: العهد ================= */
@@ -4649,10 +4923,12 @@ function renderExtraModuleBody(key,full){
   body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="openModal('custodyModal')">+ إضافة عهدة</button></div>`:'')+
    T(head,custodyRecords.map(c=>`<tr><td><b>${c.emp}</b></td><td>${c.type}</td><td>${c.desc}</td><td>${c.amount?money(c.amount,c.employee_id):'—'}</td><td><span class="tag ${c.status==='مُرجعة'?'ok':'sand'}">${c.status}</span></td>${full?`<td>${c.status!=='مُرجعة'?`<button class="btn btn-ok btn-sm" onclick="returnCustody('${c.id}')">تسجيل استرجاع</button>`:'—'}</td>`:''}</tr>`).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد عهد</td></tr>`);
  }else if(key==='paymentsAdmin'){
-  const head=full?['الموظف','المبلغ','الفئة','السبب','الحالة','إجراء']:['الموظف','المبلغ','الفئة','السبب','الحالة'];
-  body.innerHTML=T(head,paymentRequests.map(p=>{const canAct=full&&(p.status===LV_P1||p.status===LV_P2);
-   return `<tr><td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td>${full?`<td>${canAct?`<button class="btn btn-ok btn-sm" onclick="acctDecidePayment('${p.id}',true)">اعتماد</button> <button class="btn btn-danger btn-sm" onclick="acctDecidePayment('${p.id}',false)">رفض</button>`:'—'}</td>`:''}</tr>`;
-  }).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد طلبات صرف</td></tr>`);
+  const head=full?['المستفيد','المبلغ','الفئة','السبب','الفاتورة','الحالة','التواقيع','إجراء']:['المستفيد','المبلغ','الفئة','السبب','الفاتورة','الحالة','التواقيع'];
+  body.innerHTML=(full?`<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="openPayOrder()">+ إصدار أمر صرف</button></div>
+   <div class="section-note">الأمر الي تصدره يبدأ عند المالية، وبعد اعتمادها يرتفع لمدير النظام للاعتماد النهائي — وكل مرحلة بتوقيع إلكتروني.</div>`:'')+
+   T(head,paymentRequests.map(p=>
+   `<tr><td><b>${p.emp}</b>${p.createdBy&&p.createdBy!==p.emp?`<br><small style="color:var(--muted)">أصدره: ${p.createdBy}</small>`:''}</td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td>${payInvoiceCell(p)}</td><td><span class="tag ${payTag(p.status)}">${payStatusLabel(p.status)}</span></td><td>${paySigTrail(p)}</td>${full?`<td style="white-space:nowrap">${payActionBtns(p)}</td>`:''}</tr>`
+  ).join('')||`<tr><td colspan="${head.length}" class="empty">لا توجد أوامر صرف</td></tr>`);
  }else if(key==='deductionsHR'){
   const head=full?['الموظف','المبلغ','السبب','الطالب','الحالة','إجراء']:['الموظف','المبلغ','السبب','الطالب','الحالة'];
   body.innerHTML=T(head,deductionRequests.map(d=>{const canAct=full&&d.status===DED_P1;
@@ -4704,8 +4980,8 @@ function mgrRenderApprovals(){
 
  const pendingPay=paymentRequests.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
  $('mgrPaymentsTbody').innerHTML=pendingPay.length?pendingPay.map(p=>`<tr>
-  <td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePayment('${p.id}',true)">اعتماد ورفع للمحاسب</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePayment('${p.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات صرف بانتظار اعتمادك 🎉</td></tr>';
+  <td><b>${p.emp}</b></td><td>${money(p.amount,p.employee_id)}</td><td>${p.category}</td><td>${p.reason||'—'}</td><td>${payInvoiceCell(p)}</td>
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecidePayment('${p.id}',true)">✍ اعتماد ورفع للمالية</button> <button class="btn btn-danger btn-sm" onclick="mgrDecidePayment('${p.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد أوامر صرف بانتظار اعتمادك 🎉</td></tr>';
  const pending=leaves.filter(l=>l.status===LV_P1&&l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id);
  const pendingForms=formSubs.filter(s=>s.status===LV_P1&&(empById[s.employee_id]||{}).dept===currentEmp.dept&&s.employee_id!==currentEmp.id);
  const pendingPr=permits.filter(p=>p.status===LV_P1&&p.dept===currentEmp.dept&&p.employee_id!==currentEmp.id);
