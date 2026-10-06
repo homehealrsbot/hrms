@@ -1995,10 +1995,9 @@ async function loadAll(){
  if(me&&!isBackoffice()){
   const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
   attendanceEvents=AE.data||[];
- }else if(me&&isBackoffice()){
-  const AEA=await sb.from('attendance_events').select('*').order('event_date',{ascending:false});
-  allAttendanceEvents=AEA.data||[]; // RLS نفسها تحدد ما يُرجَّع فعلياً حسب صلاحية الحضور
  }
+ /* حركات الدوام الجغرافي لم تعد تُجلب هنا — تُجلب عند فتح التقارير فقط
+    عبر ensureAttendanceEvents()، وبنطاق التاريخ المختار. */
  permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
@@ -2006,7 +2005,7 @@ async function loadAll(){
  const FS2=await sb.from('form_submissions').select('*').order('created_at',{ascending:false});
  formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,status:r.status||LV_P1,dept_head:r.dept_head,created_at:r.created_at}));
  const [PR,CU,PRUN,PIT]=await Promise.all([
-  sb.from('payment_requests').select('*').order('created_at',{ascending:false}),
+  payRequestsQuery(),
   sb.from('custody_records').select('*').order('date_given',{ascending:false}),
   sb.from('payroll_runs').select('*').order('year',{ascending:false}),
   sb.from('payroll_items').select('*'),
@@ -2695,19 +2694,27 @@ function startLiveZoneMonitoring(){
  if(!navigator.geolocation)return;
  const myLoc=empLocation(currentEmp.id);
  if(!myLoc)return;
+ /* التتبع الحي كان يقارن المسافة بالنطاق مباشرة، فاهتزاز GPS حول الحد
+    (الدقة ±٥٠م على نطاق ١٥٠م) يقلب الحالة ذهاباً وإياباً: إشعار بعد إشعار
+    وصف جديد في سجل الحركات كل مرة. الآن: نتجاهل القراءات الضعيفة، ونخرج
+    فقط بعد تجاوز النطاق بهامش، ونمنع تغييرين متلاحقين خلال ٩٠ ثانية. */
+ let lastZoneChange=0;
  liveWatchId=navigator.geolocation.watchPosition(async pos=>{
-  const loc={lat:pos.coords.latitude,lng:pos.coords.longitude};
-  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
-  const inside=dist<=myLoc.radius_meters;
-  if(inside&&currentZoneStatus!=='داخل المقر'){
-   currentZoneStatus='داخل المقر';
-   await logAttendanceEvent('return_zone',loc,dist,'داخل المقر');
+  const loc={lat:pos.coords.latitude,lng:pos.coords.longitude,
+             acc:(pos.coords.accuracy!=null?Math.round(pos.coords.accuracy):null)};
+  if(loc.acc!=null&&loc.acc>GPS_MAX_ACCURACY)return;            // قراءة غير موثوقة: نتجاهلها
+  if(Date.now()-lastZoneChange<90000)return;                     // تهدئة بين التغييرات
+  const outZ=zoneCheck(loc,myLoc,ZONE_HYSTERESIS);               // عتبة الخروج: النطاق + هامش
+  const inZ=zoneCheck(loc,myLoc);                                // عتبة العودة: النطاق نفسه
+  if(inZ.inside&&currentZoneStatus!=='داخل المقر'){
+   currentZoneStatus='داخل المقر';lastZoneChange=Date.now();
+   try{await logAttendanceEvent('return_zone',loc,inZ.dist,'داخل المقر')}catch(e){}
    updateLiveStatusBadge('داخل المقر');
    toast('🟢 رجعت لنطاق موقعك — تم تسجيل عودتك');
-  }else if(!inside&&currentZoneStatus!=='خارج المقر'){
-   currentZoneStatus='خارج المقر';
-   await logAttendanceEvent('exit_zone',loc,dist,'خارج المقر');
-   updateLiveStatusBadge('خارج المقر',`تبعد ${Math.round(dist)} متر`);
+  }else if(!outZ.inside&&currentZoneStatus!=='خارج المقر'){
+   currentZoneStatus='خارج المقر';lastZoneChange=Date.now();
+   try{await logAttendanceEvent('exit_zone',loc,outZ.dist,'خارج المقر')}catch(e){}
+   updateLiveStatusBadge('خارج المقر',`تبعد ${Math.round(outZ.dist)} متر`);
    toast('🔴 خرجت من نطاق موقعك — تم تسجيل خروجك (حضورك ما زال قائماً)');
   }
  },err=>console.warn('تعذّر تتبع الموقع الحي',err),{enableHighAccuracy:true,maximumAge:60000,timeout:20000});
@@ -2725,22 +2732,53 @@ function haversineMeters(lat1,lng1,lat2,lng2){
  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function getCurrentLocation(){
+/* ============================================================
+   تحديد الموقع لتسجيل الحضور
+   GPS الجوال داخل المباني دقته ضعيفة (±٥٠ إلى ±٢٠٠ متر أحياناً)، وكان
+   النظام يطلب قراءة عالية الدقة بمهلة ١٥ ثانية بلا بديل، ثم يقارن المسافة
+   بالنطاق بلا أي اعتبار لخطأ القراءة نفسه — فالموظف الواقف داخل المقر
+   فعلاً تُرفض محاولته أو تنتهي مهلته. الآن:
+     • محاولتان: دقة عالية سريعة، ثم محاولة أخف أطول تقبل قراءة حديثة.
+     • نحتسب هامش خطأ القراءة (accuracy) عند المقارنة بالنطاق.
+     • قراءة أسوأ من GPS_MAX_ACCURACY تُرفض بوضوح بدل قبولها عشوائياً.
+   ============================================================ */
+const GPS_MAX_ACCURACY=300;    // متر — أسوأ من كذا تُعتبر القراءة غير موثوقة
+const GPS_TOLERANCE_CAP=120;   // متر — أقصى تسامح نمنحه لخطأ القراءة
+const ZONE_HYSTERESIS=60;      // متر — فاصل بين عتبة الخروج والعودة لمنع التذبذب
+function getPositionOnce(opts){
  return new Promise((resolve,reject)=>{
-  if(!navigator.geolocation){reject(new Error('متصفحك لا يدعم تحديد الموقع'));return}
   navigator.geolocation.getCurrentPosition(
-   pos=>resolve({lat:pos.coords.latitude,lng:pos.coords.longitude}),
-   err=>{
-    let msg='تعذّر تحديد موقعك';
-    if(err.code===1)msg='رفضت مشاركة موقعك — تسجيل الحضور يتطلب تفعيل إذن الموقع من إعدادات المتصفح';
-    else if(err.code===2)msg='تعذّر تحديد موقعك حالياً — تأكد من تفعيل GPS';
-    else if(err.code===3)msg='انتهت مهلة تحديد الموقع — حاول مرة أخرى';
-    reject(new Error(msg));
-   },
-   {enableHighAccuracy:true,timeout:15000,maximumAge:0}
-  );
+   pos=>resolve({lat:pos.coords.latitude,lng:pos.coords.longitude,
+                 acc:(pos.coords.accuracy!=null?Math.round(pos.coords.accuracy):null)}),
+   reject,opts);
  });
 }
+async function getCurrentLocation(){
+ if(!navigator.geolocation)throw new Error('متصفحك لا يدعم تحديد الموقع');
+ try{
+  return await getPositionOnce({enableHighAccuracy:true,timeout:12000,maximumAge:0});
+ }catch(e1){
+  if(e1&&e1.code===1)throw new Error('رفضت مشاركة موقعك — تسجيل الحضور يتطلب تفعيل إذن الموقع من إعدادات المتصفح');
+  // محاولة ثانية أخف: دقة أقل، مهلة أطول، ونقبل قراءة حديثة — تنقذ الحالة داخل المباني
+  try{
+   return await getPositionOnce({enableHighAccuracy:false,timeout:20000,maximumAge:120000});
+  }catch(e2){
+   if(e2&&e2.code===1)throw new Error('رفضت مشاركة موقعك — فعّل إذن الموقع من إعدادات المتصفح');
+   if(e2&&e2.code===3)throw new Error('ما قدر جهازك يحدد موقعك خلال المهلة — قرّب من نافذة أو فعّل GPS وجرّب مرة ثانية');
+   throw new Error('تعذّر تحديد موقعك — تأكد من تفعيل GPS وإذن الموقع ثم أعد المحاولة');
+  }
+ }
+}
+/* مقارنة الموقع بالنطاق مع احتساب خطأ القراءة */
+function zoneCheck(loc,myLoc,extraMargin){
+ const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
+ const acc=(loc.acc!=null&&loc.acc>0)?Math.min(loc.acc,GPS_TOLERANCE_CAP):0;
+ const limit=(+myLoc.radius_meters||0)+(extraMargin||0);
+ return {dist,acc,rawAcc:loc.acc,
+   unreliable:(loc.acc!=null&&loc.acc>GPS_MAX_ACCURACY),
+   inside:(dist-acc)<=limit};
+}
+const accTxt=z=>z.rawAcc!=null?` (دقة القراءة ±${z.rawAcc} متر)`:'';
 function newLocMethodTab(tab,btn){
  document.querySelectorAll('#newLocMethodTabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  $('newLocMethod-here').style.display=tab==='here'?'flex':'none';
@@ -2836,15 +2874,27 @@ async function selfCheckIn(){
   if(!myLoc.active){toast('الموقع المخصَّص لك معطَّل حالياً من الإدارة — تواصل مع الإدارة');return}
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
-  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
-  if(dist>myLoc.radius_meters){toast(`أنت بعيد عن موقعك (${myLoc.name}) — تبعد ${Math.round(dist)} متر (المسموح ${myLoc.radius_meters} متر)`);return}
+  const z=zoneCheck(loc,myLoc);
+  if(z.unreliable){toast(`قراءة موقعك غير دقيقة كفاية${accTxt(z)} — قرّب من نافذة أو فعّل GPS وأعد المحاولة`);return}
+  if(!z.inside){toast(`أنت خارج نطاق موقعك (${myLoc.name}) — تبعد ${Math.round(z.dist)} متر${accTxt(z)} والمسموح ${myLoc.radius_meters} متر`);return}
   const today=D(0);
-  const already=siteAtt.find(a=>a.employee_id===currentEmp.id&&a.date===today);
-  if(already&&already.in){toast('سجّلت حضورك اليوم مسبقاً ✅');startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  // نتحقق من قاعدة البيانات لا من النسخة المحلية — قد تكون قديمة أو من جهاز آخر
+  const {data:todayRows,error:readErr}=await sb.from('site_attendance')
+    .select('id,record_type,check_in').eq('employee_id',currentEmp.id).eq('record_date',today);
+  if(readErr){toast('تعذّر التحقق من سجل اليوم: '+friendly(readErr.message));return}
+  const rows=todayRows||[];
+  const attRow=rows.find(r=>r.record_type==='حضور');
+  if(attRow&&attRow.check_in){toast('سجّلت حضورك اليوم مسبقاً ✅');startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  if(rows.some(r=>r.record_type==='غياب')){toast('مسجَّل لك غياب اليوم من الإدارة — تواصل معهم لتعديله قبل تسجيل الحضور');return}
   const timeStr=nowTimeStr();
-  const {error}=await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,check_in:timeStr,department:currentEmp.dept,check_in_lat:loc.lat,check_in_lng:loc.lng,notes:'تسجيل ذاتي بالموقع — '+myLoc.name});
-  if(error){toast(error.message.includes('خارج نطاق')||error.message.includes('بعيد')||error.message.includes('معطَّل')?error.message:'تعذّر تسجيل الحضور');return}
-  await logAttendanceEvent('check_in',loc,dist,'داخل المقر');
+  const payload={check_in:timeStr,check_in_lat:loc.lat,check_in_lng:loc.lng,
+    notes:`تسجيل ذاتي بالموقع — ${myLoc.name} · ${Math.round(z.dist)}م${z.rawAcc!=null?` · دقة ±${z.rawAcc}م`:''}`};
+  // صف حضور موجود بلا وقت دخول (أنشأته الإدارة مثلاً): نكمّله بدل إنشاء صف مكرّر يرفضه القيد
+  const {error}=attRow
+   ? await sb.from('site_attendance').update(payload).eq('id',attRow.id)
+   : await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,department:currentEmp.dept,...payload});
+  if(error){toast('تعذّر تسجيل الحضور: '+friendly(error.message));return}
+  try{await logAttendanceEvent('check_in',loc,z.dist,'داخل المقر')}catch(e){console.warn('تعذّر تسجيل حدث الحضور',e)}
   await refresh();toast(`✅ تم تسجيل حضورك بنجاح بموقع "${myLoc.name}" — الساعة ${timeStr}`);
   startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');
  }catch(e){toast(e.message)}
@@ -2860,12 +2910,13 @@ async function selfCheckOut(){
   stopLiveZoneMonitoring(); // نوقف التتبع الحي أول لتفادي تعارض طلبات الموقع المتزامنة
   toast('جاري تحديد موقعك...');
   const loc=await getCurrentLocation();
-  const dist=haversineMeters(loc.lat,loc.lng,myLoc.lat,myLoc.lng);
-  if(dist>myLoc.radius_meters){toast(`أنت بعيد عن موقعك (${myLoc.name}) — تبعد ${Math.round(dist)} متر (المسموح ${myLoc.radius_meters} متر)، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  const z=zoneCheck(loc,myLoc);
+  if(z.unreliable){toast(`قراءة موقعك غير دقيقة كفاية${accTxt(z)} — قرّب من نافذة وأعد المحاولة`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
+  if(!z.inside){toast(`أنت خارج نطاق موقعك (${myLoc.name}) — تبعد ${Math.round(z.dist)} متر${accTxt(z)} والمسموح ${myLoc.radius_meters} متر، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
   const timeStr=nowTimeStr();
   const {error}=await sb.from('site_attendance').update({check_out:timeStr,check_out_lat:loc.lat,check_out_lng:loc.lng}).eq('id',rec.id);
-  if(error){err(error);return}
-  await logAttendanceEvent('check_out',loc,dist,'منتهي');
+  if(error){toast('تعذّر تسجيل الانصراف: '+friendly(error.message));return}
+  try{await logAttendanceEvent('check_out',loc,z.dist,'منتهي')}catch(e){console.warn('تعذّر تسجيل حدث الانصراف',e)}
   await refresh();toast(`✅ تم تسجيل انصرافك بنجاح — الساعة ${timeStr}`);
  }catch(e){toast(e.message)}
 }
@@ -3389,6 +3440,26 @@ function reportCustomRange(){
  reportTo=$('reportToInput').value||null;
  renderReports();
 }
+/* جلب حركات الدوام عند الحاجة فقط وبنطاق التقرير — مع تخزين مؤقت حسب النطاق */
+let _aeKey=null,_aeLoading=false;
+async function ensureAttendanceEvents(){
+ if(!me||!isBackoffice())return false;
+ const key=(reportFrom||'')+'~'+(reportTo||'');
+ if(_aeKey===key||_aeLoading)return false;
+ _aeLoading=true;
+ try{
+  // الفلاتر قبل الترتيب — بناء الاستعلام في supabase-js يتوقّع هذا الترتيب
+  let q=sb.from('attendance_events').select('*');
+  if(reportFrom)q=q.gte('event_date',reportFrom);
+  if(reportTo)q=q.lte('event_date',reportTo);
+  q=q.order('event_date',{ascending:false});
+  if(!reportFrom&&!reportTo)q=q.limit(3000);
+  const {data,error}=await q;
+  if(error)return false;
+  allAttendanceEvents=data||[];_aeKey=key;return true;
+ }catch(e){return false}
+ finally{_aeLoading=false}
+}
 function inReportRange(dateStr){
  if(!dateStr)return !reportFrom&&!reportTo; // بلا تاريخ: يظهر فقط لو الفلتر "كل الفترات"
  if(reportFrom&&dateStr<reportFrom)return false;
@@ -3407,6 +3478,8 @@ function printReport(i){
  });
 }
 function renderReports(){
+ // أول دخول للتقارير (أو تغيير النطاق): نجلب حركات الدوام ثم نعيد الرسم مرة واحدة
+ if(_aeKey!==((reportFrom||'')+'~'+(reportTo||'')))ensureAttendanceEvents().then(ok=>{if(ok)renderReports()});
  if($('reportRangeLabel')){
   $('reportRangeLabel').textContent=(!reportFrom&&!reportTo)?'كل الفترات':`من ${fmt(reportFrom)} إلى ${fmt(reportTo)}`;
  }
@@ -4110,6 +4183,14 @@ function epRenderDashboard(){
  $('epDashAlerts').innerHTML=(subHtml+A.slice(0,4).map((a,i)=>alertItem(a,i)).join(''))||'<div class="empty">لا توجد إشعارات حالياً</div>';
 }
 /* ================= دورة أمر الصرف: حالات + تواقيع + فاتورة ================= */
+/* أعمدة أوامر الصرف بدون صور التواقيع — الصور ثقيلة ولا تُحتاج إلا داخل المستند.
+   لو كانت أعمدة الفاتورة/المراحل غير منشأة بعد في قاعدة البيانات نرجع لـ select('*') */
+const PAY_LIST_COLS='id,employee_id,amount,category,reason,attachment_url,status,dept_head,paid_at,payment_ref,created_at,invoice_url,invoice_no,invoice_date,vendor,created_by_name,head_at,finance_by,finance_at,admin_by,admin_at';
+async function payRequestsQuery(){
+ const r=await sb.from('payment_requests').select(PAY_LIST_COLS).order('created_at',{ascending:false});
+ if(!r.error)return r;
+ return await sb.from('payment_requests').select('*').order('created_at',{ascending:false});
+}
 /* أي أمر صرف لم يُغلق بعد — يشمل المراحل الثلاث */
 const payPending=p=>p.status===LV_P1||p.status===LV_P2||p.status===PAY_P3;
 /* القيمة المخزّنة للمرحلة الثانية لم تتغير (توافقاً مع الأوامر القديمة)، بس نعرضها باسمها الصحيح */
@@ -4127,7 +4208,8 @@ const PAY_STAGE_META={
 /* أثر التواقيع: نقطة خضراء لكل مرحلة موقّعة */
 function paySigTrail(p){
  const d=(ok,label)=>`<span title="${label}${ok?' ✓':' — لم يوقّع بعد'}" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-start:4px;vertical-align:middle;background:${ok?'var(--ok)':'var(--line)'}"></span>`;
- return `<span style="white-space:nowrap">${d(p.sigReq,'مقدّم الطلب')}${d(p.sigHead,'رئيس القسم')}${d(p.sigFin,'المالية')}${d(p.sigAdm,'مدير النظام')}</span>`;
+ // نستدل على التوقيع بتاريخ المرحلة لا بالصورة، فالصور ما عادت تُجلب مع القائمة
+ return `<span style="white-space:nowrap">${d(p.created_at,'مقدّم الطلب')}${d(p.headAt,'رئيس القسم')}${d(p.financeAt,'المالية')}${d(p.adminAt,'مدير النظام')}</span>`;
 }
 const payInvoiceCell=p=>p.invoice
  ? `<button class="btn btn-ghost btn-sm" onclick="viewFileInline('${p.invoice}','فاتورة ${p.invoiceNo||''}')">🧾 ${p.invoiceNo||'عرض'}</button>`
@@ -4191,7 +4273,7 @@ async function submitPaySign(){
  try{
   toast('جاري حفظ التوقيع...');
   const blob=await sigToBlob('paySigPad');
-  const sigPath=await saveSignature(blob,'payment-orders/signatures/'+id,'sig-'+stage+'.png');
+  const sigPath=await saveSignature(blob,'payment-orders/signatures/'+id,'sig-'+stage+'.png','paySigPad');
   const now=new Date().toISOString();
   const patch={};
   if(stage==='head'){patch.status=LV_P2;patch.dept_head=me.name;patch.head_at=now;patch.sig_head_url=sigPath}
@@ -4268,7 +4350,7 @@ async function submitPayOrder(){
   const invPath=a.v;
   try{await sb.from('files_registry').insert({file_name:'فاتورة '+($('poInvNo').value||'')+' — '+((empById[empId]||{}).name||''),file_type:(inv.name.split('.').pop()||'').toUpperCase(),file_size:(inv.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',subcategory:'فواتير',source:'أمر صرف أصدره '+me.name,uploaded_by:me.name,storage_path:invPath,employee_id:empId})}catch(e){console.warn('تعذّر تسجيل الفاتورة في سجل الملفات',e)}
   const sigBlob=await sigToBlob('poSig');
-  const b={v:await saveSignature(sigBlob,'payment-orders/signatures/new','sig-issuer.png')};
+  const b={v:await saveSignature(sigBlob,'payment-orders/signatures/new','sig-issuer.png','poSig')};
   const c=await payTry('حفظ أمر الصرف',async()=>{
    const {error}=await sb.from('payment_requests').insert({
     employee_id:empId,amount:amt,category:$('poCategory').value,reason:$('poReason').value,
@@ -4288,12 +4370,21 @@ async function submitPayOrder(){
 function blobToDataUrl(blob){
  return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(blob)});
 }
-async function saveSignature(blob,folder,name){
+/* تصغير التوقيع قبل حفظه داخل السجل حتى لا يثقل الصف (التخزين لا يحتاج تصغيراً) */
+function shrinkSignature(canvasId,w){
+ const src=$(canvasId);if(!src)return null;
+ w=w||260;const h=Math.round(src.height*(w/src.width));
+ const c=document.createElement('canvas');c.width=w;c.height=h;
+ c.getContext('2d').drawImage(src,0,0,w,h);
+ return new Promise(res=>c.toBlob(res,'image/png'));
+}
+async function saveSignature(blob,folder,name,canvasId){
  try{
   return await uploadToStorage(new File([blob],name,{type:'image/png'}),folder);
  }catch(e){
-  console.warn('تعذّر رفع التوقيع للتخزين — سيُحفظ داخل السجل نفسه:',e);
-  return await blobToDataUrl(blob);
+  console.warn('تعذّر رفع التوقيع للتخزين — سيُحفظ مصغّراً داخل السجل نفسه:',e);
+  const small=canvasId?await shrinkSignature(canvasId):null;
+  return await blobToDataUrl(small||blob);
  }
 }
 /* ---------- تضمين التواقيع داخل ملف أمر الصرف حتى يبقى مستقلاً للأبد ---------- */
@@ -4349,7 +4440,7 @@ async function epAddPayment(){
   if(iv){toast('جاري رفع الفاتورة...');invPath=await uploadToStorage(iv,'employees/'+currentEmp.id+'/payments')}
   toast('جاري حفظ التوقيع...');
   const sigBlob=await sigToBlob('eppaySig');
-  const sigPath=await saveSignature(sigBlob,'employees/'+currentEmp.id+'/payments','sig-requester.png');
+  const sigPath=await saveSignature(sigBlob,'employees/'+currentEmp.id+'/payments','sig-requester.png','eppaySig');
   const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,
    invoice_url:invPath,invoice_no:$('eppayInvNo').value.trim()||null,vendor:$('eppayVendor').value.trim()||null,
    created_by_name:currentEmp.name,sig_requester_url:sigPath,
@@ -4373,7 +4464,15 @@ async function paymentOrderHtml(p){
  const amountWords=numToArabicWords(p.amount);
  const cur=empCurrency(p.employee_id);
  // نضمّن صور التواقيع داخل الملف نفسه (base64) حتى يبقى المستند صالحاً بعد انتهاء روابط التخزين
- const [sReq,sHead,sFin,sAdm]=await Promise.all([pathToDataUrl(p.sigReq),pathToDataUrl(p.sigHead),pathToDataUrl(p.sigFin),pathToDataUrl(p.sigAdm)]);
+ // صور التواقيع تُجلب لهذا الأمر وحده عند فتح المستند
+ let sg={sigReq:p.sigReq,sigHead:p.sigHead,sigFin:p.sigFin,sigAdm:p.sigAdm};
+ if(!(sg.sigReq||sg.sigHead||sg.sigFin||sg.sigAdm)){
+  try{
+   const {data}=await sb.from('payment_requests').select('sig_requester_url,sig_head_url,sig_finance_url,sig_admin_url').eq('id',p.id).maybeSingle();
+   if(data)sg={sigReq:data.sig_requester_url,sigHead:data.sig_head_url,sigFin:data.sig_finance_url,sigAdm:data.sig_admin_url};
+  }catch(e){}
+ }
+ const [sReq,sHead,sFin,sAdm]=await Promise.all([pathToDataUrl(sg.sigReq),pathToDataUrl(sg.sigHead),pathToDataUrl(sg.sigFin),pathToDataUrl(sg.sigAdm)]);
  const box=(role,name,img,at)=>`<div style="flex:1;min-width:130px;text-align:center">
    <div style="height:52px;display:flex;align-items:flex-end;justify-content:center">${img?`<img src="${img}" alt="توقيع" style="max-height:52px;max-width:100%">`:''}</div>
    <div style="border-top:1.5px solid #17251F;padding-top:6px;font-size:11px;line-height:1.6">
