@@ -1861,7 +1861,7 @@ async function enterApp(){
  me=mapEmp(profile);
  try{await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'login'})}catch(e){}
  $('loginScreen').style.display='none';
- await loadAll();await loadMeetings();
+ await Promise.all([loadAll(),loadMeetings()]);
  if(isBackoffice()){$('app').classList.add('on');initAll();renderMeetings()}
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
  runCheckin();
@@ -1960,8 +1960,16 @@ const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
 async function loadAll(){
- await loadReads();
- const [E,C,L,M,S,P,PL,FL,FM]=await Promise.all([
+ /* ============================================================
+    كانت استعلامات التحميل تُنفَّذ على عشر دفعات متتابعة: كل دفعة تنتظر
+    التي قبلها رغم أن لا واحدة منها تحتاج نتيجة الأخرى. يعني عشر رحلات
+    ذهاب وإياب للخادم عند كل دخول وكل تحديث — وعلى شبكة الجوال وحدها
+    قد تتجاوز الثلاث ثوانٍ قبل أن يظهر أي شيء.
+    الآن: تُطلق كلها دفعة واحدة بالتوازي، ثم تُنتظر بالترتيب نفسه،
+    فترتيب معالجة البيانات لم يتغيّر إطلاقاً — تغيّر وقت الانتظار فقط.
+    ============================================================ */
+ const pReads=loadReads();
+ const pMain=Promise.all([
   sb.from('employees').select('*').order('emp_num'),
   sb.from('contracts').select('*').order('version'),
   sb.from('leaves').select('*').order('created_at',{ascending:false}),
@@ -1972,6 +1980,25 @@ async function loadAll(){
   sb.from('files_registry').select('*').order('uploaded_at',{ascending:false}),
   sb.from('forms').select('*').order('created_at',{ascending:false}),
  ]);
+ /* ⚠️ استعلام supabase-js كسول: لا يُرسل للخادم إلا لحظة await عليه.
+    لذلك نمرّره على .then حتى ينطلق فوراً مع البقية بدل أن ينتظر دوره. */
+ const fire=q=>q.then(r=>r);
+ const pOLS=fire(sb.from('office_locations').select('*').order('created_at',{ascending:true}));
+ const pCS=fire(sb.from('company_settings').select('*').eq('id',1).maybeSingle());
+ const needAE=!!(me&&!isBackoffice());
+ const pAE=needAE?fire(sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true})):null;
+ const pFS2=fire(sb.from('form_submissions').select('*').order('created_at',{ascending:false}));
+ const pFin=Promise.all([
+  payRequestsQuery(),
+  sb.from('custody_records').select('*').order('date_given',{ascending:false}),
+  sb.from('payroll_runs').select('*').order('year',{ascending:false}),
+  sb.from('payroll_items').select('*'),
+ ]);
+ const pPERM=fire(sb.from('permissions').select('*'));
+ const pDED=fire(sb.from('deduction_requests').select('*').order('created_at',{ascending:false}));
+ const pWRN=fire(sb.from('warnings').select('*').order('created_at',{ascending:false}));
+ await pReads;
+ const [E,C,L,M,S,P,PL,FL,FM]=await pMain;
  for(const r of [E,C,L,M,S,P,PL,FL,FM]) if(r.error){err(r.error);}
  employees=(E.data||[]).map(mapEmp);
  empById={};empByName={};employees.forEach(e=>{empById[e.id]=e;empByName[e.name]=e});
@@ -1987,13 +2014,13 @@ async function loadAll(){
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes,checkInLat:r.check_in_lat,checkInLng:r.check_in_lng,distM:r.check_in_distance_m};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
- const OLS=await sb.from('office_locations').select('*').order('created_at',{ascending:true});
+ const OLS=await pOLS;
  officeLocations=(OLS.data||[]).map(r=>({id:r.id,name:r.name,lat:r.lat,lng:r.lng,radius_meters:r.radius_meters,active:r.active,createdBy:r.created_by,updatedAt:r.updated_at}));
  officeLocation=officeLocations[0]||null; // للتوافق مع أي كود قديم يعتمد على موقع واحد (احتياط)
- const CS=await sb.from('company_settings').select('*').eq('id',1).maybeSingle();
+ const CS=await pCS;
  companySettings=CS.data||null;
- if(me&&!isBackoffice()){
-  const AE=await sb.from('attendance_events').select('*').eq('employee_id',me.id).eq('event_date',D(0)).order('created_at',{ascending:true});
+ if(needAE){
+  const AE=await pAE;
   attendanceEvents=AE.data||[];
  }
  /* حركات الدوام الجغرافي لم تعد تُجلب هنا — تُجلب عند فتح التقارير فقط
@@ -2002,14 +2029,9 @@ async function loadAll(){
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
- const FS2=await sb.from('form_submissions').select('*').order('created_at',{ascending:false});
+ const FS2=await pFS2;
  formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,status:r.status||LV_P1,dept_head:r.dept_head,created_at:r.created_at}));
- const [PR,CU,PRUN,PIT]=await Promise.all([
-  payRequestsQuery(),
-  sb.from('custody_records').select('*').order('date_given',{ascending:false}),
-  sb.from('payroll_runs').select('*').order('year',{ascending:false}),
-  sb.from('payroll_items').select('*'),
- ]);
+ const [PR,CU,PRUN,PIT]=await pFin;
  paymentRequests=(PR.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:r.amount,category:r.category,reason:r.reason,file:r.attachment_url,status:r.status,head:r.dept_head,paidAt:r.paid_at,paymentRef:r.payment_ref,created_at:r.created_at,
   invoice:r.invoice_url,invoiceNo:r.invoice_no,invoiceDate:r.invoice_date,vendor:r.vendor,createdBy:r.created_by_name,
   sigReq:r.sig_requester_url,sigHead:r.sig_head_url,sigFin:r.sig_finance_url,sigAdm:r.sig_admin_url,
@@ -2017,19 +2039,19 @@ async function loadAll(){
  custodyRecords=(CU.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),type:r.custody_type,desc:r.description,amount:r.amount,dateGiven:r.date_given,dateReturned:r.date_returned,status:r.status,notes:r.notes}));
  payrollRuns=(PRUN.data||[]).map(r=>({id:r.id,month:r.month,year:r.year,status:r.status}));
  payrollItems=(PIT.data||[]).map(r=>({id:r.id,runId:r.run_id,employee_id:r.employee_id,base:+r.base_salary||0,additions:+r.additions||0,addNote:r.additions_note,deductions:+r.deductions||0,dedNote:r.deductions_note,net:+r.net_pay||0}));
- const PERM=await sb.from('permissions').select('*');
+ const PERM=await pPERM;
  permsMap={};
  (PERM.data||[]).forEach(r=>{
   permsMap[r.employee_id]=permsMap[r.employee_id]||{};
   permsMap[r.employee_id][r.module]=r.level;
   permsMap[r.employee_id][r.module+'_id']=r.id;
  });
- const DED=await sb.from('deduction_requests').select('*').order('created_at',{ascending:false});
+ const DED=await pDED;
  deductionRequests=(DED.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:+r.amount||0,reason:r.reason,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,acctApprover:r.accountant_approver,createdAt:r.created_at}));
- const WRN=await sb.from('warnings').select('*').order('created_at',{ascending:false});
+ const WRN=await pWRN;
  warnings=(WRN.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),level:r.level,reason:r.reason,description:r.description,attachment:r.attachment_url,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,finalApprover:r.final_approver,acknowledged:r.acknowledged_by_employee,acknowledgedAt:r.acknowledged_at,createdAt:r.created_at}));
 }
-async function refresh(){await loadAll();await loadMeetings();if(isBackoffice()){renderAll();renderMeetings()}else epRenderAll()}
+async function refresh(){await Promise.all([loadAll(),loadMeetings()]);if(isBackoffice()){renderAll();renderMeetings()}else epRenderAll()}
 
 /* ================= رفع الملفات الفعلي ================= */
 async function uploadToStorage(file,folder){
