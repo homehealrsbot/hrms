@@ -2505,8 +2505,18 @@ function filterEmpByDept(deptId){
  el.innerHTML=list.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
  if(prev&&list.some(e=>e.id===prev))el.value=prev;
 }
+/* خيارات الموظفين: النشطون أولاً، وغير النشطين في مجموعة منفصلة مكتوب عليها —
+   كانوا يظهرون مختلطين مع النشطين فيُختار موظف تارك للعمل بالغلط. ما حذفناهم
+   لأن بعض الحالات تحتاجهم فعلاً (مستحق متأخر، تسوية نهائية)، لكن صاروا مميّزين. */
+function empOptionsHtml(list,fmtLabel){
+ const lbl=fmtLabel||(e=>e.name);
+ const act=list.filter(e=>(e.status||'نشط')==='نشط');
+ const ina=list.filter(e=>(e.status||'نشط')!=='نشط');
+ const o=e=>`<option value="${e.id}">${lbl(e)}</option>`;
+ return act.map(o).join('')+(ina.length?`<optgroup label="— غير نشطين —">${ina.map(o).join('')}</optgroup>`:'');
+}
 function fillEmpSelects(){
- const opts=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+ const opts=empOptionsHtml(employees.filter(e=>e.role!=='admin'));
  ['cEmp','lvEmp','prEmp'].forEach(id=>{const el=$(id);if(!el)return;const prev=el.value;el.innerHTML=opts;if(prev&&[...el.options].some(o=>o.value===prev))el.value=prev});
  Object.keys(DEPT_EMP_MAP).forEach(filterEmpByDept);
  if(typeof renderAttendeePicker==='function'&&$('mgAttList'))renderAttendeePicker();
@@ -3009,7 +3019,16 @@ async function generateAbsence(mid){
  const attended=new Set(meetAtt.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
  const alreadyAbsent=new Set(meetAbs.filter(r=>r.meeting_id===mid).map(r=>r.employee_id));
  const absentees=pool.filter(e=>!attended.has(e.id)&&!alreadyAbsent.has(e.id));
- if(!absentees.length){toast('لا يوجد غائبون جدد — الجميع بين حاضر أو مسجَّل غيابه مسبقاً');return}
+ if(!absentees.length){
+  // رسالة تشرح السبب بالأرقام بدل «لا يوجد غائبون» المبهمة
+  const nAtt=pool.filter(e=>attended.has(e.id)).length;
+  const nAbs=pool.filter(e=>alreadyAbsent.has(e.id)).length;
+  const droppedInactive=(Array.isArray(m.attendees)?m.attendees.filter(Boolean):[])
+    .filter(id=>empById[id]&&empById[id].status!=='نشط').length;
+  toast(`لا يوجد غائبون جدد — من أصل ${pool.length} مدعو: ${nAtt} سجّلوا حضورهم و${nAbs} غيابهم مسجّل مسبقاً`
+    +(droppedInactive?` (واستُبعد ${droppedInactive} غير نشط من قائمة المدعوين)`:''));
+  return;
+ }
  const rows=absentees.map(e=>({employee_id:e.id,record_type:'غياب',meeting_name:m.meeting_name,department:e.dept||m.department,meeting_title:m.title,meeting_goal:m.goal,meeting_date:m.meeting_date,meeting_time:m.meeting_time,meeting_id:mid,notes:'غياب مولد تلقائياً'}));
  const {error}=await sb.from('meeting_records').insert(rows);
  if(error){err(error);return}
@@ -4172,9 +4191,7 @@ async function submitPaySign(){
  try{
   toast('جاري حفظ التوقيع...');
   const blob=await sigToBlob('paySigPad');
-  const up=await payTry('رفع التوقيع',()=>uploadToStorage(new File([blob],'sig-'+stage+'.png',{type:'image/png'}),'payment-orders/signatures/'+id));
-  if(!up.ok)return;
-  const sigPath=up.v;
+  const sigPath=await saveSignature(blob,'payment-orders/signatures/'+id,'sig-'+stage+'.png');
   const now=new Date().toISOString();
   const patch={};
   if(stage==='head'){patch.status=LV_P2;patch.dept_head=me.name;patch.head_at=now;patch.sig_head_url=sigPath}
@@ -4188,8 +4205,10 @@ async function submitPaySign(){
   });
   if(!sv.ok)return;
   closePaySign();
-  if(stage==='admin')await archivePaymentOrder({...p,...{paidAt:patch.paid_at,paymentRef:patch.payment_ref,sigAdm:sigPath,adminBy:me.name,adminAt:now,status:'معتمد'}});
-  await refresh();toast('✅ '+M.next);
+  let archived=true;
+  if(stage==='admin')archived=await archivePaymentOrder({...p,...{paidAt:patch.paid_at,paymentRef:patch.payment_ref,sigAdm:sigPath,adminBy:me.name,adminAt:now,status:'معتمد'}});
+  await refresh();
+  toast(archived?('✅ '+M.next):'✅ '+M.next+' — لكن تعذّر أرشفة ملف الأمر في «ملفات الصرف»، تقدر تطبعه من زر أمر الصرف');
  }catch(e){err(e)}
  finally{btn.disabled=false}
 }
@@ -4222,8 +4241,7 @@ async function payTry(step,fn){
 /* ---------- إصدار أمر صرف جديد (مدير النظام / من له تحكم كامل) ---------- */
 function openPayOrder(){
  if(!canIssuePayOrder()){toast('تحتاج صلاحية «تحكم كامل» على طلبات الصرف');return}
- const pool=employees.filter(e=>e.status==='نشط');
- $('poEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ $('poEmp').innerHTML=empOptionsHtml(employees,e=>`${e.name} — ${e.dept||''}`)||'<option value="">لا يوجد موظفون</option>';
  ['poAmount','poReason','poInvNo','poVendor','poRef'].forEach(i=>$(i).value='');
  $('poInvDate').value=D(0);$('poCategory').value='مصاريف تشغيلية';
  delete staged['payOrderInvoice'];
@@ -4250,8 +4268,7 @@ async function submitPayOrder(){
   const invPath=a.v;
   try{await sb.from('files_registry').insert({file_name:'فاتورة '+($('poInvNo').value||'')+' — '+((empById[empId]||{}).name||''),file_type:(inv.name.split('.').pop()||'').toUpperCase(),file_size:(inv.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',subcategory:'فواتير',source:'أمر صرف أصدره '+me.name,uploaded_by:me.name,storage_path:invPath,employee_id:empId})}catch(e){console.warn('تعذّر تسجيل الفاتورة في سجل الملفات',e)}
   const sigBlob=await sigToBlob('poSig');
-  const b=await payTry('رفع التوقيع',()=>uploadToStorage(new File([sigBlob],'sig-issuer.png',{type:'image/png'}),'payment-orders/signatures/new'));
-  if(!b.ok)return;
+  const b={v:await saveSignature(sigBlob,'payment-orders/signatures/new','sig-issuer.png')};
   const c=await payTry('حفظ أمر الصرف',async()=>{
    const {error}=await sb.from('payment_requests').insert({
     employee_id:empId,amount:amt,category:$('poCategory').value,reason:$('poReason').value,
@@ -4266,9 +4283,23 @@ async function submitPayOrder(){
  }catch(e){err(e)}
  finally{btn.disabled=false}
 }
+/* حفظ التوقيع: نحاول التخزين أولاً، وإذا رفضته صلاحيات القاعدة نحفظه داخل
+   السجل نفسه كـ base64 — فالاعتماد ما يتعطّل أبداً بسبب سياسة تخزين ناقصة. */
+function blobToDataUrl(blob){
+ return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(blob)});
+}
+async function saveSignature(blob,folder,name){
+ try{
+  return await uploadToStorage(new File([blob],name,{type:'image/png'}),folder);
+ }catch(e){
+  console.warn('تعذّر رفع التوقيع للتخزين — سيُحفظ داخل السجل نفسه:',e);
+  return await blobToDataUrl(blob);
+ }
+}
 /* ---------- تضمين التواقيع داخل ملف أمر الصرف حتى يبقى مستقلاً للأبد ---------- */
 async function pathToDataUrl(path){
  if(!path)return null;
+ if(String(path).startsWith('data:'))return path;   // توقيع محفوظ داخل السجل
  try{
   const {data,error}=await sb.storage.from('hrms-files').createSignedUrl(path,3600);
   if(error||!data)return null;
@@ -4278,13 +4309,16 @@ async function pathToDataUrl(path){
 }
 /* حفظ أمر الصرف النهائي كملف مؤرشف في «ملفات الصرف» */
 async function archivePaymentOrder(p){
+ let ok=false;
  try{
   const html=await paymentOrderHtml(p);
   const orderNo='PO-'+String(p.id).slice(0,8).toUpperCase();
   const file=new File([new Blob([html],{type:'text/html'})],orderNo+'.html',{type:'text/html'});
   const path=await uploadToStorage(file,'payment-orders');
   await sb.from('files_registry').insert({file_name:orderNo+' — '+(p.emp||''),file_type:'HTML',file_size:(file.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',source:'أمر صرف معتمد نهائياً بتواقيع كل المراحل',uploaded_by:me.name,storage_path:path,employee_id:p.employee_id});
+  ok=true;
  }catch(e){console.error('تعذّر حفظ ملف أمر الصرف',e)}
+ return ok;
 }
 
 /* ================= النظام المالي: طلبات الصرف ================= */
@@ -4315,7 +4349,7 @@ async function epAddPayment(){
   if(iv){toast('جاري رفع الفاتورة...');invPath=await uploadToStorage(iv,'employees/'+currentEmp.id+'/payments')}
   toast('جاري حفظ التوقيع...');
   const sigBlob=await sigToBlob('eppaySig');
-  const sigPath=await uploadToStorage(new File([sigBlob],'sig-requester.png',{type:'image/png'}),'employees/'+currentEmp.id+'/payments');
+  const sigPath=await saveSignature(sigBlob,'employees/'+currentEmp.id+'/payments','sig-requester.png');
   const {error}=await sb.from('payment_requests').insert({employee_id:currentEmp.id,amount:amt,category:$('eppayCategory').value,reason:$('eppayReason').value,attachment_url:path,
    invoice_url:invPath,invoice_no:$('eppayInvNo').value.trim()||null,vendor:$('eppayVendor').value.trim()||null,
    created_by_name:currentEmp.name,sig_requester_url:sigPath,
@@ -4464,7 +4498,7 @@ async function returnCustody(id){
 }
 function renderCustodyInto(tbodyId,selectId){
  if(selectId&&$(selectId)&&!$(selectId)._filled){
-  $(selectId).innerHTML=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  $(selectId).innerHTML=empOptionsHtml(employees.filter(e=>e.role!=='admin'));
   $(selectId)._filled=true;
  }
  const rows=custodyRecords;
@@ -4481,7 +4515,7 @@ function fillMonthSelect(id){
 function openNewDeduction(){
  const isAcct=currentEmp.role==='accountant';
  const pool=isAcct?employees.filter(e=>e.role!=='admin'):employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
- $('dedEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ $('dedEmp').innerHTML=empOptionsHtml(pool,e=>`${e.name} — ${e.dept||''}`)||'<option value="">لا يوجد موظفون</option>';
  $('dedAmount').value='';$('dedReason').value='';
  openModal('dedModal');
 }
@@ -4570,7 +4604,7 @@ function openNewWarning(){
  const pool=broadAccess
   ?employees.filter(e=>e.id!==currentEmp.id&&e.role!=='admin')
   :employees.filter(e=>e.dept===currentEmp.dept&&e.id!==currentEmp.id&&e.role!=='admin');
- $('wrnEmp').innerHTML=pool.map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('')||'<option value="">لا يوجد موظفون</option>';
+ $('wrnEmp').innerHTML=empOptionsHtml(pool,e=>`${e.name} — ${e.dept||''}`)||'<option value="">لا يوجد موظفون</option>';
  $('wrnLevel').value='إنذار';$('wrnReason').value='';$('wrnDesc').value='';
  openModal('warningModal');
 }
@@ -4660,6 +4694,19 @@ async function generatePayroll(isAdmin){
   toast('تم فتح/تحديث كشف الشهر');
  }catch(e){err(e)}
 }
+/* إظهار/إخفاء غير النشطين داخل كشف الرواتب */
+let payrollShowInactive=false;
+function togglePayrollInactive(isAdmin){payrollShowInactive=!payrollShowInactive;renderPayrollTable(isAdmin)}
+async function removeInactiveFromPayroll(runId,isAdmin){
+ const isActive=id=>((empById[id]||{}).status||'نشط')==='نشط';
+ const victims=payrollItems.filter(i=>i.runId===runId&&!isActive(i.employee_id));
+ if(!victims.length){toast('ما في موظفين غير نشطين في هذا الكشف');return}
+ const names=victims.map(i=>(empById[i.employee_id]||{}).name||'—').join('، ');
+ if(!(await showConfirm(`حذف ${victims.length} موظف غير نشط من الكشف نهائياً؟\n${names}\nلو واحد منهم مستحق راتب هذا الشهر (استقال وسط الشهر مثلاً) لا تحذفه.`,{icon:'🗑️',title:'تأكيد حذفهم من الكشف',okText:'نعم، احذفهم من الكشف',okClass:'btn-danger'})))return;
+ const {error}=await sb.from('payroll_items').delete().in('id',victims.map(i=>i.id));
+ if(error){err(error);return}
+ await refresh();renderPayrollTable(isAdmin);toast(`تم حذف ${victims.length} موظف غير نشط من الكشف`);
+}
 /* تحديث فوري لعمود "الصافي" فور كتابة أي إضافة أو خصم — بدون انتظار الحفظ */
 function updatePayrollNetLive(inputEl){
  const row=inputEl.closest('tr');if(!row)return;
@@ -4681,16 +4728,31 @@ function renderPayrollTable(isAdmin){
  if(!$(monthSel).value)return;
  const month=+$(monthSel).value,year=+$(yearSel).value;
  const run=payrollRuns.find(r=>r.month===month&&r.year===year);
- if(!run){$(tbodyId).innerHTML='<tr><td colspan="8" class="empty">اضغط «توليد / فتح كشف الشهر» لبدء كشف هذا الشهر</td></tr>';$(badgeId).innerHTML='';return}
- const locked=run.status==='مقفل';
- $(badgeId).innerHTML=`<span class="tag ${locked?'danger':'sand'}">${locked?'🔒 الكشف مقفل نهائياً':'📝 مسودة قابلة للتعديل'}</span>`;
- const items=payrollItems.filter(i=>i.runId===run.id);
+ if(!run){$(tbodyId).innerHTML='<tr><td colspan="8" class="empty">اضغط «توليد / فتح كشف الشهر» لبدء كشف هذا الشهر</td></tr>';$(badgeId).innerHTML='';const n0=$(tbodyId+'_inactiveNote');if(n0)n0.innerHTML='';return}
+ // الكشف يُقفل في كل الحالات النهائية لا «مقفل» وحدها، وإلا بقي قابلاً للتعديل بعد الاعتماد والنشر
+ const locked=['مقفل','معتمد','منشور'].includes(run.status);
+ $(badgeId).innerHTML=`<span class="tag ${locked?'danger':'sand'}">${run.status==='منشور'?'📢 منشور للموظفين':locked?'🔒 الكشف مقفل نهائياً':'📝 مسودة قابلة للتعديل'}</span>`;
+ const allItems=payrollItems.filter(i=>i.runId===run.id);
+ // الموظف غير النشط ما يظهر في الكشف — إلا إذا طلبت إظهاره صراحة (مثلاً استقال وسط الشهر وله مستحق)
+ const isActive=id=>((empById[id]||{}).status||'نشط')==='نشط';
+ const inactive=allItems.filter(i=>!isActive(i.employee_id));
+ const items=payrollShowInactive?allItems:allItems.filter(i=>isActive(i.employee_id));
+ const noteId=tbodyId+'_inactiveNote';
+ let noteEl=$(noteId);
+ if(!noteEl){noteEl=document.createElement('div');noteEl.id=noteId;$(badgeId).after(noteEl)}
+ noteEl.innerHTML=inactive.length?`<div class="section-note" style="background:var(--danger-soft);color:var(--danger);margin-top:10px">
+   ⚠️ هذا الكشف فيه <b>${inactive.length}</b> موظف غير نشط (${inactive.map(i=>(empById[i.employee_id]||{}).name||'—').join('، ')}).
+   ${payrollShowInactive?'معروضون الآن.':'مستبعدون من الكشف ومن التصدير.'}
+   <button class="btn btn-ghost btn-sm" style="margin-inline-start:8px" onclick="togglePayrollInactive(${!!isAdmin})">${payrollShowInactive?'إخفاؤهم':'إظهارهم'}</button>
+   ${!locked?`<button class="btn btn-danger btn-sm" style="margin-inline-start:6px" onclick="removeInactiveFromPayroll('${run.id}',${!!isAdmin})">حذفهم من الكشف نهائياً</button>`:''}
+  </div>`:'';
  $(tbodyId).innerHTML=items.length?items.map(it=>{
   const e=empById[it.employee_id]||{};
   const net=it.base+(+it.additions||0)-(+it.deductions||0);
   const checkboxCell=isAdmin?`<td><input type="checkbox" class="proll-select" data-emp="${it.employee_id}"></td>`:'';
+  const inact=((e.status||'نشط')!=='نشط')?' <span class="tag danger" style="font-size:10px">غير نشط</span>':'';
   return `<tr data-item="${it.id}" data-base="${it.base}">
-   ${checkboxCell}<td><b>${e.name||'—'}</b><br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
+   ${checkboxCell}<td><b>${e.name||'—'}</b>${inact}<br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${e.dept||'—'}</td><td>${it.base.toLocaleString('en-US')}</td>
    <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-addnote" data-id="${it.id}" value="${it.addNote||''}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
    <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
@@ -4805,14 +4867,15 @@ async function lockPayroll(isAdmin){
 }
 function renderPayrollStatements(){
  if(!$('payrollStatementsTbody'))return;
- const locked=payrollRuns.filter(r=>r.status==='مقفل');
+ // كانت تعرض «مقفل» وحدها، فالكشوف المعتمدة والمنشورة ما كانت تظهر هنا أبداً
+ const locked=payrollRuns.filter(r=>['مقفل','معتمد','منشور'].includes(r.status));
  $('payrollStatementsTbody').innerHTML=locked.length?locked.map(r=>{
   const items=payrollItems.filter(it=>it.runId===r.id);
   const byCur={};
   items.forEach(it=>{const cur=empCurrency(it.employee_id);byCur[cur]=(byCur[cur]||0)+it.net});
   const totalTxt=Object.entries(byCur).map(([c,v])=>v.toLocaleString('en-US')+' '+c).join(' + ')||'—';
   return `<tr><td><b>${MONTH_NAMES[(r.month||1)-1]}</b></td><td>${r.year}</td><td>${items.length}</td><td>${totalTxt}</td>
-   <td><span class="tag ok">🔒 مقفل نهائياً</span></td>
+   <td><span class="tag ok">${r.status==='منشور'?'📢 منشور للموظفين':r.status==='معتمد'?'✅ معتمد':'🔒 مقفل نهائياً'}</span></td>
    <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="viewPayrollStatement('${r.id}')">عرض التفاصيل</button>
     <button class="btn btn-danger btn-sm" onclick="deletePayrollStatement('${r.id}','${MONTH_NAMES[(r.month||1)-1]} ${r.year}')">حذف نهائياً</button></td></tr>`;
  }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف مقفلة بعد</td></tr>';
@@ -4843,23 +4906,27 @@ async function deletePayrollStatement(runId,label){
  if(e2){err(e2);return}
  await refresh();toast(`تم حذف كشف "${label}" نهائياً`);
 }
+/* الموظف ما يشوف راتبه إلا بعد قفل الكشف أو نشره — المسودة والمعتمد غير المنشور
+   شغل داخلي، وكان النظام يعرضها له رغم أن شاشة النشر تَعِد بعكس ذلك. */
+const PAYROLL_VISIBLE_TO_EMP=['مقفل','منشور'];
+const payrollRunVisible=runId=>{const r=payrollRuns.find(x=>x.id===runId);return !!r&&PAYROLL_VISIBLE_TO_EMP.includes(r.status)};
 function epRenderMySalary(){
- const mine=payrollItems.filter(i=>i.employee_id===currentEmp.id);
+ const mine=payrollItems.filter(i=>i.employee_id===currentEmp.id&&payrollRunVisible(i.runId));
  $('epSalaryTbody').innerHTML=mine.length?mine.map(it=>{
   const run=payrollRuns.find(r=>r.id===it.runId)||{};
   const cur=empCurrency(currentEmp.id);
-  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
- }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
+  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ok">${run.status==='منشور'?'منشور':'نهائي'}</span></td></tr>`;
+ }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب منشورة بعد</td></tr>';
 }
 /* نفس المنطق تماماً، لأي حساب أدمن يشوف راتبه هو (بما فيهم إبراهيم) — بوابته لوحة الإدارة لا بوابة الموظف */
 function renderMySalaryAdmin(){
  if(!$('adminSalaryTbody')||!me)return;
- const mine=payrollItems.filter(i=>i.employee_id===me.id);
+ const mine=payrollItems.filter(i=>i.employee_id===me.id&&payrollRunVisible(i.runId));
  const cur=empCurrency(me.id);
  $('adminSalaryTbody').innerHTML=mine.length?mine.map(it=>{
   const run=payrollRuns.find(r=>r.id===it.runId)||{};
-  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ${run.status==='مقفل'?'ok':'sand'}">${run.status==='مقفل'?'نهائي':'مسودة'}</span></td></tr>`;
- }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب بعد</td></tr>';
+  return `<tr><td>${MONTH_NAMES[(run.month||1)-1]} ${run.year||''}</td><td>${it.base.toLocaleString('en-US')} ${cur}</td><td>${it.additions.toLocaleString('en-US')} ${cur}${it.addNote?' — '+it.addNote:''}</td><td>${it.deductions.toLocaleString('en-US')} ${cur}${it.dedNote?' — '+it.dedNote:''}</td><td><b>${it.net.toLocaleString('en-US')} ${cur}</b></td><td><span class="tag ok">${run.status==='منشور'?'منشور':'نهائي'}</span></td></tr>`;
+ }).join(''):'<tr><td colspan="6" class="empty">لا توجد كشوف رواتب منشورة بعد</td></tr>';
 }
 
 /* ================= وحدات إضافية ممنوحة لأي موظف عبر مصفوفة الصلاحيات ================= */
@@ -4882,7 +4949,7 @@ function openExtraModule(key,label){
  document.querySelectorAll('#empApp .nav-item[data-ep="extraModule"]').forEach(b=>b.classList.toggle('active',b.textContent.includes(label)));
 }
 function openExtraAddLeave(){
- $('xlvEmp').innerHTML=employees.filter(e=>e.role!=='admin').map(e=>`<option value="${e.id}">${e.name} — ${e.dept||''}</option>`).join('');
+ $('xlvEmp').innerHTML=empOptionsHtml(employees.filter(e=>e.role!=='admin'),e=>`${e.name} — ${e.dept||''}`);
  $('xlvStart').value='';$('xlvEnd').value='';$('xlvReason').value='';
  openModal('extraAddLeaveModal');
 }
