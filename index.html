@@ -1851,7 +1851,16 @@ const fmt=d=>d? `${fmtHijri(d)} (${fmtGreg(d)}م)` : '—';
 const fmtDateTime=d=>{if(!d)return '—';const dt=new Date(d);return fmtGreg(d)+' '+dt.toTimeString().slice(0,5)};
 const tfmt=t=>t?String(t).slice(0,5):'—';
 const daysTo=d=>Math.ceil((new Date(d)-new Date())/864e5);
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200)}
+/* التنبيه: عند الخطأ يصير قابلاً للنقر ليفتح التفاصيل التقنية، ويبقى
+   ثماني ثوانٍ بدل ٣٫٢ لأن رسالة الخطأ أطول من أن تُقرأ في ثلاث ثوانٍ */
+function toast(m,rec){
+ const t=$('toast');
+ t.textContent=rec?(m+'  ‹ اضغط للتفاصيل ›'):m;
+ t.style.cursor=rec?'pointer':'';
+ t.onclick=rec?()=>{if(typeof showErrorLog==='function')showErrorLog()}:null;
+ t.classList.add('on');clearTimeout(t._h);
+ t._h=setTimeout(()=>t.classList.remove('on'),rec?8000:3200);
+}
 function openModal(id){
  if(id==='epLeaveModal'&&currentEmp){
   if($('eplPhone')&&!$('eplPhone').value)$('eplPhone').value=currentEmp.phone||'';
@@ -1861,7 +1870,23 @@ function openModal(id){
 }
 function closeModal(id){$(id).classList.remove('on')}
 document.querySelectorAll('.modal-back').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')}));
-const err=e=>{console.error(e);toast('خطأ: '+friendly(e.message||e));};
+/* كان نص قاعدة البيانات الحقيقي يُطبع في console فقط، وأغلب المستخدمين
+   على الجوال لا يفتحون console — فتصلنا صورة لرسالة مختصرة لا تكفي
+   لتحديد الحقل. الآن يُحفظ الخطأ كاملاً ويُعرض بضغطة. */
+const err=(e,extra)=>{
+ console.error(e);
+ const rec=(typeof hhLogError==='function')?hhLogError(e,extra)
+   :{msg:String((e&&e.message)||e||'')};
+ /* الموظف يرى رسالة قصيرة ثابتة ولا يرى شيئاً تقنياً — نظام مستقر في عينه.
+    التفاصيل (اسم القيد، كود الخطأ، زر التفاصيل) لمدير النظام وحده. */
+ const diag=(typeof diagAllowed==='function')&&diagAllowed();
+ let msg=friendly(rec.msg);
+ if(diag){
+  const c=(String(rec.msg).match(/constraint "([^"]+)"/)||[])[1];
+  if(c)msg+=` (القيد: ${c})`;
+ }
+ toast('خطأ: '+msg,diag?rec:null);
+};
 
 /* ================= المصادقة ================= */
 let authMode='login';
@@ -2217,18 +2242,18 @@ function buildAlerts(){
  employees.forEach(e=>{if(!e.probEnd)return;const n=daysTo(e.probEnd);
   if(n>=0&&n<=14)A.push({sid:'prob-'+e.num,t:'انتهاء فترة التجربة',d:`تنتهي فترة تجربة الموظف ${e.name} بتاريخ ${fmt(e.probEnd)}`,k:'info',ic:'⏳',nav:{p:'employees',q:e.num},kind:TASK})});
  leaves.forEach(l=>{
-  if(l.status==='تمت الموافقة'&&daysTo(l.start)===0)A.push({sid:'lvstart-'+l.id,t:'بداية إجازة',d:`تبدأ اليوم إجازة الموظف ${l.emp}`,k:'sand',ic:'🏖️',nav:{p:'leaves',detail:l.emp},kind:INFO});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.emp},kind:INFO});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.emp},kind:INFO});
-  if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.emp},kind:INFO});
-  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.emp,status:LV_P1},kind:TASK,createdAt:l.req});
-  if(l.status===LV_P2&&needsSubstitute(l))A.push({sid:'lvsub-'+l.id,t:'إجازة سنوية بدون بديل',d:`إجازة ${l.emp} السنوية وصلت للاعتماد النهائي بدون تحديد بديل يمسك مكانه — لازم تحديد البديل قبل الاعتماد`,k:'danger',ic:'👥',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK,createdAt:l.req});
-  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.emp,status:LV_P2},kind:TASK,createdAt:l.req})});
+  if(l.status==='تمت الموافقة'&&daysTo(l.start)===0)A.push({sid:'lvstart-'+l.id,t:'بداية إجازة',d:`تبدأ اليوم إجازة الموظف ${l.emp}`,k:'sand',ic:'🏖️',nav:{p:'leaves',detail:l.employee_id},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===1)A.push({sid:'lvsoon-'+l.id,t:'اقتراب انتهاء إجازة',d:`تنتهي غداً إجازة الموظف ${l.emp}`,k:'sand',ic:'⏰',nav:{p:'leaves',detail:l.employee_id},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===0)A.push({sid:'lvend-'+l.id,t:'انتهاء إجازة اليوم',d:`تنتهي اليوم إجازة الموظف ${l.emp}`,k:'ok',ic:'🌴',nav:{p:'leaves',detail:l.employee_id},kind:INFO});
+  if(l.status==='تمت الموافقة'&&daysTo(l.end)===-1)A.push({sid:'lvback-'+l.id,t:'عودة من الإجازة',d:`عاد اليوم الموظف ${l.emp} من إجازته`,k:'info',ic:'👋',nav:{p:'leaves',detail:l.employee_id},kind:INFO});
+  if(l.status===LV_P1)A.push({sid:'lv1-'+l.id,t:'طلب إجازة لدى رئيس القسم',d:`طلب إجازة ${l.type} مقدَّم من ${l.emp} — بانتظار موافقة رئيس قسم ${l.dept}`,k:'sand',ic:'🌴',nav:{p:'leaves',detail:l.employee_id,status:LV_P1},kind:TASK,createdAt:l.req});
+  if(l.status===LV_P2&&needsSubstitute(l))A.push({sid:'lvsub-'+l.id,t:'إجازة سنوية بدون بديل',d:`إجازة ${l.emp} السنوية وصلت للاعتماد النهائي بدون تحديد بديل يمسك مكانه — لازم تحديد البديل قبل الاعتماد`,k:'danger',ic:'👥',nav:{p:'leaves',detail:l.employee_id,status:LV_P2},kind:TASK,createdAt:l.req});
+  if(l.status===LV_P2)A.push({sid:'lv2-'+l.id,t:'إجازة بانتظار الاعتماد النهائي',d:`طلب إجازة ${l.type} من ${l.emp} اعتمده رئيس القسم${l.head&&l.head!=='—'?' ('+l.head+')':''} — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'leaves',detail:l.employee_id,status:LV_P2},kind:TASK,createdAt:l.req})});
  permits.forEach(p=>{
   if(p.status===LV_P1)A.push({sid:'pr1-'+p.id,t:'استئذان بانتظار موافقة رئيس القسم',d:`استئذان (${p.type}) بـ${fmtHours(permitHoursOf(p))} مقدَّم من ${p.emp} — بانتظار موافقة رئيس قسمه`,k:'sand',ic:'🚪',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
   if(p.status===LV_P2)A.push({sid:'pr2-'+p.id,t:'استئذان بانتظار الاعتماد النهائي',d:`استئذان (${p.type}) بـ${fmtHours(permitHoursOf(p))} من ${p.emp} اعتمده رئيس القسم — بانتظار اعتمادك النهائي`,k:'info',ic:'✅',nav:{p:'permits',name:p.emp},kind:TASK,createdAt:p.created_at});
  });
- employees.forEach(e=>{const b=balance(e.name);
+ employees.forEach(e=>{const b=balance(e.id);
   if(b.annualLeft<=5&&b.annualLeft>0)A.push({sid:'balA-'+e.num,t:'الرصيد السنوي',d:`تبقّى ${b.annualLeft} أيام فقط من الرصيد السنوي للموظف ${e.name}`,k:'sand',ic:'📉',nav:{p:'leaves',detail:e.name},kind:INFO});
   if(b.sickLeft<=5&&b.sickLeft>0)A.push({sid:'balS-'+e.num,t:'الرصيد المرضي',d:`تبقّى ${b.sickLeft} أيام فقط من الرصيد المرضي للموظف ${e.name}`,k:'sand',ic:'🩺',nav:{p:'leaves',detail:e.name},kind:INFO});
   if(b.annualUsed>0&&b.annualLeft<=0)A.push({sid:'balZ-'+e.num,t:'نفاد الرصيد',d:`لا يوجد رصيد سنوي متبقٍّ للموظف ${e.name}`,k:'danger',ic:'⛔',nav:{p:'leaves',detail:e.name},kind:INFO})});
@@ -3183,8 +3208,24 @@ async function confirmCheckin(mid,mObj){
 }
 
 /* ================= الإجازات ================= */
-function balance(empName,excludeId){
- const mine=leaves.filter(l=>l.emp===empName&&l.id!==excludeId);
+/* ============================================================
+   رصيد الإجازات كان يُطابق باسم الموظف: leaves.filter(l=>l.emp===name)
+   فموظفان يتشابهان في الاسم يتقاسمان رصيداً واحداً — طلب أحدهما يُرفض
+   لأن الآخر استهلك، أو يُقبل وقد نفد رصيده. صارت المطابقة بالمعرّف،
+   وهو فريد دائماً. كل المستدعين كان المعرّف متاحاً عندهم أصلاً.
+   ============================================================ */
+function balance(empId,excludeId){
+ /* شبكة أمان: لو وصل اسم بدل معرّف (مسار قديم غفلنا عنه) فالمطابقة بالمعرّف
+    لن تجد شيئاً وسيبدو رصيد الموظف كاملاً فتُعتمد إجازة لا يستحقها — وهو
+    فشل صامت وخطير. نكشفه ونعالجه بدل أن نمرّره بصمت. */
+ if(empId&&!empById[empId]){
+  const byName=employees.filter(e=>e.name===empId);
+  if(byName.length){
+   console.warn('balance(): وصلها اسم بدل معرّف —',empId,'— عالجناها مؤقتاً، لكن صحّح المستدعي');
+   empId=byName[0].id;
+  }
+ }
+ const mine=leaves.filter(l=>l.employee_id===empId&&l.id!==excludeId);
  const ok=mine.filter(l=>l.status==='تمت الموافقة');
  const pend=mine.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const annualUsed=ok.filter(l=>l.type==='سنوية').reduce((s,l)=>s+l.days,0);
@@ -3195,8 +3236,8 @@ function balance(empName,excludeId){
   annualLeft:Math.max(0,21-annualUsed),sickLeft:Math.max(0,21-sickUsed),
   annualAvail:Math.max(0,21-annualUsed-annualPend),sickAvail:Math.max(0,21-sickUsed-sickPend)};
 }
-function checkLeaveBalance(empName,type,days,excludeId){
- const b=balance(empName,excludeId);
+function checkLeaveBalance(empId,type,days,excludeId){
+ const b=balance(empId,excludeId);
  if(type==='سنوية'&&days>b.annualAvail)return `الرصيد السنوي المتاح ${b.annualAvail} يوم فقط (مستخدم: ${b.annualUsed} + قيد الطلب: ${b.annualPend}) — لا يمكن طلب ${days} يوم`;
  if(type==='مرضية'&&days>b.sickAvail)return `الرصيد المرضي المتاح ${b.sickAvail} يوم فقط (مستخدم: ${b.sickUsed} + قيد الطلب: ${b.sickPend}) — لا يمكن طلب ${days} يوم`;
  return null;
@@ -3213,7 +3254,7 @@ function calcLeaveDays(){const s=$('lvStart').value,en=$('lvEnd').value;if(s&&en
 const lvTag=st=>st==='تمت الموافقة'?'ok':st==='تم الرفض'?'danger':st===LV_P2?'info':'sand';
 function renderLeaveStats(){
  const onLeave=new Set(leaves.filter(l=>l.status==='تمت الموافقة'&&daysTo(l.start)<=0&&daysTo(l.end)>=0).map(l=>l.emp)).size;
- const lowBal=employees.filter(e=>{const b=balance(e.name);return b.annualUsed>0&&b.annualLeft<=5}).length;
+ const lowBal=employees.filter(e=>{const b=balance(e.id);return b.annualUsed>0&&b.annualLeft<=5}).length;
  const S=[
   {n:leaves.length,l:'إجمالي طلبات الإجازات',k:''},
   {n:leaves.filter(l=>l.status==='تمت الموافقة').length,l:'الإجازات المعتمدة',k:'ok'},
@@ -3233,7 +3274,7 @@ async function addLeave(){
  if($('lvType').value==='خاصة'&&!$('lvReason').value.trim()){toast('سبب الإجازة إلزامي للإجازة الخاصة');return}
  if($('lvType').value==='مرضية'&&!staged['leaveAdminSick']){toast('إرفاق التقرير الطبي إلزامي للإجازة المرضية');return}
  const lvEmpName=(empById[$('lvEmp').value]||{}).name||'';
- const balErr2=checkLeaveBalance(lvEmpName,$('lvType').value,+$('lvDays').value||1);
+ const balErr2=checkLeaveBalance($('lvEmp').value,$('lvType').value,+$('lvDays').value||1);
  if(balErr2){toast(balErr2);return}
  const leadAdm=leadTimeError($('lvStart').value,null,'طلب الإجازة');
  if(leadAdm&&!(await showConfirm(leadAdm+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب خارج مهلة الـ24 ساعة',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
@@ -3267,16 +3308,18 @@ function renderLeaveLog(){
  if(leaveExtra==='pending')base=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const byEmp={};
  base.filter(l=>(!q||l.emp.includes(q))&&(!dp||l.dept===dp)&&(!tp||l.type===tp)&&(!st||l.status===st)&&(!mo||String(l.start).startsWith(mo)))
-  .forEach(l=>{if(!byEmp[l.emp])byEmp[l.emp]={dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start,lastStatus:l.status};
-   const g=byEmp[l.emp];if(l.type==='سنوية')g.annual+=l.days;if(l.type==='مرضية')g.sick+=l.days;if(l.type==='خاصة')g.special+=l.days;
+  .forEach(l=>{const k=l.employee_id;   // التجميع بالمعرّف: موظفان بنفس الاسم لا يندمجان في صف واحد
+   if(!byEmp[k])byEmp[k]={name:l.emp,dept:l.dept,job:l.job,annual:0,sick:0,special:0,last:l.start,lastStatus:l.status};
+   const g=byEmp[k];if(l.type==='سنوية')g.annual+=l.days;if(l.type==='مرضية')g.sick+=l.days;if(l.type==='خاصة')g.special+=l.days;
    if(l.start>=g.last){g.last=l.start;g.lastStatus=l.status}});
  let keys=Object.keys(byEmp);
- if(leaveExtra==='lowbal')keys=keys.filter(emp=>{const b=balance(emp);return b.annualUsed>0&&b.annualLeft<=5});
- $('leaveLogTbody').innerHTML=keys.length?keys.map(emp=>{const g=byEmp[emp];
-  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${emp.replace(/'/g,"\\'")}')">${esc(emp)}</span></td><td>${esc(g.dept)}</td><td>${esc(g.job)}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td><td><span class="tag ${lvTag(g.lastStatus)}">${g.lastStatus}</span></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد نتائج</td></tr>';
+ if(leaveExtra==='lowbal')keys=keys.filter(id=>{const b=balance(id);return b.annualUsed>0&&b.annualLeft<=5});
+ $('leaveLogTbody').innerHTML=keys.length?keys.map(id=>{const g=byEmp[id];
+  return `<tr><td><span class="link-name" onclick="openLeaveDetail('${jsq(id)}')">${esc(g.name)}</span></td><td>${esc(g.dept)}</td><td>${esc(g.job)}</td><td>${g.annual} يوم</td><td>${g.sick} يوم</td><td>${g.special} يوم</td><td>${fmt(g.last)}</td><td><span class="tag ${lvTag(g.lastStatus)}">${g.lastStatus}</span></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد نتائج</td></tr>';
 }
-function openLeaveDetail(emp){
- const list=leaves.filter(l=>l.emp===emp);const b=balance(emp);
+function openLeaveDetail(empId){
+ const emp=(empById[empId]||{}).name||(leaves.find(l=>l.employee_id===empId)||{}).emp||'—';
+ const list=leaves.filter(l=>l.employee_id===empId);const b=balance(empId);
  const totalNoPay=list.filter(l=>l.type==='بدون راتب'&&l.status==='تمت الموافقة').reduce((s,l)=>s+l.days,0);
  const totalSpecial=list.filter(l=>l.type==='خاصة'&&l.status==='تمت الموافقة').reduce((s,l)=>s+l.days,0);
  const stTag=lvTag;
@@ -4089,7 +4132,7 @@ async function uploadEmpDoc(docType){
 function openEmpProfile(eid){
  const e=empById[eid];if(!e)return;
  const item=(k,v)=>`<div class="info-item"><div class="k">${esc(k)}</div><div class="v">${esc(v)||'—'}</div></div>`;
- const b=balance(e.name);
+ const b=balance(eid);
  const myLv=leaves.filter(l=>l.employee_id===eid);
  const myPr=permits.filter(p=>p.employee_id===eid);
  const myFm=formSubs.filter(s=>s.employee_id===eid);
@@ -4219,7 +4262,7 @@ function epRenderDashboard(){
  if($('epTodayDateBadge'))$('epTodayDateBadge').textContent=todayFullStr();
  $('epDashGreeting').textContent='أهلاً بك، '+(e.name||'').split(' ')[0];
  if($('epDailyPhrase'))$('epDailyPhrase').textContent=dailyPhrase();
- const b=balance(e.name);
+ const b=balance(e.id);
  const myLv=leaves.filter(l=>l.employee_id===e.id);
  const myPr=permits.filter(p=>p.employee_id===e.id);
  const pendingLv=myLv.filter(l=>l.status===LV_P1||l.status===LV_P2).length;
@@ -4415,7 +4458,18 @@ async function submitPaySign(){
   else{patch.status='معتمد';patch.admin_by=me.name;patch.admin_at=now;patch.sig_admin_url=sigPath;patch.paid_at=D(0);
    const r=$('paySignRef').value.trim();patch.payment_ref=r||p.paymentRef||null}
   const sv=await payTry('اعتماد أمر الصرف',async()=>{
-   const {error}=await sb.from('payment_requests').update(patch).eq('id',id);
+   let {error}=await sb.from('payment_requests').update(patch).eq('id',id);
+   /* بعض قواعد البيانات فيها قيد CHECK يربط توقيع المالية بانتقال الحالة:
+      «لو فيه finance_at فالحالة لازم تتعدّى مرحلة المالية». ونحن نُبقي
+      الحالة كما هي عمداً لأن قواعد أخرى ترفض القيمة الجديدة. الشكلان
+      متناقضان ولا نعرف أيّهما عند المستخدم، فنجرّب الثاني عند الرفض. */
+   if(error&&String(error.message||'').includes('violates check')&&stage==='finance'){
+    console.warn('القيد رفض بقاء الحالة — إعادة المحاولة بنقلها إلى:',PAY_P3);
+    const r2=await sb.from('payment_requests').update({...patch,status:PAY_P3}).eq('id',id);
+    if(!r2.error)return;
+    error={...error,message:String(error.message)+
+      ` | وفشلت أيضاً محاولة نقل الحالة إلى "${PAY_P3}": `+String(r2.error.message||'')};
+   }
    if(error)throw error;
   });
   if(!sv.ok)return;
@@ -4787,6 +4841,10 @@ async function applyDeductionToPayroll(employeeId,amount,reason){
   if(error)throw error;
   await loadAll();run=payrollRuns.find(r=>r.month===month&&r.year===year);
  }
+ /* كان الخصم المعتمد يُكتب في كشف الشهر الحالي أياً كانت حالته، فيتغيّر
+    صافي راتب موظف في كشف معتمد أو منشور بعد أن رآه. */
+ if(payrollRunClosed(run))
+  throw new Error(`كشف ${MONTH_NAMES[month-1]} ${year} ${payrollStatusLabel(run.status)} — لا يمكن إضافة الخصم إليه. اعتمده على كشف الشهر القادم.`);
  let item=payrollItems.find(i=>i.runId===run.id&&i.employee_id===employeeId);
  if(!item){
   const emp=empById[employeeId]||{};
@@ -4918,6 +4976,8 @@ async function generatePayroll(isAdmin){
  const monthSel=isAdmin?'prollMonthAdmin':'prollMonth', yearSel=isAdmin?'prollYearAdmin':'prollYear';
  const month=+$(monthSel).value,year=+$(yearSel).value;
  let run=payrollRuns.find(r=>r.month===month&&r.year===year);
+ // كان الزر يضيف موظفين جدداً حتى في كشف معتمد أو منشور، فتتغيّر أرقام كشف أُقفل
+ if(payrollRunClosed(run)){toast(`كشف ${MONTH_NAMES[month-1]} ${year} ${payrollStatusLabel(run.status)} — لا يُضاف إليه أحد`);return}
  try{
   if(!run){
    const {data,error}=await sb.from('payroll_runs').insert({month,year,status:'مسودة'}).select().maybeSingle();
@@ -4941,6 +5001,8 @@ let payrollShowInactive=false;
 function togglePayrollInactive(isAdmin){payrollShowInactive=!payrollShowInactive;renderPayrollTable(isAdmin)}
 async function removeInactiveFromPayroll(runId,isAdmin){
  const isActive=id=>((empById[id]||{}).status||'نشط')==='نشط';
+ const run0=payrollRunById(runId);
+ if(payrollRunClosed(run0)){toast(`الكشف ${payrollStatusLabel(run0.status)} — لا يُحذف منه أحد`);return}
  const victims=payrollItems.filter(i=>i.runId===runId&&!isActive(i.employee_id));
  if(!victims.length){toast('ما في موظفين غير نشطين في هذا الكشف');return}
  const names=victims.map(i=>(empById[i.employee_id]||{}).name||'—').join('، ');
@@ -4948,6 +5010,38 @@ async function removeInactiveFromPayroll(runId,isAdmin){
  const {error}=await sb.from('payroll_items').delete().in('id',victims.map(i=>i.id));
  if(error){err(error);return}
  await refresh();renderPayrollTable(isAdmin);toast(`تم حذف ${victims.length} موظف غير نشط من الكشف`);
+}
+/* ============================================================
+   حالة الكشف: كانت تُحسب في كل دالة على حدة، فبعضها يعدّ «مقفل» وحدها
+   نهائية وبعضها يضيف «معتمد» و«منشور» — ومن هنا جاءت أخطاء الكشف:
+   زر القفل يُرجِع كشفاً منشوراً إلى «مقفل»، وزر التوليد يحشر موظفين
+   جدداً في كشف معتمد، والخصم التلقائي يعدّل كشفاً أُعلن للموظفين.
+   صارت كلها تسأل دالة واحدة.
+   ============================================================ */
+const PAYROLL_CLOSED=['مقفل','معتمد','منشور'];
+const payrollRunClosed=run=>!!run&&PAYROLL_CLOSED.includes(run.status);
+const payrollRunById=runId=>payrollRuns.find(r=>r.id===runId);
+function payrollStatusLabel(st){
+ return st==='منشور'?'منشور للموظفين':st==='معتمد'?'معتمد':st==='مقفل'?'مقفل نهائياً':st||'—';
+}
+/* قراءة صفوف الجدول ومقارنتها بالمحفوظ — تُستخدم في الحفظ وفي منع التصدير
+   قبل الحفظ، حتى لا يختلف ما في ملف البنك عمّا تراه العين على الشاشة. */
+function payrollRowEdits(tbodyId){
+ const out=[];
+ [...document.querySelectorAll(`#${tbodyId} tr[data-item]`)].forEach(row=>{
+  const id=row.dataset.item;
+  const item=payrollItems.find(i=>i.id===id);if(!item)return;
+  const add=+row.querySelector('.proll-add').value||0;
+  const addNote=(row.querySelector('.proll-addnote').value||'').trim();
+  const ded=+row.querySelector('.proll-ded').value||0;
+  const dedNote=(row.querySelector('.proll-dednote').value||'').trim();
+  const addChanged=(+item.additions||0)!==add||String(item.addNote||'').trim()!==addNote;
+  const dedChanged=(+item.deductions||0)!==ded||String(item.dedNote||'').trim()!==dedNote;
+  out.push({id,item,row,add,addNote,ded,dedNote,addChanged,dedChanged,
+    dirty:addChanged||dedChanged,
+    emp:(empById[item.employee_id]||{}).name||'—'});
+ });
+ return out;
 }
 /* تحديث فوري لعمود "الصافي" فور كتابة أي إضافة أو خصم — بدون انتظار الحفظ */
 function updatePayrollNetLive(inputEl){
@@ -4972,7 +5066,7 @@ function renderPayrollTable(isAdmin){
  const run=payrollRuns.find(r=>r.month===month&&r.year===year);
  if(!run){$(tbodyId).innerHTML='<tr><td colspan="8" class="empty">اضغط «توليد / فتح كشف الشهر» لبدء كشف هذا الشهر</td></tr>';$(badgeId).innerHTML='';const n0=$(tbodyId+'_inactiveNote');if(n0)n0.innerHTML='';return}
  // الكشف يُقفل في كل الحالات النهائية لا «مقفل» وحدها، وإلا بقي قابلاً للتعديل بعد الاعتماد والنشر
- const locked=['مقفل','معتمد','منشور'].includes(run.status);
+ const locked=payrollRunClosed(run);
  $(badgeId).innerHTML=`<span class="tag ${locked?'danger':'sand'}">${run.status==='منشور'?'📢 منشور للموظفين':locked?'🔒 الكشف مقفل نهائياً':'📝 مسودة قابلة للتعديل'}</span>`;
  const allItems=payrollItems.filter(i=>i.runId===run.id);
  // الموظف غير النشط ما يظهر في الكشف — إلا إذا طلبت إظهاره صراحة (مثلاً استقال وسط الشهر وله مستحق)
@@ -4995,9 +5089,9 @@ function renderPayrollTable(isAdmin){
   const inact=((e.status||'نشط')!=='نشط')?' <span class="tag danger" style="font-size:10px">غير نشط</span>':'';
   return `<tr data-item="${it.id}" data-base="${it.base}">
    ${checkboxCell}<td><b>${esc(e.name||'—')}</b>${inact}<br><small style="color:var(--muted)">${empCurrency(it.employee_id)}</small></td><td>${esc(e.dept||'—')}</td><td>${it.base.toLocaleString('en-US')}</td>
-   <td><input class="proll-add" data-id="${it.id}" type="number" value="${it.additions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
+   <td><input class="proll-add" data-id="${it.id}" type="number" min="0" step="0.01" value="${it.additions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-addnote" data-id="${it.id}" value="${esc(it.addNote||'')}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
-   <td><input class="proll-ded" data-id="${it.id}" type="number" value="${it.deductions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
+   <td><input class="proll-ded" data-id="${it.id}" type="number" min="0" step="0.01" value="${it.deductions}" ${locked?'disabled':''} style="width:90px" oninput="updatePayrollNetLive(this)"></td>
    <td><input class="proll-dednote" data-id="${it.id}" value="${esc(it.dedNote||'')}" ${locked?'disabled':''} placeholder="سبب" style="width:110px"></td>
    <td class="proll-net"><b>${net.toLocaleString('en-US')}</b></td></tr>`;
  }).join(''):`<tr><td colspan="${isAdmin?9:8}" class="empty">لا يوجد موظفون في هذا الكشف</td></tr>`;
@@ -5037,6 +5131,10 @@ function getSelectedPayrollRows(){
  const month=+$(monthSel).value,year=+$(yearSel).value;
  const run=payrollRuns.find(r=>r.month===month&&r.year===year);
  if(!run){toast('ولّد كشف الشهر أولاً');return null}
+ /* كان التصدير يقرأ القيم المحفوظة في قاعدة البيانات، فلو عدّل المستخدم
+    رقماً ولم يحفظ خرج ملف البنك بأرقام غير التي يراها على الشاشة. */
+ const dirty=payrollRowEdits('prollTbodyAdmin').filter(r=>r.dirty);
+ if(dirty.length){toast(`احفظ التعديلات أولاً — فيه تعديلات غير محفوظة (${dirty.map(d=>d.emp).join('، ')})`);return null}
  const items=payrollItems.filter(i=>i.runId===run.id&&empIds.includes(i.employee_id));
  const missingBank=items.filter(it=>{const e=empById[it.employee_id]||{};return !e.iban||!e.bankCode});
  if(missingBank.length){toast('⚠️ الموظفون التالية أسماؤهم بلا رقم حساب بنكي/رمز بنك مسجَّل: '+missingBank.map(it=>(empById[it.employee_id]||{}).name).join('، ')+' — أكمل بياناتهم أولاً من ملفهم الشخصي');return null}
@@ -5045,18 +5143,36 @@ function getSelectedPayrollRows(){
 function exportPayrollCSV(){
  const items=getSelectedPayrollRows();if(!items)return;
  const headers=['رقم الموظف','الاسم','رقم الحساب البنكي','رمز البنك','الأساسي','الإضافات','الخصومات','الصافي','العملة'];
- const rows=items.map(it=>{const e=empById[it.employee_id]||{};return [e.num,e.name,e.iban,e.bankCode,it.base,it.additions,it.deductions,it.net,empCurrency(it.employee_id)]});
+ const rows=items.map(it=>{const e=empById[it.employee_id]||{};
+  return [e.num,e.name,e.iban,e.bankCode,it.base,it.additions,it.deductions,
+          (+it.base||0)+(+it.additions||0)-(+it.deductions||0),empCurrency(it.employee_id)]});
  const csvContent='\uFEFF'+[headers,...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
  downloadBlob(csvContent,`كشف_رواتب_${D(0)}.csv`,'text/csv;charset=utf-8;');
  toast(`تم تصدير CSV لـ ${items.length} موظف`);
 }
-function exportPayrollWPS(){
+async function exportPayrollWPS(){
  const items=getSelectedPayrollRows();if(!items)return;
+ /* ملف WPS يُرفع للبنك ويُصرَف به فعلاً — المسودة ليست رقماً نهائياً */
+ const run0=payrollRuns.find(r=>r.month===+$('prollMonthAdmin').value&&r.year===+$('prollYearAdmin').value);
+ if(!payrollRunClosed(run0)&&!(await showConfirm('هذا الكشف ما زال مسودة ولم يُعتمد.\nملف WPS يُرفع للبنك ويُصرَف به — متابعة على أي حال؟',{icon:'⚠️',title:'كشف غير معتمد',okText:'نعم، صدّر على مسؤوليتي',okClass:'btn-danger'})))return;
  if(!companySettings||!companySettings.bank_code||!companySettings.establishment_id||!companySettings.bank_account_number){
   toast('أكمل بيانات المنشأة الثابتة أول (رمز البنك، رقم المنشأة، رقم الحساب) بأعلى صفحة الرواتب');return;
  }
+ /* ملف حماية الأجور سعودي ويُرفع بالريال — الترويسة تكتب SAR ثابتة.
+    كان التصدير يضم أي موظف مهما كانت عملة راتبه ويجمع المبالغ جمعاً
+    مباشراً، فراتب بالدولار يدخل ملفاً بالريال ويخرج الإجمالي خاطئاً.
+    نمنع التصدير ونسمّي من يجب استبعاده، ولا نحذفهم بصمت لأن إسقاط موظف
+    من ملف البنك يعني راتباً لا يصل. */
+ const SAR='ريال سعودي';
+ const nonSar=items.filter(it=>empCurrency(it.employee_id)!==SAR);
+ if(nonSar.length){
+  const names=nonSar.map(it=>`${(empById[it.employee_id]||{}).name||'—'} (${empCurrency(it.employee_id)})`).join('، ');
+  toast(`ملف WPS بالريال السعودي فقط — استبعد من التحديد: ${names}`);
+  return;
+ }
  const today=D(0);
- const totalAmount=items.reduce((s,it)=>s+it.net,0);
+ const payNet=it=>(+it.base||0)+(+it.additions||0)-(+it.deductions||0);
+ const totalAmount=items.reduce((s,it)=>s+payNet(it),0);
  const rows=[
   ['Upload Details','','','','','','','','','','','',''],
   ['Establishment Name','','','Upload File Name','','','Uploaded By','','','Uploaded On','','',''],
@@ -5073,36 +5189,76 @@ function exportPayrollWPS(){
  ];
  items.forEach((it,i)=>{
   const e=empById[it.employee_id]||{};
-  rows.push([i+2,it.net,e.iban,e.name,e.bankCode,'Salary','',it.base,0,it.additions||0,it.deductions||0,e.natId||'',`${today.replace(/-/g,'')}${String(i+1).padStart(4,'0')}`]);
+  rows.push([i+2,payNet(it),e.iban,e.name,e.bankCode,'Salary','',it.base,0,it.additions||0,it.deductions||0,e.natId||'',`${today.replace(/-/g,'')}${String(i+1).padStart(4,'0')}`]);
  });
- const ws=XLSX.utils.aoa_to_sheet(rows);
- const wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,ws,'WPS');
- XLSX.writeFile(wb,`WPS_${today}.xls`);
+ try{
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'WPS');
+  XLSX.writeFile(wb,`WPS_${today}.xls`);
+ }catch(e){err(e);return}
  toast(`تم تصدير ملف WPS لـ ${items.length} موظف — راجعه قبل رفعه للبنك`);
 }
+/* ============================================================
+   حفظ كشف الرواتب — كان يرسل كل صف على حدة وينتظر رده قبل التالي:
+   خمسون موظفاً = خمسون رحلة متتابعة للخادم، ولو فشل الصف الثلاثون بقي
+   ما قبله محفوظاً وما بعده لا، ثم تظهر رسالة «خطأ» لا تقول ماذا حُفظ.
+   الآن: تُرسَل الصفوف المتغيّرة وحدها، دفعة واحدة بالتوازي، والدالة
+   تُرجع نتيجة صريحة ليعرف مستدعوها هل نجح الحفظ فعلاً.
+   ملاحظة: الذرّية الكاملة تحتاج دالة في قاعدة البيانات؛ ما نضمنه هنا
+   هو تقليل الكتابات، وإبلاغ دقيق عند الفشل الجزئي، وعدم ادّعاء النجاح.
+   ============================================================ */
 async function savePayrollChanges(isAdmin){
  const tbodyId=isAdmin?'prollTbodyAdmin':'prollTbody';
- const rows=[...document.querySelectorAll(`#${tbodyId} tr[data-item]`)];
- try{
-  for(const row of rows){
-   const id=row.dataset.item;
-   const add=+row.querySelector('.proll-add').value||0, addNote=row.querySelector('.proll-addnote').value;
-   const ded=+row.querySelector('.proll-ded').value||0, dedNote=row.querySelector('.proll-dednote').value;
-   const item=payrollItems.find(i=>i.id===id);const net=(item?item.base:0)+add-ded;
-   const {error}=await sb.from('payroll_items').update({additions:add,additions_note:addNote,deductions:ded,deductions_note:dedNote,net_pay:net}).eq('id',id);
-   if(error)throw error;
-  }
-  await refresh();renderPayrollTable(isAdmin);toast('تم حفظ التعديلات على كشف الرواتب');
- }catch(e){err(e)}
+ const edits=payrollRowEdits(tbodyId).filter(r=>r.dirty);
+ if(!edits.length){toast('لا توجد تعديلات لحفظها');return {ok:true,saved:0,failed:[]}}
+ // الكشف المغلق لا يُعدَّل: الحقول تُعطَّل بصرياً لكن الزر كان يحفظ على أي حال
+ const run=payrollRunById(edits[0].item.runId);
+ if(payrollRunClosed(run)){
+  toast(`الكشف ${payrollStatusLabel(run.status)} — لا يمكن تعديله. افتح كشف شهر آخر أو اطلب فتحه من المحاسب.`);
+  return {ok:false,saved:0,failed:edits.map(e=>e.emp)};
+ }
+ // مبلغ سالب يعني خصماً متنكراً في خانة الإضافة (وبالعكس) بلا أثر في السجل
+ const neg=edits.filter(e=>(e.addChanged&&e.add<0)||(e.dedChanged&&e.ded<0));
+ if(neg.length){
+  toast(`مبلغ سالب غير مقبول — صحّح: ${neg.map(e=>e.emp).join('، ')}`);
+  return {ok:false,saved:0,failed:neg.map(e=>e.emp)};
+ }
+ // إضافة أو خصم بلا سبب لا يصلح في كشف رواتب يُراجَع لاحقاً
+ const noReason=edits.filter(e=>(e.addChanged&&e.add>0&&!e.addNote)||(e.dedChanged&&e.ded>0&&!e.dedNote));
+ if(noReason.length){
+  toast(`اكتب سبب الإضافة/الخصم أولاً: ${noReason.map(e=>e.emp).join('، ')}`);
+  return {ok:false,saved:0,failed:noReason.map(e=>e.emp)};
+ }
+ const changed=edits.map(e=>({id:e.id,emp:e.emp,
+  patch:{additions:e.add,additions_note:e.addNote||null,deductions:e.ded,deductions_note:e.dedNote||null,
+         net_pay:(+e.item.base||0)+e.add-e.ded}}));
+ const results=await Promise.all(changed.map(async c=>{
+  try{const {error}=await sb.from('payroll_items').update(c.patch).eq('id',c.id);return {...c,error}}
+  catch(e){return {...c,error:e}}
+ }));
+ const failed=results.filter(r=>r.error);
+ if(!failed.length){
+  await refresh();renderPayrollTable(isAdmin);
+  toast(`تم حفظ تعديلات ${results.length} موظف`);
+  return {ok:true,saved:results.length,failed:[]};
+ }
+ // فشل جزئي: لا نُحدِّث الجدول حتى تبقى التعديلات غير المحفوظة أمام المستخدم
+ console.error('تعذّر حفظ صفوف الرواتب:',failed);
+ toast(`⚠️ حُفظ ${results.length-failed.length} من ${results.length} — لم تُحفظ: ${failed.map(f=>f.emp).join('، ')}. تعديلاتهم باقية أمامك، أعد المحاولة.`);
+ return {ok:false,saved:results.length-failed.length,failed:failed.map(f=>f.emp)};
 }
 async function lockPayroll(isAdmin){
  const monthSel=isAdmin?'prollMonthAdmin':'prollMonth', yearSel=isAdmin?'prollYearAdmin':'prollYear';
  const month=+$(monthSel).value,year=+$(yearSel).value;
  const run=payrollRuns.find(r=>r.month===month&&r.year===year);
  if(!run){toast('ولّد الكشف أولاً');return}
- if(!confirm('قفل كشف الرواتب نهائياً؟ لن يمكن تعديله بعد القفل.'))return;
- await savePayrollChanges(isAdmin);
+ // كان الزر يكتب «مقفل» فوق أي حالة، فكشف منشور للموظفين يعود «مقفل» بضغطة
+ if(payrollRunClosed(run)){toast(`الكشف ${payrollStatusLabel(run.status)} أصلاً — لا حاجة للقفل`);return}
+ if(!(await showConfirm('قفل كشف الرواتب نهائياً؟ لن يمكن تعديله بعد القفل.',{icon:'🔒',title:'تأكيد قفل الكشف',okText:'نعم، اقفل الكشف',okClass:'btn-sand'})))return;
+ // كان القفل يتم حتى لو فشل الحفظ، فتُقفل تعديلات لم تصل قاعدة البيانات
+ const sv=await savePayrollChanges(isAdmin);
+ if(sv&&sv.ok===false){toast('لم يُقفل الكشف — بعض التعديلات لم تُحفظ بعد');return}
  const {error}=await sb.from('payroll_runs').update({status:'مقفل'}).eq('id',run.id);
  if(error){err(error);return}
  await refresh();renderPayrollTable(isAdmin);toast('تم قفل كشف الرواتب نهائياً');
@@ -5110,7 +5266,7 @@ async function lockPayroll(isAdmin){
 function renderPayrollStatements(){
  if(!$('payrollStatementsTbody'))return;
  // كانت تعرض «مقفل» وحدها، فالكشوف المعتمدة والمنشورة ما كانت تظهر هنا أبداً
- const locked=payrollRuns.filter(r=>['مقفل','معتمد','منشور'].includes(r.status));
+ const locked=payrollRuns.filter(payrollRunClosed);
  $('payrollStatementsTbody').innerHTML=locked.length?locked.map(r=>{
   const items=payrollItems.filter(it=>it.runId===r.id);
   const byCur={};
@@ -5129,14 +5285,15 @@ function viewPayrollStatement(runId){
  const rows=items.map(it=>{const e=empById[it.employee_id]||{};
   return [e.name||'—',money(it.base,it.employee_id),money(it.additions,it.employee_id),
           money(it.deductions,it.employee_id),`<b>${money(it.net,it.employee_id)}</b>`]});
- const cur=items.length?empCurrency(items[0].employee_id):'';
- const n=v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+cur;
+ /* كان الإجمالي يجمع كل الرواتب رقماً واحداً ويكتب عليه عملة أول موظف
+    في الكشف — فكشف فيه ريال وجنيه يطبع مجموعاً لا معنى له. */
+ const tot=k=>fmtCurrencyMap(sumByCurrency(items,it=>it.employee_id,it=>it[k]));
  hhPrint({
   title:`كشف رواتب ${MONTH_NAMES[(run.month||1)-1]} ${run.year}`,
-  subtitle:'كشف مقفل نهائياً — نظام إدارة الموارد البشرية',
-  meta:[['عدد الموظفين',items.length],['إجمالي الصافي',n(sum('net'))]],
+  subtitle:`${payrollStatusLabel(run.status)} — نظام إدارة الموارد البشرية`,
+  meta:[['عدد الموظفين',items.length],['إجمالي الصافي',tot('net')]],
   body:hhTable(['الموظف','الأساسي','الإضافات','الخصومات','الصافي'],rows,
-    {footer:['الإجمالي',n(sum('base')),n(sum('additions')),n(sum('deductions')),n(sum('net'))]})
+    {footer:['الإجمالي',tot('base'),tot('additions'),tot('deductions'),tot('net')]})
    +`<div class="hh-sigs"><div class="hh-sig">المحاسب</div><div class="hh-sig">المدير المالي</div><div class="hh-sig">المدير التنفيذي</div></div>`
  });
 }
@@ -5145,7 +5302,8 @@ async function deletePayrollStatement(runId,label){
  const {error:e1}=await sb.from('payroll_items').delete().eq('run_id',runId);
  if(e1){err(e1);return}
  const {error:e2}=await sb.from('payroll_runs').delete().eq('id',runId);
- if(e2){err(e2);return}
+ // البنود حُذفت فعلاً — لا نقل «تم» ونترك كشفاً فارغاً معلّقاً بلا بيان
+ if(e2){toast('⚠️ حُذفت بنود الكشف لكن الكشف نفسه لم يُحذف — أعد المحاولة');err(e2);await refresh();return}
  await refresh();toast(`تم حذف كشف "${label}" نهائياً`);
 }
 /* الموظف ما يشوف راتبه إلا بعد قفل الكشف أو نشره — المسودة والمعتمد غير المنشور
@@ -5201,7 +5359,7 @@ async function extraAddLeave(){
  if($('xlvEnd').value<$('xlvStart').value){toast('تاريخ النهاية لا يمكن أن يسبق البداية');return}
  const days=Math.round((new Date($('xlvEnd').value)-new Date($('xlvStart').value))/864e5)+1;
  const empName=(empById[$('xlvEmp').value]||{}).name||'';
- const balErr=checkLeaveBalance(empName,$('xlvType').value,days);
+ const balErr=checkLeaveBalance($('xlvEmp').value,$('xlvType').value,days);
  if(balErr){toast(balErr);return}
  const leadX=leadTimeError($('xlvStart').value,null,'طلب الإجازة');
  if(leadX&&!(await showConfirm(leadX+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب خارج مهلة الـ24 ساعة',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
@@ -5398,7 +5556,7 @@ function epRenderContracts(){
  $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${esc(c.dur||'—')}</td><td>${contractTag(c)}</td><td><span class="tag info">نسخة رقم ${c.maxVersion||c.versions}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
 }
 function epRenderLeaves(){
- const b=balance(currentEmp.name);
+ const b=balance(currentEmp.id);
  const my=leaves.filter(l=>l.employee_id===currentEmp.id);
  const S=[
   {n:b.annualAvail,l:'الرصيد السنوي المتاح (من 21)',k:'ok'},
@@ -5452,7 +5610,7 @@ async function epAddLeave(){
  if(!$('eplPhone').value.trim()){toast('رقم الجوال إلزامي للتواصل أثناء الإجازة');return}
  if(!$('eplEmail').value.trim()){toast('البريد الإلكتروني إلزامي للتواصل أثناء الإجازة');return}
  if(!$('eplCommit').checked){toast('لازم توافق على التعهد أولاً لإتمام الطلب');return}
- const balErr=checkLeaveBalance(currentEmp.name,$('eplType').value,+$('eplDays').value||1,editingLeaveId);
+ const balErr=checkLeaveBalance(currentEmp.id,$('eplType').value,+$('eplDays').value||1,editingLeaveId);
  if(balErr){toast(balErr);return}
  const confirmMsg=editingLeaveId?'هل تريد حفظ التعديل على طلب الإجازة؟':'هل تريد إرسال طلب الإجازة؟';
  if(!(await showConfirm(confirmMsg,{icon:'🌴',title:editingLeaveId?'تأكيد حفظ التعديل':'تأكيد إرسال الطلب',okText:editingLeaveId?'نعم، احفظ التعديل':'نعم، أرسل الطلب',okClass:'btn-primary'})))return;
@@ -7341,7 +7499,7 @@ async function prepSave(host,full){
   if(error){err(error);if(btn)btn.disabled=false;return}
  }
  if(btn)btn.disabled=false;
- prepDirty=false; toast('✅ تم حفظ التحضير');
+ prepDirty=false; prepPeekReset(); toast('✅ تم حفظ التحضير');
  reload(host,full);
 }
 async function prepSend(host,full){
@@ -7352,10 +7510,28 @@ async function prepSend(host,full){
  const {error}=await sb.from('payroll_prep_runs')
    .update({status:'قيد المراجعة',sent_at:new Date().toISOString()}).eq('id',prepRun.id);
  if(error){err(error);return}
- toast('📤 أُرسل للمحاسب'); reload(host,full);
+ prepPeekReset(); toast('📤 أُرسل للمحاسب'); reload(host,full);
 }
 
 /* ============ لوحة المحاسب ============ */
+/* ذاكرة قصيرة لتحضير الشهر: كان كل رسم للجدول (وهو يُرسم تلقائياً كل ١٥
+   ثانية) يُطلق استعلامين على قاعدة البيانات. صارت تُقرأ مرة كل ١٠ ثوانٍ،
+   وتُبطَل فوراً بعد أي إجراء يغيّرها. */
+const prepPeek={key:null,at:0,pr:null,count:0};
+function prepPeekReset(){prepPeek.key=null;prepPeek.at=0}
+async function prepPeekGet(m,y){
+ const key=m+'|'+y;
+ if(prepPeek.key===key&&Date.now()-prepPeek.at<10000)return prepPeek;
+ const {data:pr}=await sb.from('payroll_prep_runs').select('*').eq('month',m).eq('year',y).maybeSingle();
+ let count=0;
+ if(pr&&pr.status==='قيد المراجعة'){
+  const r=await sb.from('payroll_prep_items').select('id',{count:'exact',head:true})
+    .eq('prep_run_id',pr.id).eq('included',true);
+  count=r.count||0;
+ }
+ prepPeek.key=key;prepPeek.at=Date.now();prepPeek.pr=pr||null;prepPeek.count=count;
+ return prepPeek;
+}
 async function acctPanel(isAdmin){
  const mSel=isAdmin?'prollMonthAdmin':'prollMonth', ySel=isAdmin?'prollYearAdmin':'prollYear';
  const badge=$$(isAdmin?'prollStatusBadgeAdmin':'prollStatusBadge');
@@ -7366,16 +7542,15 @@ async function acctPanel(isAdmin){
  if(!host){ host=document.createElement('div'); host.id='acctPrepPanel'+(isAdmin?'A':'E');
   badge.parentNode.insertBefore(host,badge) }
 
- const {data:pr}=await sb.from('payroll_prep_runs').select('*').eq('month',m).eq('year',y).maybeSingle();
+ const peek=await prepPeekGet(m,y);
+ const pr=peek.pr;
  const run=(typeof payrollRuns!=='undefined'?payrollRuns:[]).find(r=>r.month===m&&r.year===y);
  const rs=run?run.status:null;
 
  let h='';
  if(pr&&pr.status==='قيد المراجعة'){
-  const {count}=await sb.from('payroll_prep_items').select('id',{count:'exact',head:true})
-    .eq('prep_run_id',pr.id).eq('included',true);
   h=`<div class="prep-note">📥 <b>وصلك تحضير ${AR_MONTHS[m-1]} ${y} من الموارد البشرية.</b>
-   عدد المستحقين: <b>${count||0}</b> موظف — مع الخصومات والإضافات والملاحظات.</div>
+   عدد المستحقين: <b>${peek.count}</b> موظف — مع الخصومات والإضافات والملاحظات.</div>
    <div class="prep-bar"><div class="sp">
     <button class="btn btn-primary" onclick="acctGenerate(${m},${y},${isAdmin})">⚙️ توليد الكشف من التحضير</button>
     <button class="btn btn-danger" onclick="acctReturn(${m},${y},${isAdmin})">↩️ إعادة للتعديل</button>
@@ -7407,12 +7582,14 @@ async function acctPanel(isAdmin){
  }
 }
 window.acctGenerate=async function(m,y,isAdmin){
+ prepPeekReset();
  if(!(await showConfirm(`توليد كشف ${AR_MONTHS[m-1]} ${y} من التحضير؟\nستُضاف رواتب الموظفين المستحقين مع خصومات وإضافات الموارد البشرية.`,{icon:'⚙️',title:'تأكيد توليد الكشف',okText:'نعم، ولّد الكشف',okClass:'btn-primary'})))return;
  const {error}=await sb.rpc('payroll_generate_from_prep',{p_month:m,p_year:y});
  if(error){err(error);return}
  toast('⚙️ تم توليد الكشف'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
 };
 window.acctReturn=async function(m,y,isAdmin){
+ prepPeekReset();
  const reason=prompt('سبب إعادة التحضير للموارد البشرية (إلزامي):');
  if(reason===null)return;
  if(!reason.trim()){toast('السبب إلزامي');return}
@@ -7421,6 +7598,7 @@ window.acctReturn=async function(m,y,isAdmin){
  toast('↩️ أُعيد للموارد البشرية'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
 };
 window.acctApprove=async function(m,y,isAdmin){
+ prepPeekReset();
  if(!(await showConfirm('اعتماد الكشف نهائياً؟\nلن يُعدَّل بعدها، وسيُفعَّل تصدير WPS.\nالموظفون لن يروه حتى تضغط «نشر».',{icon:'✅',title:'تأكيد الاعتماد النهائي',okText:'نعم، اعتمد الكشف',okClass:'btn-ok'})))return;
  const run=payrollRuns.find(r=>r.month===m&&r.year===y);
  const {error}=await sb.from('payroll_runs').update({status:'معتمد'}).eq('id',run.id);
@@ -7428,6 +7606,7 @@ window.acctApprove=async function(m,y,isAdmin){
  toast('✅ تم الاعتماد'); await refresh(); renderPayrollTable(isAdmin); acctPanel(isAdmin);
 };
 window.acctPublish=async function(m,y,isAdmin){
+ prepPeekReset();
  if(!(await showConfirm('نشر الكشف للموظفين؟\nكل موظف سيرى راتبه في بوابته فوراً.',{icon:'📢',title:'تأكيد النشر للموظفين',okText:'نعم، انشر الكشف',okClass:'btn-primary'})))return;
  const run=payrollRuns.find(r=>r.month===m&&r.year===y);
  const {error}=await sb.from('payroll_runs').update({status:'منشور'}).eq('id',run.id);
@@ -7605,6 +7784,8 @@ if(typeof window.savePayrollChanges==='function'){
  const _save=window.savePayrollChanges;
  window.savePayrollChanges=async function(){
   const r=await _save.apply(this,arguments);
+  // كانت العلامات تُمسح دائماً، فيظن المستخدم أن كل شيء حُفظ حتى عند الفشل
+  if(r&&r.ok===false)return r;
   Object.keys(keep).forEach(k=>delete keep[k]);
   document.querySelectorAll('.proll-dirty').forEach(el=>el.classList.remove('proll-dirty'));
   bar();
@@ -7957,5 +8138,172 @@ if(typeof window.renderExtraModuleBody==='function'){
                leaves:'إجازات الموظفين',permits:'استئذانات الموظفين',
                policies:'إدارة السياسات',files:'ملفات النظام'};
  MODULES.forEach(m=>{ if(rename[m.key])m.label=rename[m.key] });
+})();
+</script>
+
+<script>
+/* ============================================================
+   سجل الأخطاء التقني
+   المشكلة: الموظف يرى «خطأ: قيمة غير مقبولة في أحد الحقول» ولا يرى
+   نص قاعدة البيانات الذي يسمّي الجدول والقيد والحقل. النص كان يُطبع في
+   console فقط، والمستخدم على جوال لا يفتح console — فيصلنا تصوير شاشة
+   لرسالة لا تكفي للإصلاح، وتضيع جولة كاملة في كل مرة.
+   الحل: كل خطأ — سواء ظهر كتنبيه أو وقع صامتاً — يُحفظ كاملاً في
+   الجهاز (آخر ٣٠)، ويُفتح بضغطة على التنبيه أو على زر يظهر عند أول
+   خطأ فقط، مع زر نسخ يرسل النص كما هو.
+   ============================================================ */
+(function(){
+"use strict";
+const KEY='hh_err_log', MAX=30;
+let log=[];
+try{log=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){log=[]}
+if(!Array.isArray(log))log=[];
+
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(log.slice(0,MAX)))}catch(e){}};
+const screenNow=()=>{
+ const a=document.querySelector('.nav-item.active');
+ return (a&&a.textContent.trim())||document.title||'—';
+};
+
+/* من يرى شاشة التشخيص؟
+   مدير النظام فقط. والموظف لا يرى زراً ولا تفاصيل ولا حتى تلميحاً —
+   لكن الخطأ يُسجَّل في جهازه بصمت، فإذا دخلتَ على حسابه تفتح السجل
+   بإحدى طريقتين: إضافة ‎#diag‎ في آخر الرابط، أو سبع نقرات متتابعة
+   على شعار النظام خلال أربع ثوانٍ. */
+function diagUnlocked(){
+ try{if(sessionStorage.getItem('hh_diag')==='1')return true}catch(e){}
+ const h=String(location.hash||'');
+ if(h.indexOf('diag')>-1||h.indexOf('تشخيص')>-1){
+  try{sessionStorage.setItem('hh_diag','1')}catch(e){}
+  return true;
+ }
+ return false;
+}
+window.diagAllowed=function(){
+ if(diagUnlocked())return true;
+ return !!(typeof me!=='undefined'&&me&&me.role==='admin');
+};
+/* سبع نقرات على الشعار خلال أربع ثوانٍ — لا تقع مصادفة */
+let _tapN=0,_tapT=0;
+document.addEventListener('click',e=>{
+ if(!e.target.closest||!e.target.closest('.logo-mark'))return;
+ const now=Date.now();
+ if(now-_tapT>4000)_tapN=0;
+ _tapT=now;
+ if(++_tapN>=7){
+  _tapN=0;
+  try{sessionStorage.setItem('hh_diag','1')}catch(x){}
+  syncBtn();
+  if(typeof toast==='function')toast('فُتحت شاشة التشخيص لهذه الجلسة');
+ }
+},true);
+
+window.hhLogError=function(e,extra){
+ const o=(e&&typeof e==='object')?e:{};
+ const rec={
+  at:new Date().toISOString(),
+  who:(typeof me!=='undefined'&&me&&me.name)?me.name
+      :((typeof currentEmp!=='undefined'&&currentEmp&&currentEmp.name)||'—'),
+  screen:screenNow(),
+  msg:String(o.message||e||''),
+  code:String(o.code||''),
+  details:String(o.details||''),
+  hint:String(o.hint||''),
+  extra:extra?String(extra):''
+ };
+ log.unshift(rec); log=log.slice(0,MAX); save(); syncBtn();
+ return rec;
+};
+
+/* الأخطاء التي لا تمرّ على err(): استثناء غير ملتقَط أو وعد مرفوض.
+   هذه بالذات هي التي «تحصل عند الموظفين» بلا أي رسالة على الشاشة. */
+window.addEventListener('error',ev=>{
+ if(!ev||!ev.message)return;
+ window.hhLogError({message:ev.message},'غير ملتقَط — '+(ev.filename||'')+':'+(ev.lineno||''));
+});
+window.addEventListener('unhandledrejection',ev=>{
+ const r=ev&&ev.reason;
+ window.hhLogError(r&&typeof r==='object'?r:{message:String(r)},'وعد مرفوض بلا معالجة');
+});
+
+/* ---------- زر يظهر لمدير النظام وحده، وبعد أول خطأ فقط ---------- */
+function syncBtn(){
+ const show=log.length&&diagAllowed();
+ let b=document.getElementById('hhErrBtn');
+ if(!show){if(b)b.style.display='none';return}
+ if(!b){
+  b=document.createElement('button');
+  b.id='hhErrBtn'; b.type='button'; b.title='سجل الأخطاء التقني';
+  b.textContent='🩺';
+  b.style.cssText='position:fixed;inset-inline-start:12px;bottom:12px;z-index:9998;width:42px;height:42px;'
+   +'border-radius:50%;border:none;background:#B3261E;color:#fff;font-size:19px;cursor:pointer;'
+   +'box-shadow:0 4px 14px rgba(0,0,0,.28)';
+  b.onclick=()=>window.showErrorLog();
+  document.body.appendChild(b);
+ }
+ b.style.display='block';
+}
+/* الحالة تتغيّر بتبديل الحساب (خروج أدمن ودخول موظف على نفس الجهاز)،
+   فنعيد التقييم دورياً بدل الاعتماد على لحظة وقوع الخطأ وحدها */
+setInterval(syncBtn,2000);
+window.hhDiagSync=syncBtn;   /* إعادة تقييم فورية عند تبديل الحساب أو الاختبار */
+
+/* ---------- شاشة العرض ---------- */
+const esc2=v=>(typeof esc==='function')?esc(v):String(v==null?'':v)
+  .replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=r=>[
+ '🕒 '+new Date(r.at).toLocaleString('en-GB'),
+ '👤 '+r.who+'   📄 '+r.screen,
+ r.extra?('🔧 '+r.extra):'',
+ '❗ '+r.msg,
+ r.code?('code: '+r.code):'',
+ r.details?('details: '+r.details):'',
+ r.hint?('hint: '+r.hint):''
+].filter(Boolean).join('\n');
+
+window.showErrorLog=function(){
+ let m=document.getElementById('hhErrModal');
+ if(!m){
+  m=document.createElement('div');
+  m.id='hhErrModal'; m.className='modal-back';
+  m.innerHTML='<div class="modal" style="max-width:640px">'
+   +'<div class="modal-head"><h3>🩺 سجل الأخطاء التقني</h3>'
+   +'<button class="x-btn" type="button" onclick="document.getElementById(\'hhErrModal\').classList.remove(\'on\')">✕</button></div>'
+   +'<div><div class="section-note">هذا النص للمطوّر: انسخه وأرسله كما هو، فيه اسم الجدول '
+   +'والقيد الذي رفض العملية. لا يُرسل تلقائياً ولا يخرج من جهازك.</div>'
+   +'<pre id="hhErrPre" style="white-space:pre-wrap;word-break:break-word;direction:ltr;text-align:left;'
+   +'background:#0E1526;color:#D7E2F5;padding:12px;border-radius:10px;max-height:46vh;overflow:auto;'
+   +'font-size:12px;line-height:1.7"></pre></div>'
+   +'<div class="modal-foot">'
+   +'<button class="btn btn-primary" type="button" id="hhErrCopy">📋 نسخ الكل</button>'
+   +'<button class="btn btn-ghost" type="button" id="hhErrClear">🗑 مسح السجل</button>'
+   +'<button class="btn btn-ghost" type="button" onclick="document.getElementById(\'hhErrModal\').classList.remove(\'on\')">إغلاق</button>'
+   +'</div></div>';
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')});
+  m.querySelector('#hhErrCopy').onclick=async()=>{
+   const txt=log.map(fmt).join('\n\n──────────\n\n');
+   try{await navigator.clipboard.writeText(txt);toast('نُسخ سجل الأخطاء — الصقه في المحادثة')}
+   catch(e){
+    const pre=document.getElementById('hhErrPre');
+    const r=document.createRange();r.selectNodeContents(pre);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
+    toast('حدّد النص ثم انسخه يدوياً');
+   }
+  };
+  m.querySelector('#hhErrClear').onclick=()=>{
+   log=[];save();
+   document.getElementById('hhErrPre').textContent='لا توجد أخطاء مسجّلة';
+   const b2=document.getElementById('hhErrBtn');if(b2)b2.style.display='none';
+   m.classList.remove('on');
+   toast('مُسح سجل الأخطاء');
+  };
+ }
+ const pre=m.querySelector('#hhErrPre');
+ pre.textContent=log.length?log.map(fmt).join('\n\n──────────\n\n'):'لا توجد أخطاء مسجّلة';
+ m.classList.add('on');
+};
+document.addEventListener('DOMContentLoaded',syncBtn);
+if(document.body)syncBtn();
 })();
 </script>
