@@ -7851,14 +7851,21 @@ window.addEventListener('beforeunload',e=>{
 let manual=false;
 
 /* ---------- 1) إيقاف الدورات الدورية ---------- */
-/* تُشغَّل بعد اكتمال التحميل حتى تُلغى الدورات التي أنشأها النظام */
-function killTimers(){
- for(let i=1;i<99999;i++){ try{ clearInterval(i) }catch(e){} }
-}
-window.addEventListener('load',()=>setTimeout(killTimers,3000));
-setTimeout(killTimers,5000);
+/* كان هنا killTimers: حلقة تمسح كل مؤقتات الصفحة بالقوة
+   (for i=1..99999 → clearInterval) وتُنفَّذ مرتين عند كل تحميل.
+   ومؤقتات النظام نفسه تُنشأ عند تحميل الصفحة، فكانت تُقتل كلها بعد
+   خمس ثوانٍ: التحديث اللحظي للوحة التحكم، وعدّادات الطلبات في القائمة
+   الجانبية، ومصحّح إخفاء أقسام لوحة التحكم حسب الصلاحية — هذا الأخير
+   يعني ظهور أقسام مالية لمن لا يملك صلاحيتها بعد أي إعادة رسم.
+   مُتحقَّق منه في المتصفح: مؤقت يُنشأ عند التحميل يتوقف عند الثانية ٥.
 
-/* منع إنشاء دورات جديدة بنفس النمط (10ث – 60ث) */
+   الحماية المقصودة أصلاً (ألا تُعاد الشاشة رسمها والمستخدم يكتب فيها)
+   يوفّرها الحارس أدناه وحده: يمنع أي دورة بين ١٠ و٦٠ ثانية، وهي نمط
+   دورات إعادة الرسم. أما دورات الثانية والثانيتين فهي تحديثات صغيرة
+   لا تمسح إدخالاً. وصفحة الرواتب صار لها حفظ واسترجاع لما يكتبه
+   المستخدم ومنع إعادة الرسم أثناء الكتابة.
+
+   منع إنشاء دورات إعادة الرسم (10ث – 60ث) */
 const _si=window.setInterval;
 window.setInterval=function(fn,ms){
  if(typeof ms==='number' && ms>=10000 && ms<=60000) return -1;
@@ -8272,11 +8279,13 @@ window.addEventListener('unhandledrejection',ev=>{
  window.hhLogError(r&&typeof r==='object'?r:{message:String(r)},'وعد مرفوض بلا معالجة');
 });
 
-/* ---------- زر يظهر لمدير النظام وحده، وبعد أول خطأ فقط ---------- */
+/* ---------- الزر: لمدير النظام (ولمن فتح التشخيص) وحدهم ----------
+   كان لا يظهر إلا بعد أول خطأ، فالأدمن يفتح النظام ولا يجد شيئاً ويظن
+   أن الميزة غير موجودة. الآن يظهر دائماً لمن يحق له: رمادي هادئ ما دام
+   السجل نظيفاً، وأحمر بعدد الأخطاء حين يوجد ما يُقرأ. */
 function syncBtn(){
- const show=log.length&&diagAllowed();
  let b=document.getElementById('hhErrBtn');
- if(!show){if(b)b.style.display='none';return}
+ if(!diagAllowed()){if(b)b.style.display='none';return}
  if(!b){
   b=document.createElement('button');
   b.id='hhErrBtn'; b.type='button'; b.title='سجل الأخطاء التقني';
@@ -8288,6 +8297,10 @@ function syncBtn(){
   document.body.appendChild(b);
  }
  b.style.display='block';
+ b.textContent=log.length?('🩺'+(log.length>1?log.length:'')):'🩺';
+ b.style.background=log.length?'#B3261E':'#8A94A6';
+ b.style.opacity=log.length?'1':'.55';
+ b.title=log.length?('سجل الأخطاء التقني — '+log.length+' خطأ'):'سجل الأخطاء التقني — لا توجد أخطاء';
 }
 /* الحالة تتغيّر بتبديل الحساب (خروج أدمن ودخول موظف على نفس الجهاز)،
    فنعيد التقييم دورياً بدل الاعتماد على لحظة وقوع الخطأ وحدها */
