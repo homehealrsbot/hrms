@@ -574,14 +574,14 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 
 <!-- ===== الإجازات ===== -->
 <section class="page" id="page-leaves">
-  <div class="page-head"><div><h1>الإجازات</h1><p>الرصيد السنوي 21 يوماً — الرصيد المرضي 21 يوماً — تنبيه عند تبقّي 5 أيام</p></div></div>
+  <div class="page-head"><div><h1>الإجازات</h1><p>الرصيد السنوي 21 يوماً (تناسبي في السنة الأولى) — الرصيد المرضي 21 يوماً — تنبيه عند تبقّي 5 أيام</p></div></div>
   <div class="card rules-card">
     <h3>📋 تعليمات وسياسة الإجازات</h3>
     <p>القواعد المطبَّقة آلياً على كل طلب إجازة داخل النظام</p>
     <ul class="rules">
       <li><span class="ri ok">👥</span><div><b>الإجازة السنوية: بديل إلزامي</b><small>ما تُعتمد أي إجازة سنوية إلا بعد ما رئيس القسم يحدد <em>موظفاً بديلاً</em> يمسك مكان صاحب الإجازة طوال فترتها. الزميل الي عنده إجازة معتمدة في نفس الفترة ما يصلح بديلاً، والنظام يمنع اختياره.</small></div></li>
       <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الإجازة قبل تاريخ بدايتها بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم لإجازة تبدأ نفس اليوم ممنوع</em>، والتقويم نفسه ما يسمح باختيار تاريخ قبل بكرة.</small></div></li>
-      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
+      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. وفي السنة الأولى يُستحق السنوي تناسبياً: 1.75 يوم لكل شهر خدمة مكتمل، فيبلغ 21 يوماً بإكمال السنة. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
       <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> أولاً، وبعدها <em>الاعتماد النهائي من الإدارة</em>. ما يقدر أحد يعتمد طلبه الشخصي.</small></div></li>
       <li><span class="ri danger">📎</span><div><b>مستندات وبيانات إلزامية</b><small>سبب الإجازة ورقم الجوال والبريد إلزامية، والتقرير الطبي إلزامي للإجازة المرضية، مع التعهد بإنجاز مستهدف الشهر بعد العودة.</small></div></li>
       <li><span class="ri danger">⚠️</span><div><b>الاستثناء الإداري</b><small>الإدخال من لوحة التحكم يقدر يسجّل حالة خارج المهلة أو خارج الرصيد بعد تأكيد صريح، ويُوثَّق تلقائياً في ملاحظات الطلب باسم من سجّله.</small></div></li>
@@ -1033,7 +1033,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 
 <section class="page" id="ep-leaves">
   <div class="page-head">
-    <div><h1>الاجازات</h1><p>رصيدك وطلباتك — الرصيد السنوي 21 يوماً والمرضي 21 يوماً</p></div>
+    <div><h1>الاجازات</h1><p>رصيدك وطلباتك — السنوي 21 يوماً (تناسبي في سنتك الأولى) والمرضي 21 يوماً</p></div>
     <button class="btn btn-primary" onclick="epNewLeave()">+ طلب إجازة جديد</button>
   </div>
   <div class="card rules-card">
@@ -1042,7 +1042,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <ul class="rules">
       <li><span class="ri ok">👥</span><div><b>الإجازة السنوية: بديل إلزامي</b><small>ما تُعتمد أي إجازة سنوية إلا بعد ما رئيس القسم يحدد <em>موظفاً بديلاً</em> يمسك مكان صاحب الإجازة طوال فترتها. الزميل الي عنده إجازة معتمدة في نفس الفترة ما يصلح بديلاً، والنظام يمنع اختياره.</small></div></li>
       <li><span class="ri sand">⏱️</span><div><b>مهلة <em class="js-lead-hours">24</em> ساعة قبل الموعد</b><small>لازم يوصل طلب الإجازة قبل تاريخ بدايتها بـ<em class="js-lead-hours">24</em> ساعة على الأقل. <em>التقديم لإجازة تبدأ نفس اليوم ممنوع</em>، والتقويم نفسه ما يسمح باختيار تاريخ قبل بكرة.</small></div></li>
-      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
+      <li><span class="ri info">🌴</span><div><b>الرصيد والحجز</b><small>السنوي 21 يوماً والمرضي 21 يوماً لكل موظف. وفي السنة الأولى يُستحق السنوي تناسبياً: 1.75 يوم لكل شهر خدمة مكتمل، فيبلغ 21 يوماً بإكمال السنة. الطلب المعلّق يُحجز من الرصيد قبل اعتماده، فالمتاح = الرصيد − المعتمد − قيد الطلب.</small></div></li>
       <li><span class="ri">✅</span><div><b>مسار الاعتماد</b><small>الطلب يمر على <em>رئيس القسم</em> أولاً، وبعدها <em>الاعتماد النهائي من الإدارة</em>. ما يقدر أحد يعتمد طلبه الشخصي.</small></div></li>
       <li><span class="ri danger">📎</span><div><b>مستندات وبيانات إلزامية</b><small>سبب الإجازة ورقم الجوال والبريد إلزامية، والتقرير الطبي إلزامي للإجازة المرضية، مع التعهد بإنجاز مستهدف الشهر بعد العودة.</small></div></li>
     </ul>
@@ -1982,8 +1982,19 @@ function initRealtime(){
    if(status==='SUBSCRIBED'){window._rtOk=true}
   });
  }catch(e){console.log('realtime',e)}
- // فحص احتياطي تلقائي كل 15 ثانية (يضمن الوصول السريع حتى لو تعطل البث)
- setInterval(()=>{if(document.visibilityState==='visible')refresh().catch(()=>{})},15000);
+ /* فحص احتياطي: كان كل ١٥ ثانية دائماً، أي إعادة تحميل لكل الجداول
+    أربع مرات في الدقيقة لكل تبويب مفتوح — حتى والبث اللحظي شغّال
+    ويوصّل التغييرات فوراً، فالفحص كان يكرّر عملاً مؤدّى أصلاً.
+    الآن: ٦٠ ثانية حين يتأكد البث (window._rtOk)، و١٥ تبقى حين
+    يتعطّل — فالاحتياط يشتغل عند الحاجة إليه لا دائماً.
+    وأي تحديث وقع لسبب آخر (إجراء مستخدم أو حدث بث) يُعدّ فحصاً،
+    فلا نحمّل مرتين لنفس الدقيقة. */
+ setInterval(()=>{
+  if(document.visibilityState!=='visible')return;
+  const everyMs=window._rtOk?60000:15000;
+  if(_rfLastAt&&Date.now()-_rfLastAt<everyMs-1500)return;
+  refresh().catch(()=>{});
+ },15000);
 }
 /* استعادة كلمة المرور */
 let recovering=location.hash.includes('type=recovery');
@@ -2134,7 +2145,45 @@ async function loadAll(){
  const WRN=await pWRN;
  warnings=(WRN.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),level:r.level,reason:r.reason,description:r.description,attachment:r.attachment_url,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,finalApprover:r.final_approver,acknowledged:r.acknowledged_by_employee,acknowledgedAt:r.acknowledged_at,createdAt:r.created_at}));
 }
-async function refresh(){await Promise.all([loadAll(),loadMeetings()]);if(isBackoffice()){renderAll();renderMeetings()}else epRenderAll()}
+/* ============================================================
+   🔄 التحديث: دمج النداءات المتزامنة
+   ------------------------------------------------------------
+   refresh() يُنادى من ٦٨ موضعاً، ومن البث اللحظي، ومن الفحص الدوري.
+   وكل نداء يعيد تحميل كل الجداول. فحين تتزاحم النداءات — إجراء ينتهي
+   وفي نفس اللحظة يوصل حدث بث، أو ينبض الفحص الدوري — صار عندنا عدة
+   تحميلات كاملة متوازية تجيب نفس البيانات.
+
+   الآن: نداء يقع أثناء تحميل جارٍ لا يبدأ تحميله الخاص، بل ينتظر
+   الجاري ثم يشترك مع كل من طلب أثناءه في تحميل واحد بعده. فعشرة
+   نداءات متزاحمة تصير تحميلين لا عشرة.
+
+   ⚠️ ليش لا ننضم للتحميل الجاري مباشرة وهو أرخص؟ لأنه قد انطلق قبل
+   أن تكتمل كتابتنا، فيرجع ببيانات ما قبلها، فيرى المستخدم شاشته بلا
+   التغيير الذي سجّله للحظة — وهو بالضبط نوع العطل الصامت الذي يُفقد
+   الثقة في النظام. لذلك ننتظر تحميلاً يبدأ بعد نداءنا، دائماً.
+   ============================================================ */
+let _rfInFlight=null, _rfPending=null, _rfLastAt=0, _rfCount=0;
+function _startRefresh(){
+ const job=(async()=>{
+  await Promise.all([loadAll(),loadMeetings()]);
+  if(isBackoffice()){renderAll();renderMeetings()}else epRenderAll();
+ })();
+ _rfInFlight=job; _rfCount++;
+ /* نصفّر المؤشّر فقط إن كان لا يزال يشير لتحميلنا: لو بدأ تحميل أحدث
+    منه فالمؤشّر ملكه الآن، وتصفيره هنا كان يُخفيه فتتسلّل تحميلات
+    متوازية من جديد. */
+ job.catch(()=>{}).then(()=>{_rfLastAt=Date.now(); if(_rfInFlight===job)_rfInFlight=null});
+ return job;
+}
+function refresh(){
+ if(!_rfInFlight)return _startRefresh();
+ if(!_rfPending){
+  _rfPending=_rfInFlight.catch(()=>{}).then(()=>{_rfPending=null;return _startRefresh()});
+ }
+ return _rfPending;
+}
+/* للاختبار والتشخيص: كم تحميلاً كاملاً جرى فعلاً */
+window._rfStats=()=>({loads:_rfCount,lastAt:_rfLastAt,inFlight:!!_rfInFlight,pending:!!_rfPending});
 
 /* ================= رفع الملفات الفعلي ================= */
 async function uploadToStorage(file,folder){
@@ -3233,6 +3282,42 @@ async function confirmCheckin(mid,mObj){
    لأن الآخر استهلك، أو يُقبل وقد نفد رصيده. صارت المطابقة بالمعرّف،
    وهو فريد دائماً. كل المستدعين كان المعرّف متاحاً عندهم أصلاً.
    ============================================================ */
+/* ============================================================
+   🌴 استحقاق الإجازة السنوية — تناسبي في السنة الأولى
+   ------------------------------------------------------------
+   كان الاستحقاق ٢١ يوماً كاملة من يوم التعيين، فموظف عُيِّن أمس يظهر
+   له رصيد ٢١ يوماً ويقدر يطلبها كلها وهو ما أكمل شهراً بعد.
+   الآن: ١٫٧٥ يوم لكل شهر خدمة مكتمل (٢١ ÷ ١٢)، بسقف ٢١ يوماً.
+
+   ⚠️ مقصود أن يكون التناسب في السنة الأولى وحدها: من أكمل ١٢ شهراً
+   أو أكثر استحقاقه ٢١ كما كان بالضبط. فلا يتغيّر رصيد ولا موظف قائم
+   بهذا التعديل — يخص الموظف الجديد وحده، وهو موضع المشكلة.
+   ============================================================ */
+const ANNUAL_LEAVE_DAYS = 21;   // الاستحقاق السنوي الكامل
+const SICK_LEAVE_DAYS   = 21;   // الرصيد المرضي — غير تناسبي
+
+/* أشهر الخدمة المكتملة من تاريخ التعيين إلى اليوم.
+   ترجع null لو التاريخ ناقص أو غير صالح، حتى يقرّر المستدعي بنفسه
+   بدل أن نخمّن له صفراً فنحجب حق موظف بسبب حقل إداري ناقص. */
+function monthsOfService(hireDate){
+ if(!hireDate)return null;
+ const h=new Date(String(hireDate).slice(0,10)+'T00:00:00');
+ if(isNaN(h.getTime()))return null;
+ const n=new Date();
+ let m=(n.getFullYear()-h.getFullYear())*12+(n.getMonth()-h.getMonth());
+ if(n.getDate()<h.getDate())m--;   // الشهر الجاري ما اكتمل بعد
+ return Math.max(0,m);
+}
+
+/* الاستحقاق السنوي لموظف بعينه، لأقرب نصف يوم.
+   تاريخ التعيين الناقص يُعطى الاستحقاق الكامل عمداً: حجب حق موظف
+   لأن حقلاً في ملفه ناقص خطأ أسوأ من إعطائه رصيده كاملاً. */
+function annualEntitlement(empId){
+ const e=(typeof empById!=='undefined'&&empById)?empById[empId]:null;
+ const m=monthsOfService(e&&e.hire);
+ if(m===null||m>=12)return ANNUAL_LEAVE_DAYS;
+ return Math.round((ANNUAL_LEAVE_DAYS/12)*m*2)/2;
+}
 function balance(empId,excludeId){
  /* شبكة أمان: لو وصل اسم بدل معرّف (مسار قديم غفلنا عنه) فالمطابقة بالمعرّف
     لن تجد شيئاً وسيبدو رصيد الموظف كاملاً فتُعتمد إجازة لا يستحقها — وهو
@@ -3251,9 +3336,12 @@ function balance(empId,excludeId){
  const sickUsed=ok.filter(l=>l.type==='مرضية').reduce((s,l)=>s+l.days,0);
  const annualPend=pend.filter(l=>l.type==='سنوية').reduce((s,l)=>s+l.days,0);
  const sickPend=pend.filter(l=>l.type==='مرضية').reduce((s,l)=>s+l.days,0);
- return {annualUsed,sickUsed,annualPend,sickPend,
-  annualLeft:Math.max(0,21-annualUsed),sickLeft:Math.max(0,21-sickUsed),
-  annualAvail:Math.max(0,21-annualUsed-annualPend),sickAvail:Math.max(0,21-sickUsed-sickPend)};
+ /* السقف يُحسب للموظف نفسه لا ثابتاً — annualCap وsickCap مُعادان مع
+    النتيجة حتى تعرض الشاشات «المتاح من كم» بالرقم الصحيح له. */
+ const annualCap=annualEntitlement(empId), sickCap=SICK_LEAVE_DAYS;
+ return {annualUsed,sickUsed,annualPend,sickPend,annualCap,sickCap,
+  annualLeft:Math.max(0,annualCap-annualUsed),sickLeft:Math.max(0,sickCap-sickUsed),
+  annualAvail:Math.max(0,annualCap-annualUsed-annualPend),sickAvail:Math.max(0,sickCap-sickUsed-sickPend)};
 }
 function checkLeaveBalance(empId,type,days,excludeId){
  const b=balance(empId,excludeId);
@@ -3715,11 +3803,11 @@ async function decideFormSub(subId,approve){
  const {error}=await sb.from('form_submissions').update({status:approve?'تمت الموافقة':'تم الرفض'}).eq('id',subId);
  if(error){err(error);return}
  if(approve){
-  const empName=(empById[s.employee_id]||{}).name||s.emp;
+  const empLabel=(empById[s.employee_id]||{}).name||s.emp;
   const label=(f&&f.name)||'نموذج';
-  if(s.sig1)await registerArchivedFile('توقيع — '+label,'النماذج المعتمدة',label+' — '+empName,s.sig1,s.employee_id);
-  if(s.sig2)await registerArchivedFile('توقيع المستلم — '+label,'النماذج المعتمدة',label+' — '+empName,s.sig2,s.employee_id);
-  if(s.file)await registerArchivedFile('مرفق — '+label,'النماذج المعتمدة',label+' — '+empName,s.file,s.employee_id);
+  if(s.sig1)await registerArchivedFile('توقيع — '+label,'النماذج المعتمدة',label+' — '+empLabel,s.sig1,s.employee_id);
+  if(s.sig2)await registerArchivedFile('توقيع المستلم — '+label,'النماذج المعتمدة',label+' — '+empLabel,s.sig2,s.employee_id);
+  if(s.file)await registerArchivedFile('مرفق — '+label,'النماذج المعتمدة',label+' — '+empLabel,s.file,s.employee_id);
  }
  if(approve&&f&&f.template==='clearance'){
   const {error:e2}=await sb.from('employees').update({status:'غير نشط'}).eq('id',s.employee_id);
@@ -4931,8 +5019,8 @@ function openNewWarning(){
 async function submitWarning(){
  if(!$('wrnEmp').value){toast('اختر الموظف');return}
  if(!$('wrnReason').value.trim()){toast('سبب الإنذار إلزامي');return}
- const empName=(empById[$('wrnEmp').value]||{}).name||'الموظف';
- if(!(await showConfirm(`هل تريد إرسال طلب "${$('wrnLevel').value}" بحق ${empName}؟ هذا إجراء تأديبي جدي وسيمر على مراجعة رسمية.`,{icon:'⚠️',title:'تأكيد الإجراء التأديبي',okText:'نعم، أرسل الطلب',okClass:'btn-sand'})))return;
+ const empLabel=(empById[$('wrnEmp').value]||{}).name||'الموظف';
+ if(!(await showConfirm(`هل تريد إرسال طلب "${$('wrnLevel').value}" بحق ${empLabel}؟ هذا إجراء تأديبي جدي وسيمر على مراجعة رسمية.`,{icon:'⚠️',title:'تأكيد الإجراء التأديبي',okText:'نعم، أرسل الطلب',okClass:'btn-sand'})))return;
  try{
   let attUrl=null;const f=takeStaged('warning','wrnFileBox','📎 إرفاق دليل (اختياري)');
   if(f){toast('جاري رفع المرفق...');attUrl=await uploadToStorage(f,'employees/'+$('wrnEmp').value+'/warnings')}
@@ -5378,12 +5466,12 @@ async function extraAddLeave(){
  if(!$('xlvStart').value||!$('xlvEnd').value){toast('حدد بداية الإجازة ونهايتها');return}
  if($('xlvEnd').value<$('xlvStart').value){toast('تاريخ النهاية لا يمكن أن يسبق البداية');return}
  const days=Math.round((new Date($('xlvEnd').value)-new Date($('xlvStart').value))/864e5)+1;
- const empName=(empById[$('xlvEmp').value]||{}).name||'';
+ const empLabel=(empById[$('xlvEmp').value]||{}).name||'';
  const balErr=checkLeaveBalance($('xlvEmp').value,$('xlvType').value,days);
  if(balErr){toast(balErr);return}
  const leadX=leadTimeError($('xlvStart').value,null,'طلب الإجازة');
  if(leadX&&!(await showConfirm(leadX+'. هل تسجّله كاستثناء إداري؟',{icon:'⚠️',title:'الطلب خارج مهلة الـ24 ساعة',okText:'نعم، سجّله كاستثناء',okClass:'btn-sand'})))return;
- if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empName}؟`,{icon:'🌴',title:'تأكيد إضافة الإجازة',okText:'نعم، أضف الإجازة',okClass:'btn-primary'})))return;
+ if(!(await showConfirm(`هل تريد إضافة إجازة ${$('xlvType').value} لـ${empLabel}؟`,{icon:'🌴',title:'تأكيد إضافة الإجازة',okText:'نعم، أضف الإجازة',okClass:'btn-primary'})))return;
  const {error}=await sb.from('leaves').insert({employee_id:$('xlvEmp').value,leave_type:$('xlvType').value,start_date:$('xlvStart').value,end_date:$('xlvEnd').value,days,reason:$('xlvReason').value,status:LV_P1});
  if(error){err(error);return}
  closeModal('extraAddLeaveModal');await refresh();toast('تم حفظ طلب الإجازة');
@@ -5579,10 +5667,10 @@ function epRenderLeaves(){
  const b=balance(currentEmp.id);
  const my=leaves.filter(l=>l.employee_id===currentEmp.id);
  const S=[
-  {n:b.annualAvail,l:'الرصيد السنوي المتاح (من 21)',k:'ok'},
+  {n:b.annualAvail,l:`الرصيد السنوي المتاح (من ${b.annualCap})`,k:'ok'},
   {n:b.annualUsed,l:'سنوية معتمدة (مخصومة)',k:''},
   {n:b.annualPend,l:'سنوية قيد الطلب (محجوزة)',k:'sand'},
-  {n:b.sickAvail,l:'الرصيد المرضي المتاح (من 21)',k:'ok'},
+  {n:b.sickAvail,l:`الرصيد المرضي المتاح (من ${b.sickCap})`,k:'ok'},
   {n:b.sickUsed,l:'مرضية معتمدة (مخصومة)',k:''},
   {n:b.sickPend,l:'مرضية قيد الطلب (محجوزة)',k:'sand'},
   {n:my.filter(l=>l.status===LV_P1||l.status===LV_P2).length,l:'طلبات معلّقة',k:'info'},
@@ -8310,7 +8398,7 @@ window.hhDiagSync=syncBtn;   /* إعادة تقييم فورية عند تبدي
 /* ---------- شاشة العرض ---------- */
 const esc2=v=>(typeof esc==='function')?esc(v):String(v==null?'':v)
   .replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=r=>[
+const fmtErrRecord=r=>[
  '🕒 '+new Date(r.at).toLocaleString('en-GB')+(r.n>1?('  (تكرر '+r.n+' مرة)'):''),
  '👤 '+r.who+'   📄 '+r.screen,
  r.extra?('🔧 '+r.extra):'',
@@ -8341,7 +8429,7 @@ window.showErrorLog=function(){
   document.body.appendChild(m);
   m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')});
   m.querySelector('#hhErrCopy').onclick=async()=>{
-   const txt=log.map(fmt).join('\n\n──────────\n\n');
+   const txt=log.map(fmtErrRecord).join('\n\n──────────\n\n');
    try{await navigator.clipboard.writeText(txt);toast('نُسخ سجل الأخطاء — الصقه في المحادثة')}
    catch(e){
     const pre=document.getElementById('hhErrPre');
@@ -8359,7 +8447,7 @@ window.showErrorLog=function(){
   };
  }
  const pre=m.querySelector('#hhErrPre');
- pre.textContent=log.length?log.map(fmt).join('\n\n──────────\n\n'):'لا توجد أخطاء مسجّلة';
+ pre.textContent=log.length?log.map(fmtErrRecord).join('\n\n──────────\n\n'):'لا توجد أخطاء مسجّلة';
  m.classList.add('on');
 };
 document.addEventListener('DOMContentLoaded',syncBtn);
