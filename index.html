@@ -1909,6 +1909,39 @@ function hhQuiet(step,e){
   if(typeof hhLogError==='function')hhLogError(e,'صامت — '+step);
  }catch(x){}
 }
+/* ============================================================
+   خطأ رآه المستخدم — ويُسجَّل أيضاً
+   err() تُسجّل وتُنبّه معاً، لكن مواضع كثيرة تُنبّه بنصّها الخاص
+   («تعذّر تسجيل الحضور: …») فتتجاوز السجل كلياً: يرى المستخدم رسالة
+   مختصرة، ولا يبقى في الجهاز أثرٌ لنصّ قاعدة البيانات الذي يسمّي
+   الجدول والقيد. فيُفتح سجل الأخطاء بحثاً عن السبب فيُوجد فارغاً.
+   hhSeen: تحفظ النصّ الكامل ولا تمسّ ما يراه المستخدم.
+   ============================================================ */
+function hhSeen(e,step){
+ try{
+  console.error('خطأ ظاهر — '+step,e);
+  if(typeof hhLogError==='function')hhLogError(e,'ظاهر — '+step);
+ }catch(x){}
+}
+/* ============================================================
+   فشل تحميل جدول
+   استعلامات loadAll كانت تُقرأ بـ (X.data||[]) بلا فحص X.error، فإذا
+   فشل استعلام صار جدوله فارغاً على الشاشة بلا رسالة ولا قيد في السجل.
+   وأخطرها «permissions»: فشلها يجعل permsMap فارغة، فتختفي كل صلاحية
+   صريحة ويبدو أن النظام «ما يسجّل الصلاحيات» — وهو حمّلها ففشل وسكت.
+   الآن يُسجَّل كل فشل كاملاً، ويُنبَّه المستخدم مرة واحدة في التحميل
+   الواحد لا بعدد الاستعلامات الفاشلة.
+   ============================================================ */
+let _loadErrShown=false;
+function loadErr(name,r){
+ if(!r||!r.error)return r;
+ hhSeen(r.error,'تحميل '+name);
+ if(!_loadErrShown){
+  _loadErrShown=true;
+  toast('تعذّر تحميل '+name+' — المعروض قد يكون ناقصاً');
+ }
+ return r;
+}
 /* ================= المصادقة ================= */
 let authMode='login';
 function setAuthMode(m){authMode=m;
@@ -1936,6 +1969,9 @@ async function doAuth(){
   }
   await enterApp();
  }catch(e){
+  /* كلمة مرور خاطئة ليست عطلاً فنُغرق السجل بها — وما عداها يُسجَّل:
+     فشل الشبكة، وتعطّل الخادم، ورمز تفعيل مرفوض. */
+  if(e&&e.message!=='Invalid login credentials')hhSeen(e,authMode==='signup'?'إنشاء حساب':'تسجيل الدخول');
   toast(e.message==='Invalid login credentials'?'بيانات الدخول غير صحيحة':'خطأ: '+e.message);
  }
  resetAuthBtn();
@@ -1993,7 +2029,7 @@ function initRealtime(){
    console.log('البث اللحظي:',status);
    if(status==='SUBSCRIBED'){window._rtOk=true}
   });
- }catch(e){console.log('realtime',e)}
+ }catch(e){hhQuiet('معالجة حدث البث اللحظي',e)}
  /* فحص احتياطي: كان كل ١٥ ثانية دائماً، أي إعادة تحميل لكل الجداول
     أربع مرات في الدقيقة لكل تبويب مفتوح — حتى والبث اللحظي شغّال
     ويوصّل التغييرات فوراً، فالفحص كان يكرّر عملاً مؤدّى أصلاً.
@@ -2079,6 +2115,7 @@ const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
 async function loadAll(){
+ _loadErrShown=false;
  /* ============================================================
     كانت استعلامات التحميل تُنفَّذ على عشر دفعات متتابعة: كل دفعة تنتظر
     التي قبلها رغم أن لا واحدة منها تحتاج نتيجة الأخرى. يعني عشر رحلات
@@ -2133,13 +2170,13 @@ async function loadAll(){
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
  (S.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,date:r.record_date,in:tfmt(r.check_in),out:tfmt(r.check_out),emp:empName(r.employee_id),dept:r.department,reason:r.absence_reason,sick:r.sick_report_url?'نعم':'لا',sickPath:r.sick_report_url,notes:r.notes,checkInLat:r.check_in_lat,checkInLng:r.check_in_lng,distM:r.check_in_distance_m};(r.record_type==='حضور'?siteAtt:siteAbs).push(rec)});
- const OLS=await pOLS;
+ const OLS=loadErr('مواقع المقر',await pOLS);
  officeLocations=(OLS.data||[]).map(r=>({id:r.id,name:r.name,lat:r.lat,lng:r.lng,radius_meters:r.radius_meters,active:r.active,createdBy:r.created_by,updatedAt:r.updated_at}));
  officeLocation=officeLocations[0]||null; // للتوافق مع أي كود قديم يعتمد على موقع واحد (احتياط)
- const CS=await pCS;
+ const CS=loadErr('إعدادات الشركة',await pCS);
  companySettings=CS.data||null;
  if(needAE){
-  const AE=await pAE;
+  const AE=loadErr('حركات الدوام',await pAE);
   attendanceEvents=AE.data||[];
  }
  /* حركات الدوام الجغرافي لم تعد تُجلب هنا — تُجلب عند فتح التقارير فقط
@@ -2148,9 +2185,10 @@ async function loadAll(){
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
- const FS2=await pFS2;
+ const FS2=loadErr('تعبئة النماذج',await pFS2);
  formSubs=(FS2.data||[]).map(r=>({id:r.id,form_id:r.form_id,employee_id:r.employee_id,emp:empName(r.employee_id),answers:(()=>{try{return JSON.parse(r.answers||'{}')}catch(e){return{}}})(),file:r.file_url,sig1:r.signature_url,sig2:r.signature2_url,status:r.status||LV_P1,dept_head:r.dept_head,created_at:r.created_at}));
  const [PR,CU,PRUN,PIT]=await pFin;
+ loadErr('أوامر الصرف',PR);loadErr('العهد',CU);loadErr('دورات الرواتب',PRUN);loadErr('بنود الرواتب',PIT);
  paymentRequests=(PR.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:r.amount,category:r.category,reason:r.reason,file:r.attachment_url,status:r.status,head:r.dept_head,paidAt:r.paid_at,paymentRef:r.payment_ref,created_at:r.created_at,
   invoice:r.invoice_url,invoiceNo:r.invoice_no,invoiceDate:r.invoice_date,vendor:r.vendor,createdBy:r.created_by_name,
   sigReq:r.sig_requester_url,sigHead:r.sig_head_url,sigFin:r.sig_finance_url,sigAdm:r.sig_admin_url,
@@ -2158,16 +2196,16 @@ async function loadAll(){
  custodyRecords=(CU.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),type:r.custody_type,desc:r.description,amount:r.amount,dateGiven:r.date_given,dateReturned:r.date_returned,status:r.status,notes:r.notes}));
  payrollRuns=(PRUN.data||[]).map(r=>({id:r.id,month:r.month,year:r.year,status:r.status}));
  payrollItems=(PIT.data||[]).map(r=>({id:r.id,runId:r.run_id,employee_id:r.employee_id,base:+r.base_salary||0,additions:+r.additions||0,addNote:r.additions_note,deductions:+r.deductions||0,dedNote:r.deductions_note,net:+r.net_pay||0}));
- const PERM=await pPERM;
+ const PERM=loadErr('الصلاحيات',await pPERM);
  permsMap={};
  (PERM.data||[]).forEach(r=>{
   permsMap[r.employee_id]=permsMap[r.employee_id]||{};
   permsMap[r.employee_id][r.module]=r.level;
   permsMap[r.employee_id][r.module+'_id']=r.id;
  });
- const DED=await pDED;
+ const DED=loadErr('طلبات الخصم',await pDED);
  deductionRequests=(DED.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),amount:+r.amount||0,reason:r.reason,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,acctApprover:r.accountant_approver,createdAt:r.created_at}));
- const WRN=await pWRN;
+ const WRN=loadErr('الإنذارات',await pWRN);
  warnings=(WRN.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),level:r.level,reason:r.reason,description:r.description,attachment:r.attachment_url,status:r.status,requestedBy:r.requested_by_name,requestedByRole:r.requested_by_role,hrReviewer:r.hr_reviewer,finalApprover:r.final_approver,acknowledged:r.acknowledged_by_employee,acknowledgedAt:r.acknowledged_at,createdAt:r.created_at}));
 }
 /* ============================================================
@@ -3028,7 +3066,7 @@ async function addOfficeLocationFromHere(){
   if(error){err(error);return}
   $('newLocName').value='';$('newLocRadius').value='150';
   await refresh();toast(`تم إضافة موقع "${name}" بنجاح ✅`);
- }catch(e){toast(e.message)}
+ }catch(e){hhSeen(e,'إضافة موقع مقر');toast(e.message)}
 }
 async function toggleLocationActive(id,active){
  const {error}=await sb.from('office_locations').update({active,updated_at:new Date().toISOString()}).eq('id',id);
@@ -3075,11 +3113,11 @@ async function selfCheckIn(){
   const {error}=attRow
    ? await sb.from('site_attendance').update(payload).eq('id',attRow.id)
    : await sb.from('site_attendance').insert({employee_id:currentEmp.id,record_type:'حضور',record_date:today,department:currentEmp.dept,...payload});
-  if(error){toast('تعذّر تسجيل الحضور: '+friendly(error.message));return}
-  try{await logAttendanceEvent('check_in',loc,z.dist,'داخل المقر')}catch(e){console.warn('تعذّر تسجيل حدث الحضور',e)}
+  if(error){hhSeen(error,'تسجيل الحضور الذاتي');toast('تعذّر تسجيل الحضور: '+friendly(error.message));return}
+  try{await logAttendanceEvent('check_in',loc,z.dist,'داخل المقر')}catch(e){hhQuiet('تسجيل حدث الحضور في سجل الحركات',e)}
   await refresh();toast(`✅ تم تسجيل حضورك بنجاح بموقع "${myLoc.name}" — الساعة ${timeStr}`);
   startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');
- }catch(e){toast(e.message)}
+ }catch(e){hhSeen(e,'تسجيل الحضور الذاتي');toast(e.message)}
 }
 async function selfCheckOut(){
  try{
@@ -3097,10 +3135,10 @@ async function selfCheckOut(){
   if(!z.inside){toast(`أنت خارج نطاق موقعك (${myLoc.name}) — تبعد ${Math.round(z.dist)} متر${accTxt(z)} والمسموح ${myLoc.radius_meters} متر، لا يمكن تسجيل الانصراف`);startLiveZoneMonitoring();updateLiveStatusBadge('داخل المقر');return}
   const timeStr=nowTimeStr();
   const {error}=await sb.from('site_attendance').update({check_out:timeStr,check_out_lat:loc.lat,check_out_lng:loc.lng}).eq('id',rec.id);
-  if(error){toast('تعذّر تسجيل الانصراف: '+friendly(error.message));return}
-  try{await logAttendanceEvent('check_out',loc,z.dist,'منتهي')}catch(e){console.warn('تعذّر تسجيل حدث الانصراف',e)}
+  if(error){hhSeen(error,'تسجيل الانصراف الذاتي');toast('تعذّر تسجيل الانصراف: '+friendly(error.message));return}
+  try{await logAttendanceEvent('check_out',loc,z.dist,'منتهي')}catch(e){hhQuiet('تسجيل حدث الانصراف في سجل الحركات',e)}
   await refresh();toast(`✅ تم تسجيل انصرافك بنجاح — الساعة ${timeStr}`);
- }catch(e){toast(e.message)}
+ }catch(e){hhSeen(e,'تسجيل الانصراف الذاتي');toast(e.message)}
 }
 async function addSiteAtt(){
  const {error}=await sb.from('site_attendance').insert({employee_id:$('saEmp').value,record_type:'حضور',record_date:$('saDate').value||D(0),check_in:$('saIn').value||null,check_out:$('saOut').value||null,department:$('saDept').value,notes:$('saNotes').value});
@@ -3994,7 +4032,7 @@ async function sendMonthlyReportNow(testOnly){
   const failList=data.errors&&data.errors.length?'<br><small style="color:var(--muted)">فشل الإرسال لـ: '+data.errors.map(e=>e.email).join('، ')+'</small>':'';
   $('reportSendStatus').innerHTML=`<span class="tag ${data.failed?'sand':'ok'}">✅ تم — نجح الإرسال لـ ${data.sent} من ${data.total}${data.failed?` (فشل ${data.failed})`:''} — الفترة: ${data.period.startStr} إلى ${data.period.endStr}</span>${failList}`;
   toast(`تم إرسال ${data.sent} تقرير بنجاح`);
- }catch(e){$('reportSendStatus').innerHTML=`<span class="tag danger">❌ تعذّر الاتصال بالدالة: ${e.message}</span>`}
+ }catch(e){hhSeen(e,'إرسال التقارير بالبريد');$('reportSendStatus').innerHTML=`<span class="tag danger">❌ تعذّر الاتصال بالدالة: ${e.message}</span>`}
 }
 function renderOfficeLocationStatus(){
  if(!$('officeLocsTbody'))return;
@@ -4678,7 +4716,7 @@ async function submitPayOrder(){
   const a=await payTry('رفع الفاتورة',()=>uploadToStorage(inv,'payment-orders/invoices'));
   if(!a.ok)return;
   const invPath=a.v;
-  try{await sb.from('files_registry').insert({file_name:'فاتورة '+($('poInvNo').value||'')+' — '+((empById[empId]||{}).name||''),file_type:(inv.name.split('.').pop()||'').toUpperCase(),file_size:(inv.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',subcategory:'فواتير',source:'أمر صرف أصدره '+me.name,uploaded_by:me.name,storage_path:invPath,employee_id:empId})}catch(e){console.warn('تعذّر تسجيل الفاتورة في سجل الملفات',e)}
+  try{await sb.from('files_registry').insert({file_name:'فاتورة '+($('poInvNo').value||'')+' — '+((empById[empId]||{}).name||''),file_type:(inv.name.split('.').pop()||'').toUpperCase(),file_size:(inv.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',subcategory:'فواتير',source:'أمر صرف أصدره '+me.name,uploaded_by:me.name,storage_path:invPath,employee_id:empId})}catch(e){hhQuiet('تسجيل الفاتورة في فهرس الملفات (لن تظهر في «الملفات»)',e)}
   const sigBlob=await sigToBlob('poSig');
   const b={v:await saveSignature(sigBlob,'payment-orders/signatures/new','sig-issuer.png','poSig')};
   const c=await payTry('حفظ أمر الصرف',async()=>{
@@ -4738,7 +4776,7 @@ async function archivePaymentOrder(p){
   const path=await uploadToStorage(file,'payment-orders');
   await sb.from('files_registry').insert({file_name:orderNo+' — '+(p.emp||''),file_type:'HTML',file_size:(file.size/1024/1024).toFixed(2)+' MB',category:'ملفات الصرف',source:'أمر صرف معتمد نهائياً بتواقيع كل المراحل',uploaded_by:me.name,storage_path:path,employee_id:p.employee_id});
   ok=true;
- }catch(e){console.error('تعذّر حفظ ملف أمر الصرف',e)}
+ }catch(e){hhQuiet('حفظ ملف أمر الصرف',e)}
  return ok;
 }
 
@@ -6255,7 +6293,7 @@ window.addNewPolicy=async function(){
    if(r.error)throw r.error;
    closeModal('changePassModal');
    toast('✅ تم تغيير كلمة المرور بنجاح — استخدم الجديدة من الآن');
-  }catch(e){toast('خطأ: '+(e.message||e))}
+  }catch(e){hhSeen(e,'تغيير كلمة المرور');toast('خطأ: '+(e.message||e))}
   btn.disabled=false;btn.textContent='تغيير كلمة المرور';
  };
 
@@ -7529,7 +7567,7 @@ function badges(){
 function run(){
  try{if(window.__kpiTick)window.__kpiTick()}catch(e){}
  try{if(window.__colorTick)window.__colorTick()}catch(e){}
- try{if(build())badges()}catch(e){console.error('dash',e)}
+ try{if(build())badges()}catch(e){hhQuiet('بناء لوحة التحكم',e)}
 }
 if(typeof window.renderDashboard==='function'){
  const _o=window.renderDashboard;
@@ -7836,7 +7874,7 @@ if(typeof window.renderPayrollTable==='function'){
  const _o=window.renderPayrollTable;
  window.renderPayrollTable=function(isAdmin){
   const r=_o.apply(this,arguments);
-  try{ acctPanel(!!isAdmin) }catch(e){ console.error('acct-panel',e) }
+  try{ acctPanel(!!isAdmin) }catch(e){ hhQuiet('لوحة الحسابات',e) }
   return r;
  };
 }
@@ -7984,7 +8022,7 @@ if(typeof window.renderPayrollTable==='function'){
  window.renderPayrollTable=function(){
   const s=snapshot();
   const r=_orig.apply(this,arguments);
-  try{ restore(s) }catch(e){ console.error('payroll-keep',e) }
+  try{ restore(s) }catch(e){ hhQuiet('استرجاع مسوّدة كشف الرواتب',e) }
   return r;
  };
 }
