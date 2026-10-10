@@ -296,7 +296,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
       <div class="nav-group-body">
         <button class="nav-item" id="nav_leaves" data-page="leaves"><span class="ic">🌴</span> الإجازات</button>
         <button class="nav-item" id="nav_permits" data-page="permits"><span class="ic">🚪</span> الاستئذانات</button>
-        <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">⚠️</span> طلبات الخصم <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
+        <button class="nav-item" id="nav_deductionsHR" data-page="deductionsHR"><span class="ic">📋</span> تحضير كشف الرواتب <span class="nav-badge" id="hrDedBadge" style="display:none">0</span></button>
         <button class="nav-item" id="nav_warnings" data-page="warningsHR"><span class="ic">🚨</span> الإنذارات <span class="nav-badge" id="hrWrnBadge" style="display:none">0</span></button>
       </div>
     </div>
@@ -842,7 +842,14 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 </section>
 
 <section class="page" id="page-deductionsHR">
-  <div class="page-head"><div><h1>طلبات الخصم</h1><p>طلبات خصم مقدَّمة من رؤساء الأقسام أو المحاسب — مراجعة الموارد البشرية أول مرحلة قبل الاعتماد المالي</p></div></div>
+  <!-- محرر تحضير كشف الرواتب — نفس محرر بوابة الموظف بلا نسخ:
+       يُركَّب هنا عبر window.hhMountPayrollPrep. كان المحرر متاحاً في بوابة
+       الموظف وحدها، فمن يُنقل للنظام الإداري يفقده ويجد مكانه شاشة طلبات
+       الخصم وحدها — وهما وحدة صلاحيات واحدة (deductionsHR) فجُمعتا هنا. -->
+  <div class="page-head"><div><h1>تحضير كشف الرواتب</h1><p>تحضير مستحقات الشهر وإرساله للمحاسب — ومراجعة طلبات الخصم</p></div></div>
+  <div class="card" id="adminPrepBody"><div class="empty">جاري التحميل…</div></div>
+
+  <div class="page-head" style="margin-top:6px"><div><h1 style="font-size:20px">⚠️ طلبات الخصم</h1><p>طلبات خصم مقدَّمة من رؤساء الأقسام أو المحاسب — مراجعة الموارد البشرية أول مرحلة قبل الاعتماد المالي</p></div></div>
   <div class="card"><h3>بانتظار مراجعتك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>القسم</th><th>المبلغ</th><th>السبب</th><th>الطالب</th><th>إجراء</th></tr></thead>
     <tbody id="hrDedPendingTbody"></tbody></table></div></div>
@@ -2258,7 +2265,7 @@ async function openStoredFile(path,friendlyName){
 }
 
 /* ================= التنقل ================= */
-const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'طلبات الخصم',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية',payrollStatements:'كشوفات الرواتب'};
+const PAGE_TITLES={dashboard:'لوحة التحكم',alerts:'التنبيهات / الإشعارات',policies:'الأنظمة والسياسات',employees:'الموظفين',contracts:'عقود الموظفين',attendance:'الحضور والغياب',leaves:'الإجازات',permits:'الاستئذانات',search:'البحث العام',files:'إدارة الملفات',reports:'التقارير',forms:'النماذج',payroll:'الرواتب',custody:'العهد',approvals:'الاعتمادات',paymentsAdmin:'طلبات الصرف',permissions:'الصلاحيات',deductionsHR:'تحضير كشف الرواتب',mySalaryAdmin:'راتبي',paymentFiles:'ملفات الصرف',auditLog:'سجل النشاط',warningsHR:'الإنذارات',employeeOfMonth:'موظف الشهر',medicalMembership:'العضوية الطبية',payrollStatements:'كشوفات الرواتب'};
 document.querySelectorAll('#app .nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 function go(p){document.querySelectorAll('#app .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
  document.querySelectorAll('#app .page').forEach(s=>s.classList.toggle('on',s.id==='page-'+p));
@@ -3624,7 +3631,14 @@ let currentFileCat='';
 function renderFiles(){
  const cats=['الكل','ملفات الموظفين','عقود الموظفين','العروض الوظيفية','طلبات الإجازة','النماذج المعتمدة','التقارير'];
  $('fileCats').innerHTML=cats.map(c=>`<div class="file-cat ${currentFileCat===(c==='الكل'?'':c)?'active':''}" onclick="currentFileCat='${c==='الكل'?'':c}';renderFiles()">🗂 ${c}</div>`).join('');
- const rows=filesData.filter(f=>!currentFileCat||f.cat===currentFileCat);
+ /* ⚠️ تبويب «الكل» كان يمرّر كل شي بما فيه «ملفات الصرف» — والفواتير
+    ليست من تصنيفات هذي الشاشة أصلاً (ما هي في قائمة cats أعلاه)، لكن
+    الفلتر عند «الكل» لا يستثني شيئاً، فكانت تظهر لكل من عنده صلاحية
+    الملفات. ولها شاشتها الخاصة المحكومة بصلاحية طلبات الصرف.
+    الآن: من لا يملك طلبات الصرف لا يراها هنا ولا في «الكل». */
+ const seePayFiles=hasPerm('paymentsAdmin','view');
+ const rows=filesData.filter(f=>
+   (seePayFiles||f.cat!=='ملفات الصرف') && (!currentFileCat||f.cat===currentFileCat));
  $('filesTbody').innerHTML=rows.length?rows.map(f=>`<tr>
   <td><b>${esc(f.name)}</b></td><td><span class="tag ${f.type==='PDF'?'danger':'ok'}">${f.type||'—'}</span></td><td>${f.size||'—'}</td>
   <td>${fmt(f.up)}</td><td>${esc(f.by||'—')}</td><td>${fmt(f.last)}</td><td>${esc(f.src||'—')}</td>
@@ -3910,7 +3924,9 @@ function renderApprovalsPage(){
  const pendingLv=leaves.filter(l=>l.status===LV_P1||l.status===LV_P2);
  const pendingPr=permits.filter(p=>p.status===LV_P1||p.status===LV_P2);
  const pendingFm=formSubs.filter(s=>s.status===LV_P1||s.status===LV_P2);
- const pendingPay=paymentRequests.filter(payPending);
+ /* عدّاد الاعتمادات كان يحشر أوامر الصرف لمن لا يملك صلاحيتها، فيرى
+    رقماً لا يقابله شي في الشاشة ويظن أن عنده عملاً مخفياً. */
+ const pendingPay=hasPerm('paymentsAdmin','view')?paymentRequests.filter(payPending):[];
  $('approvalsCount').textContent=pendingLv.length+pendingPr.length+pendingFm.length+pendingPay.length;
  const lvBtn=l=>{
   if(l.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
@@ -5004,9 +5020,11 @@ function renderDeductionsPage(){
  const mine=deductionRequests.filter(d=>d.requestedBy===currentEmp.name);
  $('dedMyRequestsTbody').innerHTML=mine.length?mine.map(d=>`<tr><td><b>${esc(d.emp)}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${esc(d.reason||'—')}</td><td>${fmt(d.createdAt)}</td><td><span class="tag ${d.status==='معتمد'?'ok':d.status==='مرفوض'?'danger':'sand'}">${d.status}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات خصم قدّمتها بعد</td></tr>';
 
- const isAcct=currentEmp.role==='accountant'&&hasPerm('paymentsAdmin','full');
- $('acctDedApprovalsCard').style.display=isAcct?'block':'none';
- if(isAcct){
+ /* الاعتماد النهائي للخصم: كان يشترط الدور والصلاحية معاً، فمن يُمنح
+    الصلاحية صراحةً بلا الدور يبقى محجوباً. الصلاحية وحدها هي المعيار. */
+ const canFinalizeDeduction=hasPerm('paymentsAdmin','full');
+ $('acctDedApprovalsCard').style.display=canFinalizeDeduction?'block':'none';
+ if(canFinalizeDeduction){
   const pend=deductionRequests.filter(d=>d.status===DED_P2);
   $('dedNavBadge').style.display=pend.length?'inline-block':'none';$('dedNavBadge').textContent=pend.length;
   $('acctDedApprovalsTbody').innerHTML=pend.length?pend.map(d=>`<tr><td><b>${esc(d.emp)}</b></td><td>${money(d.amount,d.employee_id)}</td><td>${esc(d.reason||'—')}</td><td>${esc(d.requestedBy)}</td><td>${esc(d.hrReviewer||'—')}</td>
@@ -5014,6 +5032,15 @@ function renderDeductionsPage(){
  }
 }
 function renderDeductionsHR(){
+ /* المحرر يُركَّب أولاً: هو الغرض الأساسي من الصفحة، وطلبات الخصم تحته.
+    التركيب مشروط بوجود الدالة لأن وحدة التحضير تُحمَّل في كتلة لاحقة من
+    الملف — فلو استُدعيت هذي قبلها لا نرمي، ويركّبها التحديث التالي. */
+ const prepHost=$('adminPrepBody');
+ if(prepHost){
+  if(typeof window.hhMountPayrollPrep==='function')
+   window.hhMountPayrollPrep(prepHost,hasPerm('deductionsHR','full'));
+  else prepHost.innerHTML='<div class="empty">محرر التحضير غير متاح — أعد تحميل الصفحة</div>';
+ }
  if(!$('hrDedPendingTbody'))return;
  const pend=deductionRequests.filter(d=>d.status===DED_P1);
  $('hrDedBadge').style.display=pend.length?'inline-block':'none';$('hrDedBadge').textContent=pend.length;
@@ -5582,13 +5609,45 @@ function epRenderAll(){epRenderDashboard();epRenderAlerts();epRenderContracts();
   if(activeId==='ep-payments')epGo('dashboard');
  }
  if(currentEmp.role==='manager')mgrRenderApprovals();
- if(currentEmp.role==='accountant'){
-  if($('mgrDivider'))$('mgrDivider').style.display='block';
-  $('acctPayrollNavBtn').style.display='flex';$('acctCustodyNavBtn').style.display='flex';$('acctPayApprovalsNavBtn').style.display='flex';$('acctPayFilesNavBtn').style.display='flex';
-  fillMonthSelect('prollMonth');renderPayrollTable(false);
-  renderCustodyInto('custodyTbody','custEmp');
-  acctRenderPayApprovals();
-  renderPaymentFiles('epPaymentFilesTbody');
+ /* ============================================================
+    💼 شاشات المالية: بالصلاحية لا بالدور
+    ------------------------------------------------------------
+    كانت الشاشات الأربع تُفتح بشرط role==='accountant' وحده، فتتجاوز
+    نظام الصلاحيات كاملاً في الاتجاهين:
+      · من يُمنح «طلبات الصرف» صراحةً ولا يحمل دور المحاسب لا يجد
+        الشاشة أصلاً — صلاحيته في يده والباب مقفل.
+      · ومن يحمل الدور تُفتح له «الرواتب» ولو كانت صلاحيته عليها
+        «بدون وصول» صريحة — والصريح يُفترض أن يطغى على كل شي.
+    الحالتان وقعتا فعلاً مع نفس الموظفة.
+
+    والقاعدة أصلاً تحكم هذي الجداول الأربعة بالصلاحية لا بالدور
+    (has_module_access على payroll و custody و paymentsAdmin)، فكان
+    النظام يخالف قاعدته. الآن يتطابقان.
+
+    وكل شاشة تُقاس بصلاحيتها وحدها، فلا تجرّ واحدةٌ الأخريات. */
+ const seePayroll  = hasPerm('payroll','view');
+ const seeCustody  = hasPerm('custody','view');
+ const seePayments = hasPerm('paymentsAdmin','view');
+ if((seePayroll||seeCustody||seePayments)&&$('mgrDivider'))$('mgrDivider').style.display='block';
+ /* نكتب 'none' صراحةً عند المنع لا نعتمد على الإخفاء الابتدائي: الصفحة
+    لا تُحمَّل من جديد عند تبديل الحساب على نفس الجهاز، فزرٌّ أُظهر لحساب
+    سابق كان يبقى ظاهراً للاحق. */
+ if($('acctPayrollNavBtn'))     $('acctPayrollNavBtn').style.display     = seePayroll ?'flex':'none';
+ if($('acctCustodyNavBtn'))     $('acctCustodyNavBtn').style.display     = seeCustody ?'flex':'none';
+ if($('acctPayApprovalsNavBtn'))$('acctPayApprovalsNavBtn').style.display= seePayments?'flex':'none';
+ if($('acctPayFilesNavBtn'))    $('acctPayFilesNavBtn').style.display    = seePayments?'flex':'none';
+ if(seePayroll){fillMonthSelect('prollMonth');renderPayrollTable(false)}
+ if(seeCustody)renderCustodyInto('custodyTbody','custEmp');
+ if(seePayments){acctRenderPayApprovals();renderPaymentFiles('epPaymentFilesTbody')}
+ /* ولو كان المستخدم واقفاً على صفحة صارت محجوبة عليه (تبديل حساب أو
+    سحب صلاحية أثناء الجلسة) نرجعه للوحة بدل أن يبقى أمام شاشة فارغة. */
+ {
+  const blocked=[];
+  if(!seePayroll)blocked.push('ep-payroll');
+  if(!seeCustody)blocked.push('ep-custody');
+  if(!seePayments)blocked.push('ep-payApprovals','ep-paymentFiles');
+  const activeNow=(document.querySelector('#empApp .page.on')||{}).id||'';
+  if(blocked.includes(activeNow))epGo('dashboard');
  }
  renderDeductionsPage();
  renderWarningsPage();
@@ -7764,6 +7823,10 @@ if(typeof window.renderExtraModuleBody==='function'){
   return _o.apply(this,arguments);
  };
 }
+/* نفتح المحرر للنظام الإداري كذلك، بتصدير دالة التركيب بدل نسخ الشاشة.
+   النسخة الثانية كانت ستتعتّق: نصلح واحدة وتبقى الأخرى كما هي، فيختلف ما
+   يراه من في بوابة الموظف عمّا يراه من في النظام الإداري وهما وحدة واحدة. */
+window.hhMountPayrollPrep=function(host,full){ if(host)reload(host,!!full) };
 if(typeof window.renderPayrollTable==='function'){
  const _o=window.renderPayrollTable;
  window.renderPayrollTable=function(isAdmin){
