@@ -2021,7 +2021,20 @@ sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp(
 function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,activationCode:r.activation_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
-function hasFinance(){return hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view')}
+/* ============================================================
+   💰 من يرى «النظرة المالية» في لوحة التحكم؟
+   ------------------------------------------------------------
+   كانت مشروطة بأي وحدة مالية: الرواتب أو العهد أو طلبات الصرف.
+   والنتيجة أن من يُمنح طلبات الصرف ليصدر أوامر صرف — وهي حاجة
+   تشغيلية — يرى معها إجمالي رواتب الشركة وإجمالي مصروفها، وهي
+   أرقام إدارية لا علاقة لها بعمله.
+
+   الآن مشروطة بالرواتب وحدها، لأن أثقل ما في القسم هو إجمالي
+   الرواتب، ومن يُؤتمن عليه يُؤتمن على بقية الأرقام.
+   ومن عنده العهد أو طلبات الصرف يبقى وصوله لشاشتيهما كاملاً —
+   المخفي هو ملخّص لوحة التحكم وحده لا الصلاحية.
+   ============================================================ */
+function hasFinance(){return hasPerm('payroll','view')}
 
 /* ================= بوابة الدخول: النظام الإداري مقابل بوابة الموظف =================
    قبل هذا التعديل كانت البوابة مشروطة بـ role==='admin' وحده، فأي شخص يُنزع عنه
@@ -2457,7 +2470,9 @@ function renderDashboard(){
  $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${esc(c.emp)}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد عقود قريبة الانتهاء</td></tr>';
 
  // === 💰 النظرة المالية — تظهر فقط لمن يملك صلاحية على أي قسم مالي ===
- const finVisible=hasPerm('payroll','view')||hasPerm('custody','view')||hasPerm('paymentsAdmin','view');
+ /* نفس شرط hasFinance() بالضبط — ونستدعيها بدل تكرار الشرط، فلا
+    ينفصل الموضعان عند أي تعديل قادم فيظهر القسم وزرّه مخفي أو العكس. */
+ const finVisible=hasFinance();
  if($('dashFinanceSection'))$('dashFinanceSection').style.display=finVisible?'block':'none';
  if(finVisible){
   const latestRun=[...payrollRuns].sort((a,b)=>(b.year*12+b.month)-(a.year*12+a.month))[0];
