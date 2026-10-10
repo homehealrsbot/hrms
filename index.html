@@ -1971,7 +1971,12 @@ function initRealtime(){
   ['leaves','permits','meeting_records','site_attendance','contracts','policies','form_submissions','payment_requests'].forEach(t=>{
    ch.on('postgres_changes',{event:'*',schema:'public',table:t},payload=>{
      clearTimeout(rtTimer);
-     rtTimer=setTimeout(()=>{refresh().catch(()=>{})},700);
+     /* تحديث البث تلقائي لا يطلبه المستخدم، فيمر على حارس الرسم:
+        يُعاد الرسم في لوحة التحكم، ويُمتنع في شاشة يكتب فيها أحد. */
+     rtTimer=setTimeout(()=>{
+       const rtRefresh=()=>refresh();
+       (window.hhAutoRedraw?window.hhAutoRedraw(rtRefresh):rtRefresh()).catch(()=>{});
+     },700);
      try{
       if(payload.eventType==='INSERT'&&t==='leaves'&&me.role!=='employee')toast('🔔 وصل طلب إجازة جديد الآن');
       else if(payload.eventType==='INSERT'&&t==='permits'&&isBackoffice())toast('🔔 وصل طلب استئذان جديد الآن');
@@ -8014,7 +8019,27 @@ window.addEventListener('beforeunload',e=>{
 (function(){
 "use strict";
 
-let manual=false;
+/* ⚠️ هذا العلم يميّز «من طلب إعادة الرسم».
+   كان اسمه manual ومعناه معكوس: يُرفع في التحديث الدوري وزر التحديث
+   فقط، والحارس أدناه يرسم إن كان مرفوعاً أو كانت الصفحة لوحة التحكم،
+   ويمتنع فيما عدا ذلك. والنتيجة أن **إجراء المستخدم نفسه** كان يقع في
+   «ما عدا ذلك»: تحفظ الصلاحية أو تعتمد الإجازة، فتُكتب في القاعدة
+   وتُحمَّل في الذاكرة، ولا تُعاد الشاشة رسمها — فيبدو أن شيئاً لم يحدث.
+   ومن جرّب مرتين وثلاثاً ظنّ أن الحفظ نفسه معطّل.
+
+   الغرض المقصود من الحارس صحيح: ألا يمسح تحديثٌ لم يطلبه المستخدم ما
+   يكتبه. لكن المقياس كان مقلوباً — يحجب الكل ويستثني التلقائي، والصواب
+   أن يحجب التلقائي وحده.
+   الآن: العلم يُرفع أثناء التحديث التلقائي (الدوري والبث)، والحارس
+   يمتنع إن كان مرفوعاً والصفحة ليست لوحة التحكم. وكل ما عداه — أي كل
+   إجراء يبدأه المستخدم — يُرسم دائماً. */
+let autoRedraw=false;
+
+/* يستدعيها البث اللحظي ليعلّم تحديثه تلقائياً */
+window.hhAutoRedraw=async function(fn){
+ autoRedraw=true;
+ try{ return await fn() } finally { autoRedraw=false }
+};
 
 /* ---------- 1) إيقاف الدورات الدورية ---------- */
 /* كان هنا killTimers: حلقة تمسح كل مؤقتات الصفحة بالقوة
@@ -8046,10 +8071,10 @@ _si(async function(){
   const p=document.querySelector('#app .page.on, #empApp .page.on');
   const id=p?p.id.replace(/^page-|^ep-/,''):'';
   if(id!=='dashboard')return;           /* أي صفحة أخرى: لا تحديث ولا رسم */
-  manual=true;
+  autoRedraw=true;
   await refresh();
  }catch(e){hhQuiet('التحديث الدوري للوحة التحكم',e)}
- finally{ manual=false }
+ finally{ autoRedraw=false }
 },20000);
 
 /* ---------- 3) حاجز أمان على دوال الرسم الشاملة ---------- */
@@ -8057,7 +8082,9 @@ _si(async function(){
  if(typeof window[n]!=='function')return;
  const _o=window[n];
  window[n]=function(){
-  if(manual) return _o.apply(this,arguments);
+  /* إجراء المستخدم: يُرسم دائماً وفي أي صفحة */
+  if(!autoRedraw) return _o.apply(this,arguments);
+  /* تحديث تلقائي: لوحة التحكم فقط، حتى لا يمسح ما يكتبه أحد */
   const p=document.querySelector('#app .page.on, #empApp .page.on');
   const id=p?p.id.replace(/^page-|^ep-/,''):'';
   if(id==='dashboard') return _o.apply(this,arguments);
@@ -8080,9 +8107,9 @@ setTimeout(()=>{
  b.onmouseleave=()=>b.style.transform='none';
  b.onclick=async()=>{
   b.disabled=true; b.innerHTML='⏳ جاري التحديث';
-  manual=true;
+  /* زر المستخدم: إجراء يطلبه هو، فلا يُعلَّم تلقائياً */
   try{ await refresh() }catch(e){ if(typeof err==='function')err(e) }
-  manual=false;
+
   b.disabled=false; b.innerHTML='🔄 تحديث';
   if(typeof toast==='function')toast('تم تحديث البيانات');
  };
