@@ -26,6 +26,26 @@ python3 agent-studio.py . --no-open      # بلا فتح المتصفح
 
 وكيل المستخدم الذي يحمل اسم وكيل مشروع يُعلَّم **محجوب** — المشروع يسبق.
 
+## التصنيف والتشغيل/الإيقاف
+
+الوكلاء مجمّعون تلقائيًا ببادئة اسم الملف (`marketing-`، `engineering-`…)،
+بلا أي إعداد — الاصطلاح نفسه يعمل في أي مشروع. كل سطر فيه **مفتاح** يوقفه أو
+يشغّله فورًا، ولكل مجموعة زرّا **إيقاف الكل / تشغيل الكل**.
+
+الإيقاف يعيد تسمية الملف إلى `.md.disabled` — لا يُحذف شيء، والإرجاع بنقرة.
+
+### من الطرفية، بلا فتح المتصفح
+
+```bash
+python3 agent-studio.py . --list                      # اعرض الكل مصنّفًا
+python3 agent-studio.py . --off marketing-tiktok-strategist
+python3 agent-studio.py . --on  marketing-tiktok-strategist
+python3 agent-studio.py . --group-off marketing       # أوقف مجموعة كاملة
+python3 agent-studio.py . --group-on  marketing
+```
+
+تقبل `--on` و`--off` أكثر من اسم في الأمر الواحد.
+
 ## التبويبات
 
 - **الإعدادات** — الاسم والوصف والأدوات والنموذج واللون، بنماذج لا YAML يدوي

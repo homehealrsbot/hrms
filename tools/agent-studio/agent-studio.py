@@ -171,6 +171,13 @@ def lint(path, info):
     return notes
 
 
+def group_of(stem):
+    """المجموعة من بادئة اسم الملف. اصطلاح شائع (marketing-x، engineering-y)
+    فتُشتق تلقائيًا في أي مشروع بلا أي إعداد."""
+    head, sep, _ = stem.partition("-")
+    return head if sep and len(head) > 2 else "غير مصنّف"
+
+
 def scan(project_dir):
     roots = [
         ("project", Path(project_dir).expanduser().resolve() / ".claude" / "agents"),
@@ -197,6 +204,7 @@ def scan(project_dir):
                 "scope": scope,
                 "path": str(f),
                 "file": f.name,
+                "group": group_of(f.stem),
                 "name": name,
                 "description": fm.get("description", ""),
                 "tools": fm.get("tools", ""),
@@ -216,8 +224,9 @@ def scan(project_dir):
         if not root.is_dir():
             continue
         for f in sorted(root.glob("*.md.disabled")):
+            stem = f.name.replace(".md.disabled", "")
             agents.append({"scope": scope, "path": str(f), "file": f.name,
-                           "name": f.name.replace(".md.disabled", ""),
+                           "group": group_of(stem), "name": stem,
                            "description": "— معطّل —", "tools": "", "lines": 0,
                            "notes": [("info", "معطّل: أعد تفعيله لتسجيله")],
                            "disabled": True, "shadowed": False})
@@ -348,6 +357,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"ok": True, "path": str(dest)},
                                                   ensure_ascii=False))
 
+            if u.path == "/api/bulk":
+                group = payload["group"]
+                enable = bool(payload.get("enable"))
+                done, failed = 0, []
+                for a in scan(Handler.project_dir):
+                    if a.get("group") != group:
+                        continue
+                    if a.get("disabled", False) == enable:     # يحتاج تبديلًا
+                        try:
+                            src = safe_target(a["path"], Handler.project_dir)
+                            dest = (src.with_name(src.name[:-len(".disabled")])
+                                    if enable else src.with_name(src.name + ".disabled"))
+                            if dest.exists():
+                                raise FileExistsError(dest.name)
+                            shutil.move(str(src), str(dest))
+                            done += 1
+                        except Exception as e:                # noqa: BLE001
+                            failed.append(f"{a['name']}: {e}")
+                return self._send(200, json.dumps(
+                    {"ok": True, "changed": done, "failed": failed}, ensure_ascii=False))
+
             self._send(404, json.dumps({"error": "not found"}))
         except Exception as e:                            # noqa: BLE001
             self._send(400, json.dumps({"error": str(e)}, ensure_ascii=False))
@@ -427,6 +457,21 @@ main{display:grid;grid-template-columns:330px 1fr;gap:14px;padding:14px;align-it
 .sbody code{background:var(--panel2);padding:1px 6px;border-radius:4px;font-size:11.5px;
  direction:ltr;display:inline-block}
 .empty{padding:50px 20px;text-align:center;color:var(--muted)}
+.ghead{position:sticky;top:0;z-index:2;background:var(--panel2);padding:7px 14px;
+ border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;
+ font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)}
+.ghead .gn{flex:1;direction:ltr;text-align:right}
+.ghead button{padding:3px 9px;font-size:10.5px;font-weight:600;background:transparent;
+ border:1px solid var(--line);color:var(--muted);border-radius:999px}
+.ghead button:hover{border-color:var(--accent);color:var(--accent);filter:none}
+.item{display:flex;gap:10px;align-items:flex-start}
+.ibody{flex:1;min-width:0}
+.sw{flex-shrink:0;width:34px;height:19px;border-radius:999px;background:var(--line);
+ position:relative;cursor:pointer;transition:background .15s;margin-top:2px;border:0;padding:0}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;
+ border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw.on{background:var(--ok)} .sw.on::after{transform:translateX(-15px)}
+.sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .bar2{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;
  flex-wrap:wrap;background:var(--panel2)}
 .bar2 .sp{flex:1}
@@ -546,7 +591,8 @@ async function load(){
       `<span>الكل <b>${d.agents.length}</b></span>
        <span>مشروع <b>${act.filter(a=>a.scope=='project').length}</b></span>
        <span>مستخدم <b>${act.filter(a=>a.scope=='user').length}</b></span>
-       <span>بلا Bash <b>${noBash}</b> / ${act.length}</span>`;
+       <span>بلا Bash <b>${noBash}</b> / ${act.length}</span>
+       <span>موقوف <b>${d.agents.length-act.length}</b></span>`;
     render();
   }catch(e){toast('تعذّر الاتصال بالخادم',1);}
 }
@@ -554,32 +600,65 @@ async function load(){
 function render(){
   const q=document.getElementById('filter').value.toLowerCase();
   const L=document.getElementById('list'); L.innerHTML='';
-  const rows=DATA.agents.filter(a=>!q||(a.name+a.description).toLowerCase().includes(q));
+  const rows=DATA.agents.filter(a=>!q||(a.name+a.description+(a.group||'')).toLowerCase().includes(q));
   if(!rows.length){L.innerHTML='<div class="empty">لا نتائج</div>';return;}
-  rows.forEach(a=>{
-    const d=document.createElement('div');
-    d.className='item'+(CUR&&CUR.path===a.path?' sel':'')+(a.disabled?' off':'');
-    const listed=a.tools?a.tools.split(',').map(t=>t.trim()):[];
-    let lock='<span class="tag open">كل الأدوات + Bash</span>';
-    if(a.tools){
-      const sh=listed.includes('Bash');
-      const net=listed.some(t=>['WebFetch','WebSearch'].includes(t));
-      lock = sh   ? '<span class="tag open">Bash</span>'
-           : net  ? '<span class="tag" style="border-color:var(--info);color:var(--info)">شبكة فقط</span>'
-                  : '<span class="tag lock">مقفل</span>';
-    }
-    const bad=(a.notes||[]).filter(n=>n[0]=='error').length;
-    d.innerHTML=`<div class="iname">${esc(a.name)}</div>
-      <div class="idesc">${esc(a.description)}</div>
-      <div class="tags">
-        <span class="tag ${a.scope=='project'?'p':'u'}">${a.scope=='project'?'مشروع':'مستخدم'}</span>
-        ${a.disabled?'<span class="tag">معطّل</span>':lock}
-        ${a.lines?`<span class="tag">${a.lines} سطر</span>`:''}
-        ${bad?`<span class="tag" style="border-color:var(--err);color:var(--err)">${bad} خطأ</span>`:''}
-        ${a.shadowed?'<span class="tag" style="border-color:var(--warn);color:var(--warn)">محجوب</span>':''}
-      </div>`;
-    d.onclick=()=>open_(a); L.appendChild(d);
+
+  const groups={};
+  rows.forEach(a=>{(groups[a.group||'غير مصنّف'] ||= []).push(a);});
+  Object.keys(groups).sort().forEach(g=>{
+    const items=groups[g];
+    const off=items.filter(a=>a.disabled).length;
+    const h=document.createElement('div'); h.className='ghead';
+    h.innerHTML=`<span class="gn">${esc(g)}</span>
+      <span>${items.length-off}/${items.length}</span>
+      <button data-g="${esc(g)}" data-en="0">إيقاف الكل</button>
+      <button data-g="${esc(g)}" data-en="1">تشغيل الكل</button>`;
+    h.querySelectorAll('button').forEach(b=>b.onclick=e=>{
+      e.stopPropagation(); bulk(b.dataset.g, b.dataset.en==='1');});
+    L.appendChild(h);
+
+    items.forEach(a=>{
+      const d=document.createElement('div');
+      d.className='item'+(CUR&&CUR.path===a.path?' sel':'')+(a.disabled?' off':'');
+      const listed=a.tools?a.tools.split(',').map(t=>t.trim()):[];
+      let lock='<span class="tag open">كل الأدوات + Bash</span>';
+      if(a.tools){
+        const sh=listed.includes('Bash');
+        const net=listed.some(t=>['WebFetch','WebSearch'].includes(t));
+        lock = sh   ? '<span class="tag open">Bash</span>'
+             : net  ? '<span class="tag" style="border-color:var(--info);color:var(--info)">شبكة فقط</span>'
+                    : '<span class="tag lock">مقفل</span>';
+      }
+      const bad=(a.notes||[]).filter(n=>n[0]=='error').length;
+      d.innerHTML=`
+        <button class="sw${a.disabled?'':' on'}" role="switch"
+          aria-checked="${a.disabled?'false':'true'}"
+          aria-label="${a.disabled?'تشغيل':'إيقاف'} ${esc(a.name)}"></button>
+        <div class="ibody">
+          <div class="iname">${esc(a.name)}</div>
+          <div class="idesc">${esc(a.description)}</div>
+          <div class="tags">
+            <span class="tag ${a.scope=='project'?'p':'u'}">${a.scope=='project'?'مشروع':'مستخدم'}</span>
+            ${a.disabled?'<span class="tag">موقوف</span>':lock}
+            ${a.lines?`<span class="tag">${a.lines} سطر</span>`:''}
+            ${bad?`<span class="tag" style="border-color:var(--err);color:var(--err)">${bad} خطأ</span>`:''}
+            ${a.shadowed?'<span class="tag" style="border-color:var(--warn);color:var(--warn)">محجوب</span>':''}
+          </div>
+        </div>`;
+      d.querySelector('.sw').onclick=e=>{e.stopPropagation(); toggle(a);};
+      d.querySelector('.ibody').onclick=()=>open_(a);
+      L.appendChild(d);
+    });
   });
+}
+
+async function bulk(group, enable){
+  const d=await post('/api/bulk',{group,enable});
+  if(d.error) return toast(d.error,1);
+  toast(`${enable?'شُغِّل':'أُوقف'} ${d.changed} في «${group}»`+
+        (d.failed.length?` — فشل ${d.failed.length}`:''), d.failed.length?1:0);
+  CUR=null; document.getElementById('form').style.display='none';
+  document.getElementById('noSel').style.display=''; await load();
 }
 
 async function open_(a){
@@ -684,11 +763,13 @@ async function create(){
   const a=DATA.agents.find(x=>x.path===d.path); if(a) open_(a);
 }
 
-async function toggle(){
-  if(!CUR) return toast('اختر وكيلًا أولًا',1);
-  const d=await post('/api/toggle',{path:CUR.path});
+async function toggle(a){
+  const target=a||CUR;
+  if(!target) return toast('اختر وكيلًا أولًا',1);
+  const d=await post('/api/toggle',{path:target.path});
   if(d.error) return toast(d.error,1);
-  toast(CUR.disabled?'فُعِّل':'عُطِّل'); CUR=null;
+  toast(target.disabled?`شُغِّل ${target.name}`:`أُوقف ${target.name}`);
+  if(CUR&&CUR.path===target.path) CUR=null;
   document.getElementById('form').style.display='none';
   document.getElementById('noSel').style.display=''; await load();
 }
@@ -698,17 +779,93 @@ load();
 """
 
 
+def cli_list(proj):
+    """يعرض الوكلاء مصنّفين بالمجموعة، مع حالة كل واحد وأدواته."""
+    agents = scan(proj)
+    if not agents:
+        print(f"\n  لا وكلاء في {proj}\n")
+        return
+    groups = {}
+    for x in agents:
+        groups.setdefault(x.get("group", "غير مصنّف"), []).append(x)
+    print(f"\n  {proj}")
+    for g in sorted(groups):
+        items = groups[g]
+        live = sum(1 for x in items if not x.get("disabled"))
+        print(f"\n  ── {g}  ({live}/{len(items)} يعمل)")
+        for x in sorted(items, key=lambda i: i["name"]):
+            mark = "○" if x.get("disabled") else "●"
+            tools = x.get("tools") or "ALL+Bash"
+            if "Bash" in tools:
+                tools += "  ⚠"
+            print(f"     {mark} {x['name']:<44s} {tools}")
+    live = sum(1 for x in agents if not x.get("disabled"))
+    print(f"\n  {live} يعمل · {len(agents) - live} موقوف · {len(agents)} إجمالًا\n")
+
+
+def cli_switch(proj, on, off, group_on, group_off):
+    """يشغّل أو يوقف بالاسم أو بالمجموعة، ويطبع ما تغيّر فعلًا."""
+    agents = scan(proj)
+    by_name = {x["name"]: x for x in agents}
+    todo = []                                  # (الوكيل، هل نشغّله)
+    for n in on:
+        todo.append((by_name.get(n), True, n))
+    for n in off:
+        todo.append((by_name.get(n), False, n))
+    for g, enable in ((group_on, True), (group_off, False)):
+        if not g:
+            continue
+        hit = [x for x in agents if x.get("group") == g]
+        if not hit:
+            print(f"  ✗ لا مجموعة باسم «{g}»")
+        todo += [(x, enable, x["name"]) for x in hit]
+
+    changed = 0
+    for agent, enable, label in todo:
+        if agent is None:
+            print(f"  ✗ {label} — غير موجود")
+            continue
+        if agent.get("disabled", False) != enable:
+            continue                            # في الحالة المطلوبة أصلًا
+        try:
+            src = safe_target(agent["path"], proj)
+            dest = (src.with_name(src.name[:-len(".disabled")]) if enable
+                    else src.with_name(src.name + ".disabled"))
+            if dest.exists():
+                raise FileExistsError(dest.name)
+            shutil.move(str(src), str(dest))
+            print(f"  {'●' if enable else '○'} {label} — {'شُغّل' if enable else 'أُوقف'}")
+            changed += 1
+        except Exception as e:                   # noqa: BLE001
+            print(f"  ✗ {label} — {e}")
+    print(f"\n  {changed} تغيير. يسري في جلسة Claude Code جديدة.\n")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Agent Studio — لوحة تحكم وكلاء Claude Code")
     ap.add_argument("project", nargs="?", default=".", help="مجلد المشروع (افتراضي: الحالي)")
     ap.add_argument("--port", type=int, default=7788)
     ap.add_argument("--no-open", action="store_true", help="لا تفتح المتصفح")
+    ap.add_argument("--list", action="store_true", dest="ls",
+                    help="اعرض الوكلاء مصنّفين واخرج")
+    ap.add_argument("--on", metavar="NAME", nargs="+", help="شغّل وكيلًا أو أكثر واخرج")
+    ap.add_argument("--off", metavar="NAME", nargs="+", help="أوقف وكيلًا أو أكثر واخرج")
+    ap.add_argument("--group-on", metavar="G", help="شغّل مجموعة كاملة واخرج")
+    ap.add_argument("--group-off", metavar="G", help="أوقف مجموعة كاملة واخرج")
     a = ap.parse_args()
 
     proj = Path(a.project).expanduser().resolve()
     if not proj.is_dir():
         sys.exit(f"ليس مجلدًا: {proj}")
     Handler.project_dir = str(proj)
+
+    if a.ls:
+        cli_list(proj)
+        return
+    if a.on or a.off or a.group_on or a.group_off:
+        cli_switch(proj, on=a.on or [], off=a.off or [],
+                   group_on=a.group_on, group_off=a.group_off)
+        return
 
     found = len(scan(proj))
     url = f"http://127.0.0.1:{a.port}/"
