@@ -13,17 +13,26 @@
 | `engineering-code-reviewer` | مراجعة عامة للكود |
 | `testing-accessibility-auditor` | تدقيق WCAG للنماذج والواجهة |
 
-## وكلاء التسويق
+## وكلاء التسويق (23 من الحزمة)
 
-| الوكيل | متى تستدعيه |
-|---|---|
-| `marketing-seo-specialist` | تدقيق SEO تقني، منع تنافس الصفحات، بنية الروابط |
-| `marketing-email-strategist` | تسلسلات بريدية، تقسيم الجمهور، deliverability |
-| `marketing-linkedin-content-creator` | محتوى B2B وقيادة فكرية على لينكدإن |
-| `marketing-ai-citation-strategist` | الظهور في إجابات ChatGPT/Claude/Perplexity |
+مثبّتون كاملين عدا 14 وكيلًا خاصًا بالمنصات الصينية (Douyin، Xiaohongshu،
+Weibo، Zhihu، Bilibili، Kuaishou، WeChat، Baidu، Taobao) — تُركت عمدًا.
 
-> ⚠️ وكلاء التسويق الأصليون لا يحتويون أي سياق سعودي أو خليجي أو عربي،
-> ولا يذكرون سناب شات إطلاقًا. زوّدهم بالسياق المحلي عند الاستدعاء.
+**كلهم مقفلون بلا `Bash`**: `Read, Write, Edit, WebSearch, WebFetch` فقط.
+
+البحث والقياس · `seo-specialist` `aeo-foundations` `ai-citation-strategist`
+`agentic-search-optimizer` `app-store-optimizer`
+القنوات · `email-strategist` `linkedin-content-creator` `tiktok-strategist`
+`instagram-curator` `twitter-engager` `reddit-community-builder`
+`social-media-strategist` `video-optimization-specialist`
+النمو والاتصال · `growth-hacker` `content-creator` `pr-communications-manager`
+`developer-community-builder` `x-twitter-intelligence-analyst`
+محتوى طويل وتجارة · `book-co-author` `global-podcast-strategist`
+`short-video-editing-coach` `carousel-growth-engine` `cross-border-ecommerce`
+
+> ⚠️ ولا واحد منهم يحوي سياقًا سعوديًا أو خليجيًا أو عربيًا، ولا يُذكر
+> سناب شات في أي منهم. زوّدهم بالسياق المحلي عند الاستدعاء، أو استخدم
+> `marketing-google-saudi` أدناه.
 
 ## وكيل مكتوب لنا (ليس من الحزمة)
 
