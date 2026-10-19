@@ -13,6 +13,18 @@
 | `engineering-code-reviewer` | مراجعة عامة للكود |
 | `testing-accessibility-auditor` | تدقيق WCAG للنماذج والواجهة |
 
+## وكلاء التسويق
+
+| الوكيل | متى تستدعيه |
+|---|---|
+| `marketing-seo-specialist` | تدقيق SEO تقني، منع تنافس الصفحات، بنية الروابط |
+| `marketing-email-strategist` | تسلسلات بريدية، تقسيم الجمهور، deliverability |
+| `marketing-linkedin-content-creator` | محتوى B2B وقيادة فكرية على لينكدإن |
+| `marketing-ai-citation-strategist` | الظهور في إجابات ChatGPT/Claude/Perplexity |
+
+> ⚠️ وكلاء التسويق الأصليون لا يحتويون أي سياق سعودي أو خليجي أو عربي،
+> ولا يذكرون سناب شات إطلاقًا. زوّدهم بالسياق المحلي عند الاستدعاء.
+
 ## المصدر والترخيص
 
 مأخوذة من [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents)
