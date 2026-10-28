@@ -1844,6 +1844,18 @@ function esc(v){
  if(v===null||v===undefined)return '';
  return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+/* رمز عشوائي من مولّد تشفيري. Math.random مولّد غير تشفيري تُستنتج حالته
+   من مخرجات مرصودة، ورمز التفعيل يربط حساب دخول جديد بسجل موظف قائم —
+   فتخمينه يعني انتحال ذلك الموظف. يتجنّب المحارف المتشابهة (0/O، 1/l/I)
+   لأن الرمز يُملى شفهيًا أحيانًا. */
+function randCode(n=12){
+ const abc='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+ const buf=new Uint32Array(n);
+ crypto.getRandomValues(buf);
+ let out='';
+ for(let i=0;i<n;i++) out+=abc[buf[i]%abc.length];
+ return out;
+}
 function toggleNavGroup(headBtn){headBtn.closest('.nav-group').classList.toggle('open')}
 const fmtHijri=d=>d? new Date(d).toLocaleDateString('ar-SA-u-nu-latn',{year:'numeric',month:'short',day:'numeric'}):'—';
 function todayFullStr(){
@@ -2708,7 +2720,7 @@ async function showActivationCode(empId){
  const e=empById[empId];if(!e)return;
  let code=e.activationCode;
  if(!code){
-  code=Math.random().toString(36).slice(2,10);
+  code=randCode();
   const {error}=await sb.from('employees').update({activation_code:code}).eq('id',empId);
   if(error){err(error);return}
   e.activationCode=code;
@@ -3264,7 +3276,7 @@ function renderMeetings(){
 }
 async function createMeeting(){
  if(!$('mgTitle').value.trim()){toast('أدخل عنوان الاجتماع');return}
- const code=Math.random().toString(36).slice(2,10);
+ const code=randCode();
  const link=normUrl($('mgLink').value);
  if($('mgLink').value.trim()&&!link){toast('رابط الاجتماع غير صالح — أدخل رابطاً يبدأ بـ https://');return}
  const att=[...mgAttendees];
@@ -3818,9 +3830,9 @@ function renderForms(){
 }
 function renderAnswerValue(k,v){
  if(Array.isArray(v)){
-  return `<div class="info-item" style="grid-column:1/-1"><div class="k">${k}</div>
+  return `<div class="info-item" style="grid-column:1/-1"><div class="k">${esc(k)}</div>
    <div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>البند</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
-   <tbody>${v.map(row=>`<tr><td>${row.item}</td><td><span class="tag ${row.status==='تم التسليم'?'ok':row.status==='لا ينطبق'?'gray':'sand'}">${row.status}</span></td><td>${row.note||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+   <tbody>${v.map(row=>`<tr><td>${esc(row.item)}</td><td><span class="tag ${row.status==='تم التسليم'?'ok':row.status==='لا ينطبق'?'gray':'sand'}">${esc(row.status)}</span></td><td>${esc(row.note)||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
  }
  return `<div class="info-item"><div class="k">${esc(k)}</div><div class="v">${esc(v)||'—'}</div></div>`;
 }
@@ -4022,9 +4034,14 @@ async function sendMonthlyReportNow(testOnly){
  }
  $('reportSendStatus').innerHTML='<span class="tag sand">⏳ جاري الإرسال... قد يستغرق دقيقة أو أكثر حسب عدد الموظفين</span>';
  try{
+  /* نرسل التوكن الشخصي للجلسة لا المفتاح العام: المفتاح العام موجود في
+     مصدر الصفحة، فالدالة لا تعرف به من استدعاها ولا تستطيع التحقق من
+     صلاحيته. التوكن يحمل هوية المستخدم ليتحقق منها الطرف الآخر. */
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){toast('انتهت الجلسة — سجّل الدخول من جديد');return}
   const resp=await fetch(SUPABASE_URL+'/functions/v1/weekly-report',{
    method:'POST',
-   headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY},
    body:JSON.stringify({only:testOnly?only:only||'',from:customFrom||'',to:customTo||''})
   });
   const data=await resp.json();
@@ -4208,7 +4225,7 @@ async function loadAuditLog(append){
 async function loadLoginLog(){
  const {data,error}=await sb.from('login_log').select('*').order('created_at',{ascending:false}).limit(200);
  if(error){err(error);return}
- $('loginLogTbody').innerHTML=(data||[]).map(r=>`<tr><td><b>${r.employee_name||'—'}</b></td><td><span class="tag ${r.event_type==='login'?'ok':'gray'}">${r.event_type==='login'?'دخول':'خروج'}</span></td><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد سجلات دخول بعد</td></tr>';
+ $('loginLogTbody').innerHTML=(data||[]).map(r=>`<tr><td><b>${esc(r.employee_name)||'—'}</b></td><td><span class="tag ${r.event_type==='login'?'ok':'gray'}">${r.event_type==='login'?'دخول':'خروج'}</span></td><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد سجلات دخول بعد</td></tr>';
 }
 function initAuditLogPage(){
  if($('auditMoveFilter').options.length<=1){
