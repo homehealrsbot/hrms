@@ -2611,10 +2611,69 @@ function renderAlerts(){
 
 /* ================= لوحة التحكم ================= */
 let DASH_CHARTS={};
+/* ============================================================
+   📊 الرسوم وسمة الصفحة
+   ------------------------------------------------------------
+   كانت الرسوم خارج نظام السمة: Chart.js يلوّن النصوص والشبكة بـ
+   #666 افتراضياً، وهو غير مقروء على أرضية داكنة — فتظهر البطاقة
+   فارغة إلا من الأعمدة. وألوان السلاسل كانت ثابتة بقيم اللوحة
+   القديمة فلا تتبع الكحلي الجديد.
+
+   الحل في مكان واحد: نقرأ التوكنات من CSS لحظة الرسم ونحقنها في
+   إعدادات Chart. و16 رسمة تمرّ كلها من هنا.
+   ============================================================ */
+function tok(n,f){
+ try{const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f}
+ catch(e){return f}
+}
+/* ألوان السلاسل من التوكنات — تتبدّل مع السمة */
+function chartColors(){
+ return {pine:tok('--pine','#103080'), sand:tok('--sand','#3D6FD9'),
+         ok:tok('--ok','#15803D'), danger:tok('--danger','#B3261E'),
+         info:tok('--info','#2D5BC4'), gray:tok('--muted','#56607A')};
+}
+function applyChartTheme(cfg){
+ const ink=tok('--ink','#0F1726'), muted=tok('--muted','#56607A'), line=tok('--line','#DCE3F0');
+ const o=cfg.options=cfg.options||{};
+ o.color=muted;
+ o.plugins=o.plugins||{};
+ if(o.plugins.legend!==false){
+  o.plugins.legend=o.plugins.legend||{};
+  if(o.plugins.legend.display!==false){
+   o.plugins.legend.labels=Object.assign({color:ink},o.plugins.legend.labels||{});
+  }
+ }
+ if(o.plugins.title)o.plugins.title.color=ink;
+ for(const ax of Object.values(o.scales||{})){
+  if(!ax||typeof ax!=='object')continue;
+  ax.ticks=Object.assign({color:muted},ax.ticks||{});
+  ax.grid=Object.assign({color:line},ax.grid||{});
+  if(ax.title)ax.title.color=muted;
+ }
+ return cfg;
+}
+const DASH_CFG={};                       /* نحفظ الإعدادات لإعادة الرسم عند تبديل السمة */
 function drawChart(canvasId,config){
  const el=$(canvasId);if(!el||typeof Chart==='undefined')return;
  if(DASH_CHARTS[canvasId])DASH_CHARTS[canvasId].destroy();
- DASH_CHARTS[canvasId]=new Chart(el.getContext('2d'),config);
+ DASH_CFG[canvasId]=config;
+ DASH_CHARTS[canvasId]=new Chart(el.getContext('2d'),applyChartTheme(config));
+}
+/* تبديل السمة لا يعيد رسم canvas تلقائياً.
+   renderDashboard يعيد بناء الإعدادات من CH فتتحدّث ألوان السلاسل أيضاً؛
+   وإن لم يكن متاحاً (صفحة أخرى، أو بيانات لم تُحمّل) نكتفي بإعادة رسم
+   ما هو قائم — فيصحّ لون النص والشبكة على الأقل. */
+/* تصريح دالة لا إسناد: التصريح يُرفع عند تحليل الكتلة فيوجد حتى لو
+   تعثّر تنفيذ سطر أسبق فيها، والإسناد لا يُنفَّذ إلا عند بلوغه. */
+function redrawChartsForTheme(){
+ if(typeof renderDashboard==='function'){
+  try{renderDashboard();return}catch(e){}
+ }
+ for(const id in DASH_CFG){
+  const el=$(id);if(!el)continue;
+  if(DASH_CHARTS[id])DASH_CHARTS[id].destroy();
+  try{DASH_CHARTS[id]=new Chart(el.getContext('2d'),applyChartTheme(DASH_CFG[id]))}catch(e){}
+ }
 }
 function renderDashboard(){
  if($('todayDateBadge'))$('todayDateBadge').textContent=todayFullStr();
@@ -2634,7 +2693,9 @@ function renderDashboard(){
   {n:siteAbs.filter(a=>String(a.date).startsWith(mNow)).length,l:'غيابات هذا الشهر',k:'danger'},
  ];
  // ألوان الهوية البصرية الفعلية للموقع (متوافقة مع متغيرات CSS الجذرية)
- const CH={pine:'#143087',sand:'#62A0F6',ok:'#2E8B62',danger:'#C34A3C',info:'#3A6EA5',gray:'#93A69D'};
+  /* ألوان السلاسل من التوكنات لا قيماً ثابتة: القيم القديمة كانت
+     من اللوحة السابقة فلا تتبع الكحلي الجديد ولا الوضع الداكن. */
+ const CH=chartColors();
  const PALETTE=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
 
  // === شارت 1: توزيع الموظفين حسب القسم ===
@@ -7500,7 +7561,9 @@ const KCUR='ر.س';
 const SIGN={Asset:1,Expense:1,Liability:-1,Equity:-1,Revenue:-1};
 const nf=n=>(+n||0).toLocaleString('en-US',{maximumFractionDigits:0});
 const pf=n=>(isFinite(n)?n.toFixed(1):'0.0')+'%';
-const CH={pine:'#143087',sand:'#62A0F6',ok:'#1F7A54',danger:'#B3261E',info:'#3A6EA5',gray:'#93A69D'};
+ /* ألوان السلاسل من التوكنات لا قيماً ثابتة: القيم القديمة كانت
+    من اللوحة السابقة فلا تتبع الكحلي الجديد ولا الوضع الداكن. */
+const CH=chartColors();
 const PAL=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
 
 async function kLoad(force){
@@ -8861,6 +8924,8 @@ function applyTheme(t){
  const dark = t==='dark' || (t!=='light' && matchMedia('(prefers-color-scheme:dark)').matches);
  /* getElementById لا $: هذه الكتلة في IIFE لا يصلها مختصر $ المعرّف في كتلة أخرى */
  const b=document.getElementById('themeBtn'); if(b)b.textContent=dark?'☀️':'🌙';
+ /* canvas لا يعيد رسم نفسه عند تغيّر CSS */
+ if(window.redrawChartsForTheme)setTimeout(window.redrawChartsForTheme,30);
 }
 function currentTheme(){
  try{return localStorage.getItem('hh-theme')||'auto'}catch(e){return 'auto'}
