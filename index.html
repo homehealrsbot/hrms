@@ -10,22 +10,46 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
+/* ============================================================
+   🎨 لوحة الألوان
+   ------------------------------------------------------------
+   الكحلي #103080 مأخوذ من الشعار (٧١٪ من بكسلاته)، فهو الهوية.
+   لكن المحايدات حوله كانت خضراء — بقايا لوحة سابقة: الخلفية
+   نعناعية والحبر مائل للأخضر و--muted رمادي أخضر، بينما الأساسي
+   أزرق. واجهة زرقاء على أرضية خضراء: العين تلتقط التنافر ولا
+   تسمّيه. المحايدات الآن مائلة نحو الكحلي نفسه.
+
+   أسماء المتغيّرات محفوظة كما هي (--pine، --sand) رغم أنها لم تعد
+   تصف قيمها، لأنها مستخدمة في ٣١ و٦ موضعًا؛ تغييرها تعديل واسع
+   بلا مكسب بصري. ما تغيّر القيم لا الأسماء.
+   ============================================================ */
 :root{
-  --pine:#143087; --pine-deep:#0B1F5C; --pine-soft:#E7ECFB;
-  --ink:#17251F; --muted:#6B7A73; --line:#E2E8E4;
-  --bg:#EAF5F2; --card:#FFFFFF;
-  --sand:#62A0F6; --sand-soft:#EAF2FE;
-  --ok:#2E8B62; --ok-soft:#E6F3EC;
-  --danger:#C34A3C; --danger-soft:#FAEAE7;
-  --info:#3A6EA5; --info-soft:#E9F0F8;
-  --radius:14px; --shadow:0 1px 3px rgba(20,37,31,.06),0 8px 24px rgba(20,37,31,.05);
+  --pine:#103080; --pine-deep:#0A1F57; --pine-soft:#E7EEFC;
+  --ink:#0F1726; --muted:#56607A; --line:#DCE3F0;
+  --bg:#F3F6FB; --card:#FFFFFF;
+  --sand:#3D6FD9; --sand-soft:#EAF0FD;
+  --ok:#15803D; --ok-soft:#E6F4EA;
+  --danger:#B3261E; --danger-soft:#FBECEB;
+  --info:#2D5BC4; --info-soft:#E9EFFB;
+  --radius:14px; --shadow:0 1px 2px rgba(15,23,38,.05),0 6px 20px rgba(15,23,38,.06);
 }
+
+/* ============================================================
+   📐 الكثافة حسب الهيكل
+   ------------------------------------------------------------
+   #app هيكل الإدارة: من يعمل عليه ساعات يريد معلومات أكثر في
+   الشاشة — حواف أحدّ وحشو أقل.
+   #empApp هيكل الموظف: يفتحه دقيقتين يوميًا — زوايا أكبر ومساحة
+   أوسع وخط أكبر. الكثافة تتبع الهيكل تلقائياً بلا أي JS.
+   ============================================================ */
+#app{    --radius:9px;  --pad:13px; --gap:12px; --fs:13.5px }
+#empApp{ --radius:18px; --pad:20px; --gap:18px; --fs:15px }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65}
 h1,h2,h3,h4{font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.35;font-weight:700}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
-input,select,textarea{font-family:inherit;font-size:14px;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);transition:border-color .15s, box-shadow .15s}
+input,select,textarea{font-family:inherit;font-size:14px;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);transition:border-color .15s, box-shadow .15s}
 input[type="date"],input[type="time"],input[type="datetime-local"]{direction:ltr;text-align:right}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px rgba(15,76,63,.12)}
 label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(--ink)}
@@ -33,12 +57,14 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 
 /* ---------- شاشة الدخول ---------- */
 #loginScreen{position:fixed;inset:0;display:flex;z-index:100;background:var(--bg)}
-.login-side{flex:1;background:linear-gradient(160deg,var(--pine-deep),var(--pine) 55%,#2F63D6);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
+/* سطح علامة لا سطح سمة: يبقى كحلياً في الوضعين. لو تبع --pine لانقلب
+   فاتحاً في الداكن وصار النص الأبيض فوقه بلا تباين. */
+.login-side{flex:1;background:linear-gradient(160deg,#0A1F57,#103080 55%,#2F63D6);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:64px;position:relative;overflow:hidden}
 .login-side::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 20% 110%,rgba(98,160,246,.28),transparent 60%)}
 .login-side h1{font-size:34px;font-weight:900;margin:18px 0 10px;position:relative}
 .login-side p{opacity:.85;max-width:420px;position:relative}
 .logo-mark{width:58px;height:58px;border-radius:16px;background:#fff;border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Sans Arabic';font-weight:900;font-size:22px;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15)}
-.login-form-wrap{width:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff}
+.login-form-wrap{width:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:var(--card)}
 .login-form{width:100%;max-width:340px}
 .login-form h2{font-size:24px;font-weight:800;margin-bottom:6px}
 .login-form .sub{color:var(--muted);font-size:13.5px;margin-bottom:26px}
@@ -49,7 +75,7 @@ label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:var(-
 .btn{display:inline-flex;align-items:center;gap:7px;justify-content:center;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;transition:.15s}
 .btn-primary{background:var(--pine);color:#fff}
 .btn-primary:hover{background:var(--pine-deep)}
-.btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.btn-ghost{background:var(--card);border:1.5px solid var(--line);color:var(--ink)}
 .btn-ghost:hover{border-color:var(--pine);color:var(--pine)}
 .btn-danger{background:var(--danger-soft);color:var(--danger)}
 .btn-sand{background:var(--sand-soft);color:var(--pine-deep)}
@@ -88,7 +114,7 @@ nav{padding:14px 12px;flex:1}
 main{margin-inline-start:264px;flex:1;min-width:0}
 
 /* ---------- الشريط العلوي ---------- */
-.topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:40}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:12px 28px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:40}
 .topbar h2{font-size:17px;font-weight:800}
 .top-search{flex:1;max-width:440px;position:relative}
 .top-search input{padding-inline-start:38px;border-radius:22px;background:var(--bg)}
@@ -98,7 +124,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .bell{position:relative;font-size:19px;color:var(--muted);padding:4px}
 .bell .dot{position:absolute;top:2px;inset-inline-end:0;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid #fff}
 
-.page{padding:26px 28px 60px;display:none}
+.page{padding:calc(var(--pad,20px) + 6px) calc(var(--pad,20px) + 8px) 60px;display:none}
 .page.on{display:block}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .page-head h1{font-size:23px;font-weight:900}
@@ -118,7 +144,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .stat .num{font-family:'IBM Plex Sans Arabic';font-size:28px;font-weight:900;line-height:1.2}
 .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:600}
 .stat.sand{border-color:var(--sand)} .stat.danger{border-color:var(--danger)} .stat.info{border-color:var(--info)} .stat.ok{border-color:var(--ok)}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--pad,20px) calc(var(--pad,20px) + 2px);margin-bottom:var(--gap,18px)}
 .card h3{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
@@ -127,10 +153,10 @@ fieldset{border:1.5px solid var(--line);border-radius:12px;padding:16px;margin-b
 legend{font-family:'IBM Plex Sans Arabic';font-weight:800;font-size:14px;padding:0 10px;color:var(--pine)}
 
 /* ---------- الجداول ---------- */
-.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;min-width:640px}
-th{background:var(--pine-soft);color:var(--pine);font-family:'IBM Plex Sans Arabic';font-weight:800;font-size:12.5px;padding:11px 13px;text-align:right;white-space:nowrap}
-td{padding:11px 13px;border-top:1px solid var(--line);vertical-align:middle}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:calc(var(--radius) - 2px)}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);min-width:640px}
+th{background:var(--pine-soft);color:var(--pine);font-family:'IBM Plex Sans Arabic';font-weight:800;font-size:12.5px;padding:9px 12px;text-align:right;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:middle}
 tbody tr:hover{background:#FAFCFB}
 .tag{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
 .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.sand{background:var(--sand-soft);color:var(--pine-deep)}
@@ -147,32 +173,33 @@ tbody tr:hover{background:#FAFCFB}
 .tabs button{padding:10px 16px;font-weight:700;font-size:13.5px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:.13s}
 .tabs button.active{color:var(--pine);border-color:var(--pine)}
 .subtabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.subtabs button{padding:7px 15px;border-radius:20px;background:#fff;border:1.5px solid var(--line);font-weight:600;font-size:12.5px;transition:.13s}
+.subtabs button{padding:7px 15px;border-radius:20px;background:var(--card);border:1.5px solid var(--line);font-weight:600;font-size:12.5px;transition:.13s}
 .subtabs button.active{background:var(--pine);border-color:var(--pine);color:#fff}
 
 /* ---------- التنبيهات ---------- */
-.alert-item{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff}
+.alert-item{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card)}
 .alert-item .aic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
 .alert-item b{display:block;font-size:13.5px}
 .alert-item small{color:var(--muted);font-size:12px}
 .aic.sand{background:var(--sand-soft)} .aic.danger{background:var(--danger-soft)} .aic.info{background:var(--info-soft)} .aic.ok{background:var(--ok-soft)}
 
 /* ---------- السياسات والملفات ---------- */
-.policy{display:flex;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff;flex-wrap:wrap}
+.policy{display:flex;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:var(--card);flex-wrap:wrap}
 .policy .pic{width:44px;height:44px;border-radius:11px;background:var(--pine-soft);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
 .policy .pinfo{flex:1;min-width:200px}
 .policy b{font-size:14.5px;font-family:'IBM Plex Sans Arabic'}
 .policy small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .policy .actions{display:flex;gap:7px;flex-wrap:wrap}
 .file-cat{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--pine-soft);border-radius:11px;font-weight:700;cursor:pointer;transition:.13s;border:1.5px solid transparent}
-.file-cat:hover,.file-cat.active{border-color:var(--pine);background:#fff;color:var(--pine)}
+.file-cat:hover,.file-cat.active{border-color:var(--pine);background:var(--card);color:var(--pine)}
 
 /* ---------- بوابة الموظف ---------- */
 .empapp{display:none;min-height:100vh}
 .empapp.on{display:flex}
 .empapp aside{background:var(--pine-deep)}
-.profile-hero{background:linear-gradient(140deg,var(--pine-deep),var(--pine));color:#fff;border-radius:var(--radius);padding:26px;display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-.empapp .profile-hero{background:linear-gradient(140deg,var(--pine-deep),var(--pine))}
+/* نفس السبب: أسطح علامة بنص أبيض — تبقى كحلية في الوضعين. */
+.profile-hero{background:linear-gradient(140deg,#0A1F57,#103080);color:#fff;border-radius:var(--radius);padding:26px;display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.empapp .profile-hero{background:linear-gradient(140deg,#0A1F57,#103080)}
 .profile-hero .avatar{width:70px;height:70px;font-size:26px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35)}
 .profile-hero h2{font-size:22px;font-weight:900}
 .profile-hero small{opacity:.85}
@@ -184,7 +211,7 @@ tbody tr:hover{background:#FAFCFB}
 /* ---------- النوافذ المنبثقة ---------- */
 .modal-back{position:fixed;inset:0;background:rgba(12,26,21,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:40px 16px;isolation:isolate}
 .modal-back.on{display:flex}
-.modal{background:#fff;border-radius:18px;width:100%;max-width:720px;padding:26px 28px;animation:pop .18s ease;max-height:86vh;overflow-y:auto;overscroll-behavior:contain}
+.modal{background:var(--card);border-radius:18px;width:100%;max-width:720px;padding:26px 28px;animation:pop .18s ease;max-height:86vh;overflow-y:auto;overscroll-behavior:contain}
 .grid-2>*{min-width:0}
 .modal.sm{max-width:520px}
 .modal.lg{max-width:860px}
@@ -207,7 +234,7 @@ tbody tr:hover{background:#FAFCFB}
 .rules-card h3{font-size:15px;margin-bottom:4px}
 .rules-card>p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
 .rules{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px}
-.rules li{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.rules li{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .rules .ri{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--pine-soft)}
 .rules .ri.ok{background:var(--ok-soft)}
 .rules .ri.sand{background:var(--sand-soft)}
@@ -356,6 +383,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <input id="topSearchInput" placeholder="ابحث في كل النظام… ثم اضغط Enter" onkeydown="if(event.key==='Enter'){go('search');runGlobalSearch(this.value)}">
   </div>
   <div class="top-user">
+    <button class="bell" id="themeBtn" onclick="toggleTheme()" title="الوضع الفاتح / الداكن" aria-label="تبديل السمة">🌙</button>
     <button class="bell" onclick="go('alerts')">🔔<span class="dot" id="bellDot" style="display:none"></span></button>
     <div class="avatar" id="topUserAvatar">أ</div>
     <div style="line-height:1.3"><b style="font-size:13px" id="topUserName">مدير النظام</b><br><small style="color:var(--muted);font-size:11px" id="topUserRole">صلاحية كاملة</small></div>
@@ -368,6 +396,12 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
    <div class="tag info" id="todayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div id="schemaWarnBox"></div>
   <div class="stats" id="dashStats"></div>
+  <!-- التنبيهات صعدت فوق الرسوم: ما يحتاج تصرفاً يُقرأ أولاً،
+       وكانت تحت ثماني رسوم مرجعية فلا تُرى إلا بتمرير طويل. -->
+  <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
+  <div class="page-head" style="margin-top:4px"><div>
+    <h1 style="font-size:19px">📊 المؤشرات والاتجاهات</h1>
+    <p>توزيعات مرجعية — للاطلاع لا للتصرّف</p></div></div>
   <div class="dash-charts-grid">
     <div class="card"><h3>👥 توزيع الموظفين حسب القسم</h3><div class="chart-box"><canvas id="chartDept"></canvas></div></div>
     <div class="card"><h3>📋 الطلبات المعلّقة حسب النوع</h3><div class="chart-box"><canvas id="chartPending"></canvas></div></div>
@@ -387,7 +421,6 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
       <thead><tr><th>الموظف</th><th>القسم</th><th>مبلغ الخصم</th><th>السبب</th></tr></thead>
       <tbody id="dashDeductionsTbody"></tbody></table></div></div>
   </div>
-  <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
   <div style="display:none"><table><tbody id="dashContracts"></tbody></table></div>
 </section>
 
@@ -1550,10 +1583,10 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 <style>
 /* منتقي الحضور المتعدد (قائمة منسدلة بخانات اختيار) */
 .ms-wrap{position:relative}
-.ms-btn{width:100%;text-align:right;padding:10px 12px;border:1px solid var(--line,#d8dee6);border-radius:10px;background:#fff;font:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ms-btn{width:100%;text-align:right;padding:10px 12px;border:1px solid var(--line,#d8dee6);border-radius:10px;background:var(--card);font:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .ms-btn:hover{border-color:var(--pine,#0f6b5c)}
 .ms-caret{opacity:.6;font-size:12px}
-.ms-panel{display:none;position:absolute;z-index:50;top:calc(100% + 4px);right:0;left:0;background:#fff;border:1px solid var(--line,#d8dee6);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:8px}
+.ms-panel{display:none;position:absolute;z-index:50;top:calc(100% + 4px);right:0;left:0;background:var(--card);border:1px solid var(--line,#d8dee6);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:8px}
 .ms-panel.on{display:block}
 .ms-search{width:100%;padding:8px 10px;border:1px solid var(--line,#d8dee6);border-radius:8px;font:inherit;margin-bottom:6px}
 .ms-actions{display:flex;gap:6px;margin-bottom:6px}
@@ -6190,7 +6223,7 @@ function clearSigPad(id){const c=$(id);c.getContext('2d').clearRect(0,0,c.width,
 function sigIsEmpty(id){const c=$(id),ctx=c.getContext('2d');const d=ctx.getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i]!==0)return false;return true}
 function sigToBlob(id){return new Promise(res=>$(id).toBlob(res,'image/png'))}
 function sigPadHtml(id,label){return `<div class="field"><label>${label} <b style="color:var(--danger)">*</b></label>
- <div style="border:1.5px dashed var(--line);border-radius:10px;background:#fff">
+ <div style="border:1.5px dashed var(--line);border-radius:10px;background:var(--card)">
  <canvas id="${id}" width="560" height="170" style="width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas></div>
  <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="clearSigPad('${id}')">مسح التوقيع</button></div>`}
 
@@ -6572,7 +6605,7 @@ window.hhPrintDoc=function(o){
  /* تذييل ثابت يتكرر في كل صفحة */
  .hh-foot{position:fixed;bottom:0;left:0;right:0;height:18mm;padding-top:7px;
    border-top:1px solid ${B.line};display:flex;justify-content:space-between;align-items:center;
-   font-size:10px;color:${B.muted};background:#fff}
+   font-size:10px;color:${B.muted};background:var(--card)}
  .hh-foot b{color:${B.blue};font-weight:600}
  @page{size:A4 ${o.landscape?'landscape':'portrait'};margin:14mm 13mm 24mm}
  @media print{.hh-noprint{display:none!important}}
@@ -7336,16 +7369,55 @@ if(typeof window.renderExtraModuleBody==='function'){
      يُلصق مرة واحدة بعد وحدة المحاسبة (accounting_module) فقط.
      ============================================================ -->
 <style>
+/* ألوان الحالة. كانت --ok و--st-good أخضرين مختلفين لنفس المعنى،
+   فالشارة الخضراء تختلف عن الشارة الخضراء حسب المكوّن. وُحِّدت. */
 :root{
-  --st-good:#1F7A54; --st-good-bg:#EEF7F2; --st-good-line:#1F7A54;
-  --st-warn:#9A6700;  --st-warn-bg:#FDF7E7; --st-warn-line:#C99200;
-  --st-bad:#B3261E;   --st-bad-bg:#FCF0EF;  --st-bad-line:#B3261E;
-  --st-neut:#3D4A63;  --st-neut-bg:#F5F7FB; --st-neut-line:#8A97AE;
-  --hair:#E6EAF2;
+  --st-good:var(--ok);    --st-good-bg:var(--ok-soft);     --st-good-line:var(--ok);
+  --st-warn:#9A6400;      --st-warn-bg:#FBF2E0;            --st-warn-line:#C99200;
+  --st-bad:var(--danger); --st-bad-bg:var(--danger-soft);  --st-bad-line:var(--danger);
+  --st-neut:#3D4A63;      --st-neut-bg:#F1F4FA;            --st-neut-line:#8A97AE;
+  --hair:#E4EAF4;
+}
+
+/* ============================================================
+   🌙 الوضع الداكن
+   ------------------------------------------------------------
+   يعيد تعريف نفس المتغيّرات فقط — لا CSS موازٍ ولا صيانة مضاعفة.
+   الكحلي يُرفع إلى #6E9AF0 لأن #103080 لا يُقرأ على أرضية داكنة.
+   يتبع إعداد الجهاز، ويغلبه اختيار المستخدم من زر السمة.
+   color-scheme يجعل حقول الإدخال وأشرطة التمرير تتبع اللوحة.
+   ============================================================ */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --pine:#6E9AF0; --pine-deep:#8FB2F5; --pine-soft:#17233C;
+  --ink:#E9EDF6; --muted:#A2ABC0; --line:#283145;
+  --bg:#0A101C; --card:#131B2B;
+  --sand:#8FB2F5; --sand-soft:#1A2744;
+  --ok:#4ADE80; --ok-soft:#10261A;
+  --danger:#F0736A; --danger-soft:#2C1614;
+  --info:#7FA6F2; --info-soft:#141F33;
+  --st-warn:#E3B341; --st-warn-bg:#2A2113; --st-warn-line:#E3B341;
+  --st-neut:#A2ABC0; --st-neut-bg:#1C2537; --st-neut-line:#4A5569;
+  --hair:#232C3E;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --pine:#6E9AF0; --pine-deep:#8FB2F5; --pine-soft:#17233C;
+  --ink:#E9EDF6; --muted:#A2ABC0; --line:#283145;
+  --bg:#0A101C; --card:#131B2B;
+  --sand:#8FB2F5; --sand-soft:#1A2744;
+  --ok:#4ADE80; --ok-soft:#10261A;
+  --danger:#F0736A; --danger-soft:#2C1614;
+  --info:#7FA6F2; --info-soft:#141F33;
+  --st-warn:#E3B341; --st-warn-bg:#2A2113; --st-warn-line:#E3B341;
+  --st-neut:#A2ABC0; --st-neut-bg:#1C2537; --st-neut-line:#4A5569;
+  --hair:#232C3E;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
 }
 /* بطاقات المؤشرات */
 #page-dashboard .stat{border:1px solid var(--hair);border-inline-start:4px solid var(--st-neut-line);
-  background:#fff;padding:15px 17px 13px;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);
+  background:var(--card);padding:15px 17px 13px;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);
   transition:box-shadow .16s,transform .16s}
 #page-dashboard .stat:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,.09)}
 #page-dashboard .stat .num{font-variant-numeric:tabular-nums;letter-spacing:-.5px;color:var(--st-neut)}
@@ -7382,14 +7454,14 @@ if(typeof window.renderExtraModuleBody==='function'){
 #page-dashboard table tbody tr:nth-child(even){background:#FCFDFE}
 #page-dashboard table td{border-top:1px solid #EEF1F6;font-variant-numeric:tabular-nums}
 /* مفتاح الألوان */
-#stLegend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:#fff;
+#stLegend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--card);
   border:1px solid var(--hair);border-radius:12px;padding:10px 16px;margin-bottom:18px;font-size:12.5px;color:#65718A}
 #stLegend b{color:#101B33;font-weight:800;margin-inline-end:4px}
 #stLegend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
 #stLegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
 /* التبويب */
 #dashShell{display:grid;grid-template-columns:236px 1fr;gap:20px;align-items:start}
-#dashNav{position:sticky;top:74px;background:#fff;border:1px solid var(--hair);border-radius:14px;
+#dashNav{position:sticky;top:74px;background:var(--card);border:1px solid var(--hair);border-radius:14px;
   padding:9px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 #dashNav .dn-title{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#93A0B8;padding:8px 11px 6px}
 .dn-item{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-radius:10px;
@@ -7777,7 +7849,7 @@ setTimeout(run,2000);
      تُلصق في آخر index.html بعد كل شيء.
      ============================================================ -->
 <style>
-.prep-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;
+.prep-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);
   border:1px solid #E6EAF2;border-radius:12px;padding:12px 16px;margin-bottom:14px}
 .prep-bar .sp{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
 .prep-note{background:#FDF7E7;border:1px solid #E8D9A8;color:#6B4E00;border-radius:10px;
@@ -8343,14 +8415,14 @@ setTimeout(()=>{
      تُلصق في آخر index.html بعد كل شيء.
      ============================================================ -->
 <style>
-.xf-bar{background:#fff;border:1px solid #E6EAF2;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.xf-bar{background:var(--card);border:1px solid #E6EAF2;border-radius:12px;padding:14px 16px;margin-bottom:14px}
 .xf-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
 .xf-row .f{display:flex;flex-direction:column;gap:4px}
 .xf-row label{font-size:11.5px;color:#77839C;font-weight:700}
 .xf-row input,.xf-row select{margin:0}
 .xf-days{display:flex;gap:6px;flex-wrap:wrap}
 .xf-day{padding:6px 12px;border:1px solid #E6EAF2;border-radius:18px;font-size:12px;font-weight:700;
-  cursor:pointer;background:#fff;color:#3D4A63;user-select:none;transition:all .13s}
+  cursor:pointer;background:var(--card);color:#3D4A63;user-select:none;transition:all .13s}
 .xf-day.on{background:var(--pine);color:#fff;border-color:var(--pine)}
 .xf-count{font-size:12.5px;color:#65718A;font-weight:700}
 .xf-count b{color:#101B33}
@@ -8775,6 +8847,42 @@ window.showErrorLog=function(){
  pre.textContent=log.length?log.map(fmtErrRecord).join('\n\n──────────\n\n'):'لا توجد أخطاء مسجّلة';
  m.classList.add('on');
 };
+/* ============================================================
+   🌙 تبديل السمة
+   ------------------------------------------------------------
+   بلا اختيار محفوظ يتبع النظام إعداد الجهاز. الاختيار يُحفظ في
+   localStorage وقد يفشل (نافذة خاصة، بيانات محجوبة) فكل وصول
+   داخل try — والصفحة تعمل بلا تخزين.
+   ============================================================ */
+function applyTheme(t){
+ const root=document.documentElement;
+ if(t==='dark'||t==='light')root.setAttribute('data-theme',t);
+ else root.removeAttribute('data-theme');
+ const dark = t==='dark' || (t!=='light' && matchMedia('(prefers-color-scheme:dark)').matches);
+ /* getElementById لا $: هذه الكتلة في IIFE لا يصلها مختصر $ المعرّف في كتلة أخرى */
+ const b=document.getElementById('themeBtn'); if(b)b.textContent=dark?'☀️':'🌙';
+}
+function currentTheme(){
+ try{return localStorage.getItem('hh-theme')||'auto'}catch(e){return 'auto'}
+}
+function toggleTheme(){
+ const now=currentTheme();
+ const dark = now==='dark' || (now==='auto' && matchMedia('(prefers-color-scheme:dark)').matches);
+ const next = dark?'light':'dark';
+ try{localStorage.setItem('hh-theme',next)}catch(e){}
+ applyTheme(next);
+}
+/* هذه الكتلة داخل IIFE، و onclick في الـHTML يبحث في النطاق العام —
+   فبلا التصدير لا يجد الزرُّ الدالةَ ولا يحدث شيء عند الضغط. */
+window.toggleTheme=toggleTheme;
+window.applyTheme=applyTheme;
+
+applyTheme(currentTheme());
+document.addEventListener('DOMContentLoaded',()=>applyTheme(currentTheme()));
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{
+ if(currentTheme()==='auto')applyTheme('auto');
+});
+
 document.addEventListener('DOMContentLoaded',syncBtn);
 
 /* ربط فلتر الجداول العام بالرسم: المراقب يرصد استبدال محتوى أي tbody
