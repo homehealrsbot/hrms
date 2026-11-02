@@ -3265,11 +3265,20 @@ function renderMeetings(){
   const invCell=inv.length
     ? `<span class="tag info" title="${inv.map(e=>e.name).join('، ')}">${inv.length} مدعو</span>`
     : `<span class="tag sand" title="لم تُحدَّد قائمة حضور — توليد الغياب سيشمل كل موظفي القسم">كل القسم</span>`;
-  return `<tr><td><b>${m.meeting_name}</b></td><td>${esc(m.title||'—')}</td><td>${m.department}</td><td>${fmt(m.meeting_date)}</td><td>${tfmt(m.meeting_time)}</td>
+  const g=checkinGate(m);
+  const linkTag=g.ok
+    ? '<span class="tag ok">الرابط مفتوح</span>'
+    : (g.why==='closed'
+        ? '<span class="tag gray">🔒 مجمّد</span>'
+        : `<span class="tag sand">يفتح ${clockStr(g.opensAt)}</span>`);
+  return `<tr><td><b>${esc(m.meeting_name)}</b></td><td>${esc(m.title||'—')}</td><td>${esc(m.department)}</td><td>${fmt(m.meeting_date)}</td><td>${tfmt(m.meeting_time)}</td>
   <td>${invCell}</td>
-  <td><span class="tag ok">${att} حاضر</span></td>
+  <td><span class="tag ok">${att} حاضر</span> ${linkTag}</td>
   <td style="white-space:nowrap">
    <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ رابط الحضور</button>
+   ${m.checkin_closed
+     ? `<button class="btn btn-ghost btn-sm" onclick="setMeetingCheckin('${m.id}',false)">🔓 إعادة فتح</button>`
+     : `<button class="btn btn-ghost btn-sm" onclick="setMeetingCheckin('${m.id}',true)">🔒 تجميد الرابط</button>`}
    ${m.meet_link?`<button class="btn btn-ghost btn-sm" onclick="openExt('${m.meet_link}')">فتح Meet</button>`:''}
    <button class="btn btn-sand btn-sm" onclick="generateAbsence('${m.id}')">توليد الغياب</button>
   </td></tr>`}).join(''):'<tr><td colspan="8" class="empty">لا توجد اجتماعات منشأة — أنشئ أول اجتماع برابط حضور</td></tr>';
@@ -3287,6 +3296,43 @@ async function createMeeting(){
  closeModal('meetingModal');await loadMeetings();renderMeetings();
  copyCheckinLink(code);
 }
+/* ============================================================
+   🔒 نافذة تسجيل الحضور عبر الرابط
+   ------------------------------------------------------------
+   الرابط لا يفتح إلا قبل موعد الاجتماع بدقيقتين، ويُغلق يدوياً
+   بزر التجميد بعد انتهائه. الفحص هنا للواجهة فقط — الحاجز الفعلي
+   سياسة RLS على meeting_records، لأن من يملك الرابط يستطيع
+   استدعاء الـAPI مباشرة متجاوزاً الصفحة.
+   ============================================================ */
+const CHECKIN_EARLY_MIN=2;
+function meetingStartsAt(m){
+ if(!m||!m.meeting_date)return null;
+ const d=String(m.meeting_date).slice(0,10);
+ const t=String(m.meeting_time||'00:00').slice(0,5);
+ const dt=new Date(d+'T'+t);          // بلا Z: يُقرأ بتوقيت الجهاز المحلي
+ return isNaN(dt.getTime())?null:dt;
+}
+/* يرجع {ok} أو {ok:false, why, opensAt} */
+function checkinGate(m){
+ if(m&&m.checkin_closed)return {ok:false,why:'closed'};
+ const start=meetingStartsAt(m);
+ if(!start)return {ok:true};          // بلا موعد محدد: لا نمنع
+ const opensAt=new Date(start.getTime()-CHECKIN_EARLY_MIN*60000);
+ if(Date.now()<opensAt.getTime())return {ok:false,why:'early',opensAt};
+ return {ok:true};
+}
+const clockStr=d=>(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0');
+
+async function setMeetingCheckin(mid,closed){
+ if(closed&&!(await showConfirm(
+   'سيتوقف تسجيل الحضور عبر الرابط لهذا الاجتماع. من لم يسجّل بعد لن يستطيع التسجيل.',
+   {icon:'🔒',title:'تجميد رابط الحضور',okText:'نعم، جمّد',okClass:'btn-sand'})))return;
+ const {error}=await sb.from('meetings').update({checkin_closed:closed}).eq('id',mid);
+ if(error){err(error);return}
+ await loadMeetings();renderMeetings();
+ toast(closed?'تم تجميد رابط الحضور 🔒':'أُعيد فتح رابط الحضور 🔓');
+}
+
 function copyCheckinLink(code){
  const link=location.origin+location.pathname+'#checkin='+code;
  navigator.clipboard.writeText(link).then(
@@ -3337,9 +3383,20 @@ async function runCheckin(){
    ${m.meet_link?`<button class="btn btn-primary btn-block" onclick="openExt('${m.meet_link}')">↗ الانتقال للاجتماع الآن</button>`:''}`;
   return;
  }
- $('checkinBody').innerHTML=`
-  <div class="section-note">📅 <b>${m.meeting_name}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
-  <p style="text-align:center;font-weight:700;color:var(--pine);padding:16px">⏳ جاري تسجيل حضورك تلقائياً...</p>`;
+ const head=`<div class="section-note">📅 <b>${esc(m.meeting_name)}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${esc(m.department)}</div>`;
+ /* البوابة تأتي بعد فحص «مسجّل مسبقاً»: من سجّل حضوره يرى تأكيده
+    ورابط الاجتماع حتى لو جُمّد الرابط بعده. */
+ const gate=checkinGate(m);
+ if(!gate.ok){
+  $('checkinBody').innerHTML=head+(gate.why==='closed'
+   ? `<p style="text-align:center;font-weight:700;color:var(--danger);padding:16px">🔒 أُغلق تسجيل الحضور لهذا الاجتماع<br>
+      <small style="font-weight:600;color:var(--muted)">تواصل مع منظّم الاجتماع إن كنت حاضراً ولم تسجّل</small></p>`
+   : `<p style="text-align:center;font-weight:700;color:var(--sand);padding:16px">⏳ لم يُفتح التسجيل بعد<br>
+      <small style="font-weight:600;color:var(--muted)">يفتح الرابط الساعة ${clockStr(gate.opensAt)} — قبل الموعد بدقيقتين</small></p>`);
+  return;
+ }
+ $('checkinBody').innerHTML=head+
+  `<p style="text-align:center;font-weight:700;color:var(--pine);padding:16px">⏳ جاري تسجيل حضورك تلقائياً...</p>`;
  await confirmCheckin(m.id,m);
 }
 async function confirmCheckin(mid,mObj){
