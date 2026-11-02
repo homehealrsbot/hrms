@@ -1865,6 +1865,114 @@ function todayFullStr(){
  const greg=now.toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'});
  return `📅 اليوم ${weekday} — ${hij} (${greg}م)`;
 }
+/* ============================================================
+   🔎 فلتر الجداول العام
+   ------------------------------------------------------------
+   يركّب نفسه على كل جدول تلقائياً بلا تعديل أي دالة render.
+   الصفحات امتلأت بالبيانات وأغلب الجداول بلا فلترة إطلاقاً، وكتابة
+   فلتر لكل جدول يعني ٥٠ نسخة تتباعد مع الوقت. فالفلترة هنا تجري على
+   الصفوف المعروضة: التطبيق يحمّل كل البيانات للذاكرة ويرسمها دفعة
+   واحدة، فما في الصفحة هو كل ما في الجدول — لا صفحات مخفية.
+
+   التاريخ يُستخرج من نص الخلية نفسها: fmt() تطبع الهجري ثم الميلادي
+   بصيغة DD/MM/YYYY، فيلتقطه التعبير النمطي بلا حاجة لـdata-attributes.
+
+   الشريط لا يظهر إلا حين تتجاوز الصفوف FILTER_MIN_ROWS — فالجداول
+   الصغيرة تبقى نظيفة.
+   ============================================================ */
+const FILTER_MIN_ROWS=8;
+/* جداول لها فلاتر غنية أصلاً — لا نضاعفها */
+const FILTER_SKIP=new Set(['empTbody','permitTbody','auditLogTbody','permissionsTbody']);
+
+/* توحيد العربية: همزات الألف، التاء المربوطة، الألف المقصورة، التشكيل.
+   بحث «احمد» يجب أن يجد «أحمد»، و«شعبه» تجد «شُعبة». */
+function normAr(s){
+ return String(s==null?'':s).toLowerCase()
+  .replace(/[أإآٱ]/g,'ا')
+  .replace(/ى/g,'ي').replace(/ة/g,'ه')
+  .replace(/[ً-ْـ]/g,'')
+  .replace(/\s+/g,' ').trim();
+}
+/* أول تاريخ في النص، بصيغة ISO للمقارنة النصية */
+function textDate(s){
+ let m=String(s).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+ if(m)return m[3]+'-'+m[2]+'-'+m[1];
+ m=String(s).match(/\d{4}-\d{2}-\d{2}/);
+ return m?m[0]:null;
+}
+function rowDates(tr){
+ const out=[];
+ for(const td of tr.cells){const d=textDate(td.textContent);if(d)out.push(d)}
+ return out;
+}
+
+function applyTableFilter(tbl){
+ const bar=tbl._hhBar;if(!bar)return;
+ const q=normAr(bar.querySelector('.hhf-q').value);
+ const from=bar.querySelector('.hhf-from').value;
+ const to=bar.querySelector('.hhf-to').value;
+ const body=tbl.tBodies[0];if(!body)return;
+ const rows=[...body.rows].filter(r=>!r.querySelector('.empty'));
+ let shown=0;
+ for(const tr of rows){
+  let ok=true;
+  if(q&&!normAr(tr.textContent).includes(q))ok=false;
+  if(ok&&(from||to)){
+   const ds=rowDates(tr);
+   /* صف بلا تاريخ يُخفى عند تحديد مدى — وإلا بقي معلّقاً بلا معنى */
+   ok=ds.length?ds.some(d=>(!from||d>=from)&&(!to||d<=to)):false;
+  }
+  tr.hidden=!ok;if(ok)shown++;
+ }
+ const on=!!(q||from||to);
+ bar.querySelector('.hhf-count').textContent=on?`عرض ${shown} من ${rows.length}`:`${rows.length} سجل`;
+ bar.querySelector('.hhf-reset').hidden=!on;
+ let none=body.querySelector('.hhf-none');
+ if(on&&!shown){
+  if(!none){none=document.createElement('tr');none.className='hhf-none';
+   none.innerHTML=`<td colspan="99" class="empty">لا نتائج مطابقة للفلتر</td>`;body.appendChild(none)}
+  none.hidden=false;
+ }else if(none)none.hidden=true;
+}
+
+function buildFilterBar(tbl){
+ const wrap=tbl.closest('.tbl-wrap')||tbl;
+ const bar=document.createElement('div');
+ bar.className='filters hhf-bar';
+ bar.innerHTML=
+  `<input class="hhf-q" placeholder="🔎 بحث في الجدول…" style="max-width:260px">
+   <input class="hhf-from" type="date" title="من تاريخ" style="max-width:170px">
+   <input class="hhf-to"   type="date" title="إلى تاريخ" style="max-width:170px">
+   <button class="btn btn-ghost btn-sm hhf-reset" hidden style="flex:0 0 auto;min-width:auto;max-width:none">مسح</button>
+   <span class="hhf-count" style="flex:0 0 auto;min-width:auto;max-width:none;white-space:nowrap;align-self:center;font-size:12px;color:var(--muted)"></span>`;
+ wrap.parentNode.insertBefore(bar,wrap);
+ tbl._hhBar=bar;
+ const run=()=>applyTableFilter(tbl);
+ bar.querySelector('.hhf-q').addEventListener('input',run);
+ bar.querySelector('.hhf-from').addEventListener('change',run);
+ bar.querySelector('.hhf-to').addEventListener('change',run);
+ bar.querySelector('.hhf-reset').addEventListener('click',()=>{
+  bar.querySelector('.hhf-q').value='';
+  bar.querySelector('.hhf-from').value='';
+  bar.querySelector('.hhf-to').value='';
+  run();
+ });
+ return bar;
+}
+
+/* يُستدعى بعد كل رسم: يُظهر الشريط عند تجاوز العتبة ويعيد تطبيق الفلتر.
+   الرسم يستبدل innerHTML فيمحو حالة الصفوف — لكن الشريط خارج الجدول
+   فيبقى، ونعيد الفلترة على الصفوف الجديدة. */
+function syncTableFilters(){
+ for(const body of document.querySelectorAll('tbody[id]')){
+  if(FILTER_SKIP.has(body.id))continue;
+  const tbl=body.closest('table');if(!tbl)continue;
+  const n=[...body.rows].filter(r=>!r.querySelector('.empty')&&!r.classList.contains('hhf-none')).length;
+  const need=n>=FILTER_MIN_ROWS;
+  if(need&&!tbl._hhBar)buildFilterBar(tbl);
+  if(tbl._hhBar){tbl._hhBar.hidden=!need;if(need)applyTableFilter(tbl)}
+ }
+}
 const fmtGreg=d=>d? new Date(d).toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'}):'';
 const fmt=d=>d? `${fmtHijri(d)} (${fmtGreg(d)}م)` : '—';
 const fmtDateTime=d=>{if(!d)return '—';const dt=new Date(d);return fmtGreg(d)+' '+dt.toTimeString().slice(0,5)};
@@ -8668,6 +8776,17 @@ window.showErrorLog=function(){
  m.classList.add('on');
 };
 document.addEventListener('DOMContentLoaded',syncBtn);
+
+/* ربط فلتر الجداول العام بالرسم: المراقب يرصد استبدال محتوى أي tbody
+   فيعيد التقييم. بهذا لا تحتاج أي دالة render تعديلاً، ولا يُنسى جدول
+   جديد يُضاف لاحقاً. عناصر tbody نفسها ثابتة — الرسم يستبدل أبناءها. */
+document.addEventListener('DOMContentLoaded',()=>{
+ let t=null;
+ const schedule=()=>{clearTimeout(t);t=setTimeout(syncTableFilters,80)};
+ const obs=new MutationObserver(schedule);
+ for(const body of document.querySelectorAll('tbody[id]'))obs.observe(body,{childList:true});
+ schedule();
+});
 if(document.body)syncBtn();
 })();
 </script>
