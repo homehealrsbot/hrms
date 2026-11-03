@@ -1182,7 +1182,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
         <button class="btn btn-danger" onclick="selfCheckOut()">🚪 تسجيل انصراف</button>
       </div>
     </div>
-    <div class="card"><h3>✅ حضوري في المقر</h3><div class="tbl-wrap"><table>
+    <div class="card"><h3>✅ حضوري في المقر</h3><div class="window-note" id="attWindowNote"></div><div class="tbl-wrap"><table>
       <thead><tr><th>التاريخ</th><th>وقت الدخول</th><th>وقت الخروج</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAttTbody"></tbody></table></div></div>
     <div class="card"><h3>📋 سجل حركات الدوام اليوم</h3><div class="tbl-wrap"><table>
       <thead><tr><th>الوقت</th><th>الحركة</th><th>الحالة بعدها</th><th>المسافة عن المقر</th></tr></thead><tbody id="epAttEventsTbody"></tbody></table></div></div>
@@ -1836,6 +1836,9 @@ function localDateStr(d){
  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
 }
 const D = o=>{const d=new Date();d.setDate(d.getDate()+(o||0));return localDateStr(d)};
+/* مدى الحضور وسجلات الاجتماعات المحمّل عند الدخول (بالأيام).
+   ما قبله لا يصل المتصفح — تُعلنه شارة في صفحة الحضور. */
+const DATA_WINDOW_DAYS=120;
 const DEPTS = ['التقنية', 'التسويق', 'المالية', 'العمليات', 'الطبي', 'خدمة العملاء', 'الإداري', 'الموارد البشرية', 'B2B'];
 const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظار الاعتماد النهائي';
 /* ============================================================
@@ -2355,8 +2358,14 @@ async function loadAll(){
   sb.from('employees').select('*').order('emp_num'),
   sb.from('contracts').select('*').order('version'),
   sb.from('leaves').select('*').order('created_at',{ascending:false}),
-  sb.from('meeting_records').select('*').order('meeting_date',{ascending:false}),
-  sb.from('site_attendance').select('*').order('record_date',{ascending:false}),
+  /* نافذة زمنية صريحة على الجدولين النامِيَين.
+     كان select('*') بلا حدّ: 29 موظفاً × ~22 يوم عمل = ~640 صف حضور
+     شهرياً، وسقف PostgREST الافتراضي 1000 صف — فخلال شهر ونصف تقريباً
+     تبدأ السجلات القديمة تسقط *بصمت* وتظهر التقارير ناقصة وهي تبدو
+     سليمة. الحدّ الصريح يجعل القطع معروفاً وقابلاً للإعلان عنه،
+     و.limit(5000) حارسٌ نكتشف به بلوغ السقف بدل أن يمرّ بلا أثر. */
+  sb.from('meeting_records').select('*').gte('meeting_date',D(-DATA_WINDOW_DAYS)).order('meeting_date',{ascending:false}).limit(5000),
+  sb.from('site_attendance').select('*').gte('record_date',D(-DATA_WINDOW_DAYS)).order('record_date',{ascending:false}).limit(5000),
   sb.from('permits').select('*').order('created_at',{ascending:false}),
   sb.from('policies').select('*').order('name'),
   sb.from('files_registry').select('*').order('uploaded_at',{ascending:false}),
@@ -2506,7 +2515,7 @@ const staged={};
 async function stageFile(key,accept,boxId){
  const f=await pickFile(accept);if(!f)return;
  staged[key]=f;
- if(boxId&&$(boxId))$(boxId).innerHTML='✅ '+f.name+' <small style="color:var(--muted)">(اضغط للتغيير)</small>';
+ if(boxId&&$(boxId))$(boxId).innerHTML='✅ '+esc(f.name)+' <small style="color:var(--muted)">(اضغط للتغيير)</small>';
 }
 function takeStaged(key,boxId,resetText){const f=staged[key]||null;delete staged[key];if(boxId&&$(boxId)&&resetText)$(boxId).innerHTML=resetText;return f}
 function friendly(m){m=String(m||'');
@@ -4304,7 +4313,7 @@ async function printOfficialForm(subId){
  const a=s.answers;
  const checklistHtml=(items)=>`<table style="width:100%;border-collapse:collapse;margin:10px 0"><thead><tr>
    <th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">البند</th><th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">الحالة</th><th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">ملاحظات</th></tr></thead>
-   <tbody>${items.map(r=>`<tr><td style="border:1px solid #ddd;padding:7px">${r.item}</td><td style="border:1px solid #ddd;padding:7px">${r.status}</td><td style="border:1px solid #ddd;padding:7px">${r.note||'—'}</td></tr>`).join('')}</tbody></table>`;
+   <tbody>${items.map(r=>`<tr><td style="border:1px solid #ddd;padding:7px">${esc(r.item)}</td><td style="border:1px solid #ddd;padding:7px">${esc(r.status)}</td><td style="border:1px solid #ddd;padding:7px">${esc(r.note||'—')}</td></tr>`).join('')}</tbody></table>`;
  let bodyHtml='';
  if(f.template==='clearance'){
   bodyHtml=`
@@ -6188,7 +6197,7 @@ function mgrRenderApprovals(){
   <td><b>${esc(s.emp)}</b></td><td>${esc(fm.name||'—')}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
-  <td><b>${esc(l.emp)}</b></td><td>${l.type}${l.reason?' — '+l.reason:''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
+  <td><b>${esc(l.emp)}</b></td><td>${esc(l.type)}${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
@@ -6254,7 +6263,7 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 let editingLeaveId=null;
 function epNewLeave(){
@@ -6323,6 +6332,11 @@ async function epAddLeave(){
 }
 const EVENT_TYPE_LABELS={check_in:'✅ تسجيل حضور',check_out:'🚪 تسجيل انصراف',exit_zone:'🔴 خروج من النطاق',return_zone:'🟢 عودة للنطاق'};
 function epRenderAttendance(){
+ /* القطع معلَن لا صامت: الموظف يعرف أن ما قبل النافذة غير معروض
+    هنا، بدل أن يظن أن سجلّه الأقدم اختفى. */
+ if($('attWindowNote'))$('attWindowNote').innerHTML=
+  `<span>🗓</span> المعروض هنا آخر ${DATA_WINDOW_DAYS} يوماً (من ${fmt(D(-DATA_WINDOW_DAYS))}). للأقدم راجع الموارد البشرية.`;
+
  const eid=currentEmp.id;
  const today=D(0);
  const todayRec=siteAtt.find(r=>r.employee_id===eid&&r.date===today);
@@ -7734,6 +7748,10 @@ if(typeof window.renderExtraModuleBody==='function'){
 .chk-txt b{font-size:17px;color:var(--ink);font-weight:800}
 .chk-txt small{font-size:12.5px;color:var(--muted);font-weight:600}
 .chk-zone:empty{display:none}
+.window-note{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+ background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
+ padding:7px 11px;margin:-2px 0 12px}
+.window-note:empty{display:none}
 .chk-zone{margin-top:6px;font-size:12px}
 .chk-act{flex-shrink:0}
 .chk-btn{min-height:48px;padding:0 26px;font-size:15px;font-weight:800;border-radius:12px}
@@ -8263,7 +8281,7 @@ function prepRender(host,full){
    <td><input class="pi-addnote" value="${it.additions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
    <td><input class="pi-ded" type="number" min="0" step="0.01" value="${+it.deductions||0}" ${editable?'':'disabled'} style="width:95px"></td>
    <td><input class="pi-dednote" value="${it.deductions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
-   <td><input class="pi-note" value="${it.note||''}" ${editable?'':'disabled'} placeholder="ملاحظة للمحاسب" style="width:150px"></td>
+   <td><input class="pi-note" value="${esc(it.note||'')}" ${editable?'':'disabled'} placeholder="ملاحظة للمحاسب" style="width:150px"></td>
   </tr>`;
  }).join('');
 
