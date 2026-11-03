@@ -2121,8 +2121,64 @@ const err=(e,extra)=>{
   const c=(String(rec.msg).match(/constraint "([^"]+)"/)||[])[1];
   if(c)msg+=` (القيد: ${c})`;
  }
+ if(sessionDead(rec.msg)){showSessionEnded(clockSkew(rec.msg)?'skew':null);return}
  toast('خطأ: '+msg,diag?rec:null);
 };
+
+/* ============================================================
+   انتهاء الجلسة
+   كان onAuthStateChange يعالج PASSWORD_RECOVERY وحده، فحين تنتهي
+   الجلسة يرى المستخدم «Failed to fetch» أو PGRST303 ويظن النظام
+   معطّلاً. وبلا خروج تلقائي يبقى جهاز مفتوح في المكتب داخلاً إلى
+   ما لا نهاية — في نظام يحمل أرقام هوية ورواتب.
+   ============================================================ */
+const IDLE_LOGOUT_MIN=45;        /* خمول قبل الخروج التلقائي */
+const IDLE_WARN_MIN=2;           /* تحذير قبل الخروج */
+let sessionEndedShown=false;
+
+/* علامات انقضاء الجلسة أو انحراف ساعة الجهاز */
+/* ساعة الجهاز متقدّمة على الخادم: الرسالة نفسها تصل كانتهاء جلسة
+   لكن علاجها ضبط التاريخ، لا إعادة الدخول. */
+function clockSkew(m){return /issued at future|iat.*future/i.test(String(m||''))}
+function sessionDead(m){
+ m=String(m||'');
+ return /PGRST303|JWT expired|JWT issued at future|invalid claim|token is expired|refresh_token_not_found|Invalid Refresh Token/i.test(m);
+}
+function showSessionEnded(reason){
+ if(sessionEndedShown)return; sessionEndedShown=true;
+ try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){}
+ const skew=reason==='skew';
+ const box=document.createElement('div');
+ box.className='session-gate';
+ box.innerHTML=`<div class="sg-card">
+   <div class="sg-ic">${skew?'🕒':'🔒'}</div>
+   <b>${skew?'ساعة جهازك غير مضبوطة':'انتهت جلستك'}</b>
+   <small>${skew
+     ? 'فرق توقيت جهازك عن الوقت الحقيقي يمنع الاتصال بالخادم. اضبط التاريخ والوقت تلقائياً من إعدادات الجهاز ثم أعد الدخول.'
+     : 'لم تعد جلستك صالحة — إمّا لمرور وقت طويل أو لتسجيل دخولك من جهاز آخر. بياناتك محفوظة، سجّل دخولك من جديد للمتابعة.'}</small>
+   <button class="btn btn-primary" onclick="location.reload()">تسجيل الدخول من جديد</button>
+  </div>`;
+ document.body.appendChild(box);
+}
+/* الخروج عند الخمول — يُهيّأ بعد الدخول */
+let idleTimer=null,idleWarnTimer=null,idleArmed=false;
+function resetIdle(){
+ if(!idleArmed)return;
+ clearTimeout(idleTimer);clearTimeout(idleWarnTimer);
+ const warnEl=document.getElementById('idleWarn'); if(warnEl)warnEl.remove();
+ idleWarnTimer=setTimeout(()=>{
+  const w=document.createElement('div');w.id='idleWarn';w.className='idle-warn';
+  w.innerHTML=`<span>⏳</span> ستُغلق جلستك بعد ${IDLE_WARN_MIN} دقيقتين لعدم النشاط — حرّك الفأرة للبقاء.`;
+  document.body.appendChild(w);
+ },(IDLE_LOGOUT_MIN-IDLE_WARN_MIN)*60000);
+ idleTimer=setTimeout(()=>{ if(typeof logout==='function')logout(); },IDLE_LOGOUT_MIN*60000);
+}
+function armIdleLogout(){
+ if(idleArmed)return; idleArmed=true;
+ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>
+   document.addEventListener(ev,resetIdle,{passive:true}));
+ resetIdle();
+}
 
 /* ============================================================
    الفشل الصامت
@@ -2220,9 +2276,11 @@ async function enterApp(){
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
  runCheckin();
  initRealtime();
+ armIdleLogout();   /* الخروج التلقائي يبدأ بعد الدخول لا قبله */
  checkSchema().catch(e=>console.warn('تعذّر فحص قاعدة البيانات',e)); // في الخلفية، لا يعطّل الدخول
 }
 async function logout(){
+ window.__hhLoggingOut=true;   /* خروج إرادي: لا تُعرض لوحة «انتهت جلستك» */
  try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){hhQuiet('إيقاف مراقبة الموقع عند الخروج',e)}
  try{if(me)await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'logout'})}catch(e){hhQuiet('تسجيل الخروج في السجل',e)}
  await sb.auth.signOut();location.reload()
@@ -2282,7 +2340,13 @@ async function forgotPassword(){
  if(error){err(error);return}
  toast('تم إرسال رابط الاستعادة إلى '+email+' — افتح بريدك واضغط الرابط');
 }
-sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;openModal('newPassModal')}});
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'){recovering=true;openModal('newPassModal');return}
+ /* الخروج الذي لم يطلبه المستخدم (انقضاء أو إبطال) يُعلَن بوضوح
+    بدل أن تتحوّل كل نداءة لاحقة إلى خطأ شبكة غامض. */
+ if(event==='SIGNED_OUT'&&!window.__hhLoggingOut&&me)showSessionEnded();
+ if(event==='TOKEN_REFRESHED'&&!session)showSessionEnded();
+});
 async function saveNewPassword(){
  const p1=$('npPass').value,p2=$('npPass2').value;
  if(p1.length<6){toast('كلمة المرور 6 أحرف على الأقل');return}
@@ -7752,6 +7816,21 @@ if(typeof window.renderExtraModuleBody==='function'){
  background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
  padding:7px 11px;margin:-2px 0 12px}
 .window-note:empty{display:none}
+/* ===== لوحة انتهاء الجلسة وتحذير الخمول ===== */
+.session-gate{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;
+ background:rgba(8,14,28,.72);backdrop-filter:blur(3px);padding:20px}
+.sg-card{background:var(--card);border-radius:18px;padding:34px 30px;max-width:430px;width:100%;
+ text-align:center;display:flex;flex-direction:column;align-items:center;gap:11px;
+ box-shadow:0 24px 70px rgba(0,0,0,.4);border:1px solid var(--line)}
+.sg-ic{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;
+ background:var(--st-warn-bg);font-size:28px;margin-bottom:4px}
+.sg-card b{font-size:19px;color:var(--ink);font-weight:800}
+.sg-card small{font-size:13.5px;color:var(--muted);line-height:1.85}
+.sg-card .btn{margin-top:12px;min-height:46px;padding:0 30px;font-size:15px}
+.idle-warn{position:fixed;bottom:22px;inset-inline-start:50%;transform:translateX(50%);
+ z-index:10400;display:flex;align-items:center;gap:9px;background:var(--st-warn-bg);
+ color:var(--st-warn);border:1px solid var(--st-warn-line);border-radius:12px;
+ padding:11px 18px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(16,24,40,.25)}
 .chk-zone{margin-top:6px;font-size:12px}
 .chk-act{flex-shrink:0}
 .chk-btn{min-height:48px;padding:0 26px;font-size:15px;font-weight:800;border-radius:12px}
