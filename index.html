@@ -1182,7 +1182,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
         <button class="btn btn-danger" onclick="selfCheckOut()">🚪 تسجيل انصراف</button>
       </div>
     </div>
-    <div class="card"><h3>✅ حضوري في المقر</h3><div class="tbl-wrap"><table>
+    <div class="card"><h3>✅ حضوري في المقر</h3><div class="window-note" id="attWindowNote"></div><div class="tbl-wrap"><table>
       <thead><tr><th>التاريخ</th><th>وقت الدخول</th><th>وقت الخروج</th><th>ملاحظات</th></tr></thead><tbody id="epSiteAttTbody"></tbody></table></div></div>
     <div class="card"><h3>📋 سجل حركات الدوام اليوم</h3><div class="tbl-wrap"><table>
       <thead><tr><th>الوقت</th><th>الحركة</th><th>الحالة بعدها</th><th>المسافة عن المقر</th></tr></thead><tbody id="epAttEventsTbody"></tbody></table></div></div>
@@ -1836,6 +1836,9 @@ function localDateStr(d){
  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
 }
 const D = o=>{const d=new Date();d.setDate(d.getDate()+(o||0));return localDateStr(d)};
+/* مدى الحضور وسجلات الاجتماعات المحمّل عند الدخول (بالأيام).
+   ما قبله لا يصل المتصفح — تُعلنه شارة في صفحة الحضور. */
+const DATA_WINDOW_DAYS=120;
 const DEPTS = ['التقنية', 'التسويق', 'المالية', 'العمليات', 'الطبي', 'خدمة العملاء', 'الإداري', 'الموارد البشرية', 'B2B'];
 const LV_P1='بانتظار موافقة رئيس القسم', LV_P2='بانتظار الاعتماد النهائي';
 /* ============================================================
@@ -2118,8 +2121,64 @@ const err=(e,extra)=>{
   const c=(String(rec.msg).match(/constraint "([^"]+)"/)||[])[1];
   if(c)msg+=` (القيد: ${c})`;
  }
+ if(sessionDead(rec.msg)){showSessionEnded(clockSkew(rec.msg)?'skew':null);return}
  toast('خطأ: '+msg,diag?rec:null);
 };
+
+/* ============================================================
+   انتهاء الجلسة
+   كان onAuthStateChange يعالج PASSWORD_RECOVERY وحده، فحين تنتهي
+   الجلسة يرى المستخدم «Failed to fetch» أو PGRST303 ويظن النظام
+   معطّلاً. وبلا خروج تلقائي يبقى جهاز مفتوح في المكتب داخلاً إلى
+   ما لا نهاية — في نظام يحمل أرقام هوية ورواتب.
+   ============================================================ */
+const IDLE_LOGOUT_MIN=45;        /* خمول قبل الخروج التلقائي */
+const IDLE_WARN_MIN=2;           /* تحذير قبل الخروج */
+let sessionEndedShown=false;
+
+/* علامات انقضاء الجلسة أو انحراف ساعة الجهاز */
+/* ساعة الجهاز متقدّمة على الخادم: الرسالة نفسها تصل كانتهاء جلسة
+   لكن علاجها ضبط التاريخ، لا إعادة الدخول. */
+function clockSkew(m){return /issued at future|iat.*future/i.test(String(m||''))}
+function sessionDead(m){
+ m=String(m||'');
+ return /PGRST303|JWT expired|JWT issued at future|invalid claim|token is expired|refresh_token_not_found|Invalid Refresh Token/i.test(m);
+}
+function showSessionEnded(reason){
+ if(sessionEndedShown)return; sessionEndedShown=true;
+ try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){}
+ const skew=reason==='skew';
+ const box=document.createElement('div');
+ box.className='session-gate';
+ box.innerHTML=`<div class="sg-card">
+   <div class="sg-ic">${skew?'🕒':'🔒'}</div>
+   <b>${skew?'ساعة جهازك غير مضبوطة':'انتهت جلستك'}</b>
+   <small>${skew
+     ? 'فرق توقيت جهازك عن الوقت الحقيقي يمنع الاتصال بالخادم. اضبط التاريخ والوقت تلقائياً من إعدادات الجهاز ثم أعد الدخول.'
+     : 'لم تعد جلستك صالحة — إمّا لمرور وقت طويل أو لتسجيل دخولك من جهاز آخر. بياناتك محفوظة، سجّل دخولك من جديد للمتابعة.'}</small>
+   <button class="btn btn-primary" onclick="location.reload()">تسجيل الدخول من جديد</button>
+  </div>`;
+ document.body.appendChild(box);
+}
+/* الخروج عند الخمول — يُهيّأ بعد الدخول */
+let idleTimer=null,idleWarnTimer=null,idleArmed=false;
+function resetIdle(){
+ if(!idleArmed)return;
+ clearTimeout(idleTimer);clearTimeout(idleWarnTimer);
+ const warnEl=document.getElementById('idleWarn'); if(warnEl)warnEl.remove();
+ idleWarnTimer=setTimeout(()=>{
+  const w=document.createElement('div');w.id='idleWarn';w.className='idle-warn';
+  w.innerHTML=`<span>⏳</span> ستُغلق جلستك بعد ${IDLE_WARN_MIN} دقيقتين لعدم النشاط — حرّك الفأرة للبقاء.`;
+  document.body.appendChild(w);
+ },(IDLE_LOGOUT_MIN-IDLE_WARN_MIN)*60000);
+ idleTimer=setTimeout(()=>{ if(typeof logout==='function')logout(); },IDLE_LOGOUT_MIN*60000);
+}
+function armIdleLogout(){
+ if(idleArmed)return; idleArmed=true;
+ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>
+   document.addEventListener(ev,resetIdle,{passive:true}));
+ resetIdle();
+}
 
 /* ============================================================
    الفشل الصامت
@@ -2217,9 +2276,11 @@ async function enterApp(){
  else{currentEmp=me;$('empApp').classList.add('on');initEmpPortal()}
  runCheckin();
  initRealtime();
+ armIdleLogout();   /* الخروج التلقائي يبدأ بعد الدخول لا قبله */
  checkSchema().catch(e=>console.warn('تعذّر فحص قاعدة البيانات',e)); // في الخلفية، لا يعطّل الدخول
 }
 async function logout(){
+ window.__hhLoggingOut=true;   /* خروج إرادي: لا تُعرض لوحة «انتهت جلستك» */
  try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){hhQuiet('إيقاف مراقبة الموقع عند الخروج',e)}
  try{if(me)await sb.from('login_log').insert({employee_id:me.id,employee_name:me.name,event_type:'logout'})}catch(e){hhQuiet('تسجيل الخروج في السجل',e)}
  await sb.auth.signOut();location.reload()
@@ -2279,7 +2340,13 @@ async function forgotPassword(){
  if(error){err(error);return}
  toast('تم إرسال رابط الاستعادة إلى '+email+' — افتح بريدك واضغط الرابط');
 }
-sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;openModal('newPassModal')}});
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'){recovering=true;openModal('newPassModal');return}
+ /* الخروج الذي لم يطلبه المستخدم (انقضاء أو إبطال) يُعلَن بوضوح
+    بدل أن تتحوّل كل نداءة لاحقة إلى خطأ شبكة غامض. */
+ if(event==='SIGNED_OUT'&&!window.__hhLoggingOut&&me)showSessionEnded();
+ if(event==='TOKEN_REFRESHED'&&!session)showSessionEnded();
+});
 async function saveNewPassword(){
  const p1=$('npPass').value,p2=$('npPass2').value;
  if(p1.length<6){toast('كلمة المرور 6 أحرف على الأقل');return}
@@ -2355,8 +2422,14 @@ async function loadAll(){
   sb.from('employees').select('*').order('emp_num'),
   sb.from('contracts').select('*').order('version'),
   sb.from('leaves').select('*').order('created_at',{ascending:false}),
-  sb.from('meeting_records').select('*').order('meeting_date',{ascending:false}),
-  sb.from('site_attendance').select('*').order('record_date',{ascending:false}),
+  /* نافذة زمنية صريحة على الجدولين النامِيَين.
+     كان select('*') بلا حدّ: 29 موظفاً × ~22 يوم عمل = ~640 صف حضور
+     شهرياً، وسقف PostgREST الافتراضي 1000 صف — فخلال شهر ونصف تقريباً
+     تبدأ السجلات القديمة تسقط *بصمت* وتظهر التقارير ناقصة وهي تبدو
+     سليمة. الحدّ الصريح يجعل القطع معروفاً وقابلاً للإعلان عنه،
+     و.limit(5000) حارسٌ نكتشف به بلوغ السقف بدل أن يمرّ بلا أثر. */
+  sb.from('meeting_records').select('*').gte('meeting_date',D(-DATA_WINDOW_DAYS)).order('meeting_date',{ascending:false}).limit(5000),
+  sb.from('site_attendance').select('*').gte('record_date',D(-DATA_WINDOW_DAYS)).order('record_date',{ascending:false}).limit(5000),
   sb.from('permits').select('*').order('created_at',{ascending:false}),
   sb.from('policies').select('*').order('name'),
   sb.from('files_registry').select('*').order('uploaded_at',{ascending:false}),
@@ -2506,7 +2579,7 @@ const staged={};
 async function stageFile(key,accept,boxId){
  const f=await pickFile(accept);if(!f)return;
  staged[key]=f;
- if(boxId&&$(boxId))$(boxId).innerHTML='✅ '+f.name+' <small style="color:var(--muted)">(اضغط للتغيير)</small>';
+ if(boxId&&$(boxId))$(boxId).innerHTML='✅ '+esc(f.name)+' <small style="color:var(--muted)">(اضغط للتغيير)</small>';
 }
 function takeStaged(key,boxId,resetText){const f=staged[key]||null;delete staged[key];if(boxId&&$(boxId)&&resetText)$(boxId).innerHTML=resetText;return f}
 function friendly(m){m=String(m||'');
@@ -4304,7 +4377,7 @@ async function printOfficialForm(subId){
  const a=s.answers;
  const checklistHtml=(items)=>`<table style="width:100%;border-collapse:collapse;margin:10px 0"><thead><tr>
    <th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">البند</th><th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">الحالة</th><th style="border:1px solid #ccd;padding:8px;background:var(--ok-soft)">ملاحظات</th></tr></thead>
-   <tbody>${items.map(r=>`<tr><td style="border:1px solid #ddd;padding:7px">${r.item}</td><td style="border:1px solid #ddd;padding:7px">${r.status}</td><td style="border:1px solid #ddd;padding:7px">${r.note||'—'}</td></tr>`).join('')}</tbody></table>`;
+   <tbody>${items.map(r=>`<tr><td style="border:1px solid #ddd;padding:7px">${esc(r.item)}</td><td style="border:1px solid #ddd;padding:7px">${esc(r.status)}</td><td style="border:1px solid #ddd;padding:7px">${esc(r.note||'—')}</td></tr>`).join('')}</tbody></table>`;
  let bodyHtml='';
  if(f.template==='clearance'){
   bodyHtml=`
@@ -4588,7 +4661,7 @@ function auditDiffSummary(r){
   const ov=r.old_data[k],nv=r.new_data[k];
   if(JSON.stringify(ov)!==JSON.stringify(nv)){
    const label=AUDIT_FIELD_LABELS[k]||k;
-   changes.push(`${label}: ${ov??'—'} ← ${nv??'—'}`);
+   changes.push(`${esc(label)}: ${esc(ov??'—')} ← ${esc(nv??'—')}`);
   }
  });
  return changes.length?changes.slice(0,3).join('، ')+(changes.length>3?' ...':''):'لا تغيير بالبيانات';
@@ -4610,7 +4683,7 @@ async function loadAuditLog(append){
   const lbl=AUDIT_ACTION_LABELS[r.action]||{t:r.action,k:'info'};
   const moveLabel=(AUDIT_MOVE_LABELS[r.table_name]||{})[r.action]||(AUDIT_TABLE_LABELS[r.table_name]||r.table_name);
   const isDirectSQL=!r.changed_by_name||r.changed_by_name==='غير معروف';
-  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td>${!isDirectSQL?`<b>${r.changed_by_name}</b>`:'<span style="color:var(--muted)" title="نُفّذ هذا الإجراء عبر SQL Editor مباشرة، مو من داخل الموقع">🛠 تعديل مباشر (SQL)</span>'}</td><td><span class="tag ${lbl.k}">${moveLabel}</span></td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td><td>${!isDirectSQL?`<b>${esc(r.changed_by_name)}</b>`:'<span style="color:var(--muted)" title="نُفّذ هذا الإجراء عبر SQL Editor مباشرة، مو من داخل الموقع">🛠 تعديل مباشر (SQL)</span>'}</td><td><span class="tag ${lbl.k}">${esc(moveLabel)}</span></td><td style="font-size:12px;color:var(--muted)">${auditDiffSummary(r)}</td></tr>`;
  }).join('');
  if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
  else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="4" class="empty">لا توجد سجلات مطابقة</td></tr>';
@@ -6188,7 +6261,7 @@ function mgrRenderApprovals(){
   <td><b>${esc(s.emp)}</b></td><td>${esc(fm.name||'—')}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
-  <td><b>${esc(l.emp)}</b></td><td>${l.type}${l.reason?' — '+l.reason:''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
+  <td><b>${esc(l.emp)}</b></td><td>${esc(l.type)}${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
   <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
@@ -6254,7 +6327,7 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${l.type}</b>${l.reason?' — '+l.reason:''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 let editingLeaveId=null;
 function epNewLeave(){
@@ -6323,6 +6396,11 @@ async function epAddLeave(){
 }
 const EVENT_TYPE_LABELS={check_in:'✅ تسجيل حضور',check_out:'🚪 تسجيل انصراف',exit_zone:'🔴 خروج من النطاق',return_zone:'🟢 عودة للنطاق'};
 function epRenderAttendance(){
+ /* القطع معلَن لا صامت: الموظف يعرف أن ما قبل النافذة غير معروض
+    هنا، بدل أن يظن أن سجلّه الأقدم اختفى. */
+ if($('attWindowNote'))$('attWindowNote').innerHTML=
+  `<span>🗓</span> المعروض هنا آخر ${DATA_WINDOW_DAYS} يوماً (من ${fmt(D(-DATA_WINDOW_DAYS))}). للأقدم راجع الموارد البشرية.`;
+
  const eid=currentEmp.id;
  const today=D(0);
  const todayRec=siteAtt.find(r=>r.employee_id===eid&&r.date===today);
@@ -7734,6 +7812,25 @@ if(typeof window.renderExtraModuleBody==='function'){
 .chk-txt b{font-size:17px;color:var(--ink);font-weight:800}
 .chk-txt small{font-size:12.5px;color:var(--muted);font-weight:600}
 .chk-zone:empty{display:none}
+.window-note{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+ background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
+ padding:7px 11px;margin:-2px 0 12px}
+.window-note:empty{display:none}
+/* ===== لوحة انتهاء الجلسة وتحذير الخمول ===== */
+.session-gate{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;
+ background:rgba(8,14,28,.72);backdrop-filter:blur(3px);padding:20px}
+.sg-card{background:var(--card);border-radius:18px;padding:34px 30px;max-width:430px;width:100%;
+ text-align:center;display:flex;flex-direction:column;align-items:center;gap:11px;
+ box-shadow:0 24px 70px rgba(0,0,0,.4);border:1px solid var(--line)}
+.sg-ic{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;
+ background:var(--st-warn-bg);font-size:28px;margin-bottom:4px}
+.sg-card b{font-size:19px;color:var(--ink);font-weight:800}
+.sg-card small{font-size:13.5px;color:var(--muted);line-height:1.85}
+.sg-card .btn{margin-top:12px;min-height:46px;padding:0 30px;font-size:15px}
+.idle-warn{position:fixed;bottom:22px;inset-inline-start:50%;transform:translateX(50%);
+ z-index:10400;display:flex;align-items:center;gap:9px;background:var(--st-warn-bg);
+ color:var(--st-warn);border:1px solid var(--st-warn-line);border-radius:12px;
+ padding:11px 18px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(16,24,40,.25)}
 .chk-zone{margin-top:6px;font-size:12px}
 .chk-act{flex-shrink:0}
 .chk-btn{min-height:48px;padding:0 26px;font-size:15px;font-weight:800;border-radius:12px}
@@ -8263,7 +8360,7 @@ function prepRender(host,full){
    <td><input class="pi-addnote" value="${it.additions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
    <td><input class="pi-ded" type="number" min="0" step="0.01" value="${+it.deductions||0}" ${editable?'':'disabled'} style="width:95px"></td>
    <td><input class="pi-dednote" value="${it.deductions_note||''}" ${editable?'':'disabled'} placeholder="سبب" style="width:120px"></td>
-   <td><input class="pi-note" value="${it.note||''}" ${editable?'':'disabled'} placeholder="ملاحظة للمحاسب" style="width:150px"></td>
+   <td><input class="pi-note" value="${esc(it.note||'')}" ${editable?'':'disabled'} placeholder="ملاحظة للمحاسب" style="width:150px"></td>
   </tr>`;
  }).join('');
 
