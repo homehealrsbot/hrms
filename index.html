@@ -32,6 +32,10 @@
   --danger:#B3261E; --danger-soft:#FBECEB;
   --info:#2D5BC4; --info-soft:#E9EFFB;
   --radius:14px; --shadow:0 1px 2px rgba(15,23,38,.05),0 6px 20px rgba(15,23,38,.06);
+  /* ألوان تصنيفية — ثماني درجات متمايزة لا درجات لون واحد. لا تُشتق من
+     توكنات العلامة: --pine و--sand و--info كلها كحليّات، فاشتقاقها منها
+     جعل شرائح الدونات متشابهة. مرتّبة ومتحقَّق منها بفاحص عمى الألوان. */
+  --cat-1:#3366D6; --cat-2:#099268; --cat-3:#9333EA; --cat-4:#A16207; --cat-5:#1098AD; --cat-6:#C2255C; --cat-7:#E8590C; --cat-8:#5F6B85;
 }
 
 /* ============================================================
@@ -134,6 +138,19 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px;margin-bottom:26px}
 .stat{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-inline-start:4px solid var(--pine);display:flex;flex-direction:column;gap:2px}
 .dash-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dash-fold{margin-bottom:16px;border:1px solid var(--line);border-radius:var(--radius);
+ background:var(--card);overflow:hidden}
+.dash-fold>summary{cursor:pointer;list-style:none;padding:13px 18px;display:flex;
+ align-items:baseline;gap:10px;flex-wrap:wrap;user-select:none}
+.dash-fold>summary::-webkit-details-marker{display:none}
+.dash-fold>summary::before{content:'▸';color:var(--muted);font-size:12px;
+ transition:transform .15s;display:inline-block}
+.dash-fold[open]>summary::before{transform:rotate(-90deg)}
+.dash-fold>summary:hover{background:var(--bg)}
+.dash-fold .ft{font-weight:800;font-size:16px}
+.dash-fold .fs{font-size:12px;color:var(--muted)}
+.dash-fold .dash-charts-grid,.dash-fold>.card{margin:0 14px 14px}
+.dash-fold[open]>summary{border-bottom:1px solid var(--line);margin-bottom:14px}
 .chart-box{position:relative;height:260px;margin-top:6px}
 @media (max-width:1024px){.dash-charts-grid{grid-template-columns:1fr}}
 .stat{cursor:pointer;transition:transform .12s, box-shadow .12s}
@@ -399,24 +416,32 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <!-- التنبيهات صعدت فوق الرسوم: ما يحتاج تصرفاً يُقرأ أولاً،
        وكانت تحت ثماني رسوم مرجعية فلا تُرى إلا بتمرير طويل. -->
   <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
-  <div class="page-head" style="margin-top:4px"><div>
-    <h1 style="font-size:19px">📊 المؤشرات والاتجاهات</h1>
-    <p>توزيعات مرجعية — للاطلاع لا للتصرّف</p></div></div>
+  <!-- مطوية افتراضياً: ثماني رسوم بنفس وزن بطاقات المؤشرات تجعل اللوحة
+       تبدو مبعثرة، وهي مرجعية لا يُتصرّف بها يومياً. تُفتح عند الحاجة
+       وتبقى مفتوحة بعدها (محفوظة محلياً). -->
+  <details class="dash-fold" id="foldTrends">
+   <summary><span class="ft">📊 المؤشرات والاتجاهات</span>
+    <span class="fs">توزيعات مرجعية — للاطلاع لا للتصرّف</span></summary>
   <div class="dash-charts-grid">
     <div class="card"><h3>👥 توزيع الموظفين حسب القسم</h3><div class="chart-box"><canvas id="chartDept"></canvas></div></div>
     <div class="card"><h3>📋 الطلبات المعلّقة حسب النوع</h3><div class="chart-box"><canvas id="chartPending"></canvas></div></div>
     <div class="card"><h3>🌴 استخدام الإجازات هذا العام</h3><div class="chart-box"><canvas id="chartLeaves"></canvas></div></div>
     <div class="card"><h3>📈 اتجاه طلبات الإجازة — آخر 6 أشهر</h3><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
   </div>
+    </details>
   <div id="dashFinanceSection" style="display:none">
     <div class="page-head" style="margin-top:6px"><div><h1 style="font-size:20px">💰 النظرة المالية</h1><p>مؤشرات الرواتب والعهد والمصروفات</p></div></div>
     <div class="stats" id="dashFinanceStats"></div>
+    <details class="dash-fold" id="foldFinance">
+     <summary><span class="ft">💰 رسوم المالية</span>
+      <span class="fs">الرواتب والعهد والمصروفات</span></summary>
     <div class="dash-charts-grid">
       <div class="card"><h3>📑 تكلفة الرواتب حسب القسم (آخر كشف)</h3><div class="chart-box"><canvas id="chartPayrollDept"></canvas></div></div>
       <div class="card"><h3>💵 طلبات الصرف حسب الفئة</h3><div class="chart-box"><canvas id="chartPaySplit"></canvas></div></div>
       <div class="card"><h3>📦 حالة العهد</h3><div class="chart-box"><canvas id="chartCustody"></canvas></div></div>
       <div class="card"><h3>📈 اتجاه المصروفات — آخر 6 أشهر</h3><div class="chart-box"><canvas id="chartSpendTrend"></canvas></div></div>
     </div>
+        </details>
     <div class="card"><h3>🧾 تفاصيل الخصومات — آخر كشف رواتب</h3><div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>القسم</th><th>مبلغ الخصم</th><th>السبب</th></tr></thead>
       <tbody id="dashDeductionsTbody"></tbody></table></div></div>
@@ -2626,6 +2651,11 @@ function tok(n,f){
  try{const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f}
  catch(e){return f}
 }
+/* اللوحة التصنيفية: ترتيب ثابت لا يُدوَّر، وكل خانة تعني نفس الفئة في
+   الوضعين. القيم الداكنة مختارة لسطحها لا مقلوبة آلياً عن الفاتحة. */
+function catPalette(){
+ const a=[];for(let i=1;i<=8;i++)a.push(tok('--cat-'+i,'#3366D6'));return a;
+}
 /* ألوان السلاسل من التوكنات — تتبدّل مع السمة */
 function chartColors(){
  return {pine:tok('--pine','#103080'), sand:tok('--sand','#3D6FD9'),
@@ -2696,7 +2726,7 @@ function renderDashboard(){
   /* ألوان السلاسل من التوكنات لا قيماً ثابتة: القيم القديمة كانت
      من اللوحة السابقة فلا تتبع الكحلي الجديد ولا الوضع الداكن. */
  const CH=chartColors();
- const PALETTE=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
+ const PALETTE=catPalette();
 
  // === شارت 1: توزيع الموظفين حسب القسم ===
  const deptCounts={};
@@ -7460,6 +7490,7 @@ if(typeof window.renderExtraModuleBody==='function'){
   --st-neut:#A2ABC0; --st-neut-bg:#1C2537; --st-neut-line:#4A5569;
   --hair:#232C3E;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  --cat-1:#4A7FE0; --cat-2:#1A8F5E; --cat-3:#8A66DE; --cat-4:#AD8418; --cat-5:#1792AB; --cat-6:#B8457F; --cat-7:#D4772A; --cat-8:#6E7B93;
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -7474,6 +7505,7 @@ if(typeof window.renderExtraModuleBody==='function'){
   --st-neut:#A2ABC0; --st-neut-bg:#1C2537; --st-neut-line:#4A5569;
   --hair:#232C3E;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  --cat-1:#4A7FE0; --cat-2:#1A8F5E; --cat-3:#8A66DE; --cat-4:#AD8418; --cat-5:#1792AB; --cat-6:#B8457F; --cat-7:#D4772A; --cat-8:#6E7B93;
   color-scheme:dark;
 }
 /* بطاقات المؤشرات */
@@ -7564,7 +7596,7 @@ const pf=n=>(isFinite(n)?n.toFixed(1):'0.0')+'%';
  /* ألوان السلاسل من التوكنات لا قيماً ثابتة: القيم القديمة كانت
     من اللوحة السابقة فلا تتبع الكحلي الجديد ولا الوضع الداكن. */
 const CH=chartColors();
-const PAL=[CH.pine,CH.ok,CH.sand,CH.info,CH.danger,'#8B5CF6','#F59E0B',CH.gray];
+const PAL=catPalette();
 
 async function kLoad(force){
  if(kBusy)return;
@@ -8946,6 +8978,21 @@ applyTheme(currentTheme());
 document.addEventListener('DOMContentLoaded',()=>applyTheme(currentTheme()));
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{
  if(currentTheme()==='auto')applyTheme('auto');
+});
+
+/* <details> مغلق يعني حاوية بلا أبعاد، فـChart.js يرسم بمقاس صفر ويبقى
+   كذلك بعد الفتح. نعيد المقاس عند أول فتح، ونحفظ حالة الطي للمستخدم. */
+document.addEventListener('DOMContentLoaded',function(){
+ document.querySelectorAll('details.dash-fold').forEach(function(d){
+  try{if(localStorage.getItem('hh-fold-'+d.id)==='1')d.open=true}catch(e){}
+  d.addEventListener('toggle',function(){
+   try{localStorage.setItem('hh-fold-'+d.id,d.open?'1':'0')}catch(e){}
+   if(!d.open)return;
+   /* Chart.js المستجيب يستمع لـresize على النافذة، فإطلاقه يكفي ولا
+      يحتاج الوصول إلى سجلّ الرسوم من كتلة أخرى. */
+   setTimeout(function(){window.dispatchEvent(new Event('resize'))},50);
+  });
+ });
 });
 
 document.addEventListener('DOMContentLoaded',syncBtn);
