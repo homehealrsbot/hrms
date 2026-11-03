@@ -141,7 +141,7 @@ main{margin-inline-start:264px;flex:1;min-width:0}
 .page-head p{color:var(--muted);font-size:13px;margin-top:3px}
 
 /* ---------- البطاقات ---------- */
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px;margin-bottom:26px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;margin-bottom:26px}
 .stat{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-inline-start:4px solid var(--pine);display:flex;flex-direction:column;gap:2px}
 .dash-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .dash-fold{margin-bottom:16px;border:1px solid var(--line);border-radius:var(--radius);
@@ -190,6 +190,44 @@ tbody tr:hover{background:var(--card)}
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .filters>*{width:auto;min-width:150px;flex:1;max-width:220px}
 .empty{text-align:center;color:var(--muted);padding:34px 10px;font-size:13.5px}
+/* الحالة الفارغة: كانت سطر نص رمادياً وسط فراغ. الآن أيقونة
+   وعنوان وسطر يشرح السبب، وزرّ الخطوة التالية حيث توجد واحدة. */
+.empty-x{display:flex;flex-direction:column;align-items:center;gap:7px;padding:38px 16px;text-align:center}
+/* ===== هيكل التحميل: شكل المحتوى قبل وصوله، بدل فراغ أبيض ===== */
+.skel{background:linear-gradient(90deg,var(--line) 25%,var(--bg) 37%,var(--line) 63%);
+ background-size:400% 100%;animation:skelShine 1.4s ease-in-out infinite;border-radius:7px;display:block}
+@keyframes skelShine{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.skel-stat{height:84px;border-radius:var(--radius)}
+.skel-line{height:12px;margin:9px 0}
+.skel-row{height:38px;margin:7px 0}
+@media (prefers-reduced-motion:reduce){.skel{animation:none;background:var(--line)}}
+
+/* ===== تفاعلات دقيقة ===== */
+/* البطاقات والأزرار تستجيب للمس واللمحة بوضوح لكن بلا مبالغة */
+.stat:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(15,23,38,.10)}
+.stat:active{transform:translateY(0)}
+.btn{transition:background .15s,color .15s,box-shadow .15s,transform .08s}
+.btn:active{transform:scale(.975)}
+.card{transition:box-shadow .18s}
+/* مؤشر تركيز واضح للوحة المفاتيح — كان يعتمد على الافتراضي فقط */
+.btn:focus-visible,.nav-item:focus-visible,.stat:focus-visible,
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+ outline:2px solid var(--sand);outline-offset:2px}
+/* ظهور ناعم للصفحة عند التنقّل */
+.page.on{animation:pageIn .22s ease-out}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+ .page.on{animation:none}
+ .stat:hover{transform:none}
+ .btn:active{transform:none}
+}
+.empty-x .ex-ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+ background:var(--st-neut-bg);font-size:23px;margin-bottom:3px}
+.empty-x.good .ex-ic{background:var(--st-good-bg)}
+.empty-x b{font-size:14.5px;color:var(--ink);font-weight:800}
+.empty-x small{font-size:12.5px;color:var(--muted);max-width:42ch;line-height:1.7}
+.empty-x .btn{margin-top:9px}
+td .empty-x{padding:26px 10px}
 
 /* ---------- التبويبات ---------- */
 .tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
@@ -418,7 +456,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <div class="page-head"><div><h1>لوحة التحكم</h1><p>نظرة تنفيذية على مؤشرات الشركة</p></div>
    <div class="tag info" id="todayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div id="schemaWarnBox"></div>
-  <div class="stats" id="dashStats"></div>
+  <div class="stats" id="dashStats"><div class="stats-row"><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div></div></div>
   <!-- التنبيهات صعدت فوق الرسوم: ما يحتاج تصرفاً يُقرأ أولاً،
        وكانت تحت ثماني رسوم مرجعية فلا تُرى إلا بتمرير طويل. -->
   <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
@@ -1053,7 +1091,11 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 <section class="page on" id="ep-dashboard">
   <div class="page-head"><div><h1 id="epDashGreeting">أهلاً بك</h1><p id="epDailyPhrase">نظرة سريعة على كل ما يخصك</p></div>
    <div class="tag info" id="epTodayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
-  <div class="stats" id="epDashStats"></div>
+  <!-- أول ما يراه الموظف: حالة دوامه اليوم وزر الإجراء الوحيد
+       المطلوب منه الآن. كان عليه أن يفتح صفحة الحضور ويبحث عن
+       زرّين صغيرين متجاورين. -->
+  <div id="epCheckHero"></div>
+  <div class="stats" id="epDashStats"><div class="stats-row"><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div></div></div>
   <div class="grid-2">
     <div class="card">
       <h3>🔔 أحدث الإشعارات</h3><div id="epDashAlerts"></div>
@@ -2637,7 +2679,7 @@ function renderAlerts(){
  if($('bellDot'))$('bellDot').style.display=unreadCount?'block':'none';
  $('alertsList').innerHTML=(A.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>غير المقروءة: ${A.filter(a=>!readKeys.has(alertKey(a))).length}</b>${allKeys.length?`<button class="btn btn-ghost btn-sm" onclick='markAllRead(${JSON.stringify(allKeys)})'>تحديد الكل كمقروء</button>`:''}</div>`:'')+
   (A.length?A.map((a,i)=>alertItem(a,i)).join(''):`<div class="empty">${alertTabActive==='task'?'لا توجد مهام معلّقة 🎉':'لا توجد تنبيهات حالياً'}</div>`);
- $('dashAlerts').innerHTML=Afull.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||'<div class="empty">لا توجد تنبيهات</div>';
+ $('dashAlerts').innerHTML=Afull.slice(0,4).map((a,i)=>alertItem(a,i)).join('')||emptyState('🔔','لا تنبيهات الآن','لا عقود تقترب من الانتهاء ولا طلبات متأخرة. ستظهر هنا فور وجودها.','',1);
 }
 
 /* ================= لوحة التحكم ================= */
@@ -2653,6 +2695,15 @@ let DASH_CHARTS={};
    الحل في مكان واحد: نقرأ التوكنات من CSS لحظة الرسم ونحقنها في
    إعدادات Chart. و16 رسمة تمرّ كلها من هنا.
    ============================================================ */
+/* حالة فارغة موحّدة: أيقونة + سبب + خطوة تالية اختيارية.
+   يُستدعى داخل <td colspan> أو داخل بطاقة على السواء. */
+function emptyState(icon,title,hint,actionHtml,good){
+ return `<div class="empty-x${good?' good':''}"><div class="ex-ic">${icon}</div>`
+  +`<b>${title}</b>${hint?`<small>${hint}</small>`:''}${actionHtml||''}</div>`;
+}
+function emptyRow(cols,icon,title,hint,actionHtml,good){
+ return `<tr><td colspan="${cols}">${emptyState(icon,title,hint,actionHtml,good)}</td></tr>`;
+}
 function tok(n,f){
  try{const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f}
  catch(e){return f}
@@ -2813,7 +2864,7 @@ function renderDashboard(){
   `<div class="dash-group wrk"><div class="dg-head"><span class="dg-t">👥 القوة العاملة</span>`+
   `<span class="dg-n">للاطلاع</span></div>`+
   `<div class="stats-row">${WRK.map(statCard).join('')}</div></div>`;
- $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${esc(c.emp)}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد عقود قريبة الانتهاء</td></tr>';
+ $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${esc(c.emp)}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||emptyRow(3,'✅','لا عقود قريبة الانتهاء','كل العقود السارية أمامها أكثر من 30 يوماً.','',1);
 
  // === 💰 النظرة المالية — تظهر فقط لمن يملك صلاحية على أي قسم مالي ===
  /* نفس شرط hasFinance() بالضبط — ونستدعيها بدل تكرار الشرط، فلا
@@ -4335,7 +4386,7 @@ function renderApprovalsPage(){
  $('apvLeavesTbody').innerHTML=pendingLv.length?pendingLv.map(l=>`<tr>
   <td><b>${esc(l.emp)}</b></td><td>${esc(l.dept||'—')}</td><td>${l.type}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td>
   <td><span class="tag ${lvTag(l.status)}">${l.status}</span>${l.head?' — '+l.head:''}</td>
-  <td style="white-space:nowrap">${lvBtn(l)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد إجازات بانتظار اعتماد 🎉</td></tr>';
+  <td style="white-space:nowrap">${lvBtn(l)}</td></tr>`).join(''):emptyRow(8,'✅','لا شيء بانتظار اعتمادك','كل طلبات الإجازة في قسمك مُعالَجة. ستظهر الطلبات الجديدة هنا فور إرسالها.','',1);
  const prBtn2=p=>{
   if(p.employee_id===me.id)return '<span style="color:var(--muted);font-size:12px">طلبك الشخصي — بانتظار قرار مدير آخر</span>';
   return p.status===LV_P2
@@ -4697,10 +4748,10 @@ function openEmpProfile(eid){
   ${myDocs.length?`<div class="info-grid">${myDocs.map(f=>`<div class="info-item" style="cursor:pointer" onclick="viewFileInline('${esc(f.path)}','${jsq(f.sub||f.name)}')"><div class="k">${esc(f.sub||f.cat)}</div><div class="v">📎 ${esc(f.name)}</div></div>`).join('')}</div>`:'<div class="empty" style="padding:12px">لا توجد مستندات مرفوعة — من زر 📎 المستندات في الجدول</div>'}
   <h3 style="font-size:15px;margin:14px 0 8px">🌴 الإجازات — <small>سنوي متاح: <b style="color:var(--ok)">${b.annualAvail}</b> · مرضي متاح: <b style="color:var(--ok)">${b.sickAvail}</b></small></h3>
   <div class="tbl-wrap"><table><thead><tr><th>النوع</th><th>الفترة</th><th>الأيام</th><th>الحالة</th></tr></thead>
-  <tbody>${myLv.length?myLv.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا توجد إجازات</td></tr>'}</tbody></table></div>
+  <tbody>${myLv.length?myLv.map(l=>`<tr><td><b>${l.type}</b></td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td></tr>`).join(''):emptyRow(4,'🌴','لا توجد إجازات بعد','لم تقدّم أي طلب إجازة حتى الآن. رصيدك السنوي والمرضي معروض في البطاقات أعلى الصفحة.','<button class="btn btn-primary btn-sm" onclick="epNewLeave()">+ طلب إجازة</button>')}</tbody></table></div>
   <h3 style="font-size:15px;margin:14px 0 8px">🚪 الاستئذانات (${myPr.length})</h3>
   <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>الموعد</th><th>النوع</th><th>الحالة</th></tr></thead>
-  <tbody>${myPr.length?myPr.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${prTag(p.status)}">${p.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا توجد استئذانات</td></tr>'}</tbody></table></div>
+  <tbody>${myPr.length?myPr.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${p.type}</td><td><span class="tag ${prTag(p.status)}">${p.status}</span></td></tr>`).join(''):emptyRow(4,'🚪','لا توجد استئذانات بعد','لم تقدّم أي طلب استئذان هذا الشهر. رصيدك المتاح معروض في البطاقات أعلى الصفحة.','<button class="btn btn-primary btn-sm" onclick="epNewPermit()">+ طلب استئذان</button>')}</tbody></table></div>
   <h3 style="font-size:15px;margin:14px 0 8px">📄 النماذج المقدَّمة (${myFm.length})</h3>
   <div class="tbl-wrap"><table><thead><tr><th>النموذج</th><th>تاريخ التقديم</th><th>الحالة</th><th>إجراء</th></tr></thead>
   <tbody>${myFm.length?myFm.map(s=>{const fm=formsData.find(x=>x.id===s.form_id)||{};return `<tr><td><b>${esc(fm.name||'—')}</b></td><td>${fmt(s.created_at)}</td><td><span class="tag ${stTag(s.status)}">${s.status}</span></td><td>${(fm.template==='clearance'||fm.template==='handover')?`<button class="btn btn-ghost btn-sm" onclick="printOfficialForm('${s.id}')">🖨 طباعة</button>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج مقدَّمة</td></tr>'}</tbody></table></div>
@@ -4798,6 +4849,54 @@ function dailyPhrase(){
  const idx=((daysSinceEpoch%DAILY_PHRASES.length)+DAILY_PHRASES.length)%DAILY_PHRASES.length;
  return DAILY_PHRASES[idx];
 }
+/* بطاقة الدوام في صدر شاشة الموظف.
+   الحالة تُقرأ من سجل اليوم نفسه الذي تقرأه صفحة الحضور، فلا
+   يفترق العرضان. الزر واحد كبير: الإجراء التالي المطلوب فقط. */
+function renderCheckHero(){
+ const box=$('epCheckHero'); if(!box||!currentEmp) return;
+ const rec=siteAtt.find(r=>r.employee_id===currentEmp.id&&r.date===D(0));
+ const hasIn =!!(rec&&rec.in &&rec.in !=='—');
+ const hasOut=!!(rec&&rec.out&&rec.out!=='—');
+ const now=new Date();
+ const clock=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ let state,title,sub,btn;
+ if(!hasIn){
+  state='idle';
+  title='لم تسجّل حضورك اليوم';
+  sub='الساعة الآن '+clock+' — سيُطلب إذن الموقع، ولازم تكون داخل نطاق المقر';
+  btn='<button class="btn btn-ok chk-btn" onclick="selfCheckIn()">✅ تسجيل حضور</button>';
+ }else if(!hasOut){
+  state='in';
+  title='أنت على رأس العمل';
+  sub='سجّلت حضورك الساعة '+esc(rec.in)+elapsedTxt(rec.in);
+  btn='<button class="btn btn-danger chk-btn" onclick="selfCheckOut()">🚪 تسجيل انصراف</button>';
+ }else{
+  state='done';
+  title='اكتمل دوامك اليوم';
+  sub='حضور '+esc(rec.in)+' — انصراف '+esc(rec.out)+elapsedTxt(rec.in,rec.out);
+  btn='<button class="btn btn-ghost chk-btn" onclick="epGo(\'attendance\')">📋 عرض سجلّي</button>';
+ }
+ box.innerHTML=`<div class="chk-hero ${state}">
+   <div class="chk-dot"><span></span></div>
+   <div class="chk-txt"><b>${title}</b><small>${sub}</small>
+    <div id="epHeroZone" class="chk-zone"></div></div>
+   <div class="chk-act">${btn}</div>
+  </div>`;
+ const z=$('epLiveZoneStatus');
+ if(z&&z.innerHTML.trim()&&$('epHeroZone'))$('epHeroZone').innerHTML=z.innerHTML;
+}
+/* فرق الوقت بالعربية — "منذ 3 س 20 د" أو "المدة 7 س 45 د" */
+function elapsedTxt(from,to){
+ const mins=t=>{const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):null};
+ const a=mins(from); if(a==null) return '';
+ const now=new Date();
+ const b=to?mins(to):now.getHours()*60+now.getMinutes();
+ if(b==null) return '';
+ let d=b-a; if(d<0)d+=24*60;
+ const h=Math.floor(d/60), mm=d%60;
+ const span=(h?h+' س ':'')+(mm?mm+' د':'')||'أقل من دقيقة';
+ return to?(' — المدة '+span):(' — منذ '+span);
+}
 function epRenderDashboard(){
  const e=currentEmp;
  if($('epTodayDateBadge'))$('epTodayDateBadge').textContent=todayFullStr();
@@ -4828,9 +4927,10 @@ function epRenderDashboard(){
  ];
  if(myContract&&contractDays!==null)S.push({n:contractDays>=0?contractDays:'منتهي',l:'أيام حتى نهاية العقد',k:contractDays!==null&&contractDays<=30?'sand':'info'});
  if(e.probEnd&&probDays!==null&&probDays>=0)S.push({n:probDays,l:'أيام حتى نهاية فترة التجربة',k:'info'});
+ renderCheckHero();
  $('epDashStats').innerHTML=S.map(s=>`<div class="stat ${s.k}"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`).join('');
  const subHtml=subFor.map(l=>`<div class="alert-item"><div class="aic info">👥</div><div><b>أنت البديل عن ${esc(l.emp)} خلال إجازته</b><small>${fmt(l.start)} → ${fmt(l.end)} · ${l.days} يوم — أنت من يمسك مهامه خلال الفترة</small></div></div>`).join('');
- $('epDashAlerts').innerHTML=(subHtml+A.slice(0,4).map((a,i)=>alertItem(a,i)).join(''))||'<div class="empty">لا توجد إشعارات حالياً</div>';
+ $('epDashAlerts').innerHTML=(subHtml+A.slice(0,4).map((a,i)=>alertItem(a,i)).join(''))||emptyState('🔔','لا إشعارات جديدة','كل شيء على ما يرام — ستصلك هنا تنبيهات العقود والإجازات والإنذارات أولاً بأول.','',1);
 }
 /* ============================================================
    فحص ذاتي لقاعدة البيانات
@@ -6138,7 +6238,7 @@ function epRenderAlerts(){
 }
 function epRenderContracts(){
  const rows=contracts.filter(c=>c.employee_id===currentEmp.id);
- $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${esc(c.dur||'—')}</td><td>${contractTag(c)}</td><td><span class="tag info">نسخة رقم ${c.maxVersion||c.versions}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">لا توجد عقود مسجلة</td></tr>';
+ $('epContractTbody').innerHTML=rows.length?rows.map(c=>`<tr><td>${fmt(c.start)}</td><td>${fmt(c.end)}</td><td>${esc(c.dur||'—')}</td><td>${contractTag(c)}</td><td><span class="tag info">نسخة رقم ${c.maxVersion||c.versions}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openStoredFile('${c.file||''}','عقدي')">PDF</button></td></tr>`).join(''):emptyRow(6,'✍','لا توجد عقود مسجّلة','لم تُسجَّل لك عقود في النظام بعد — راجع الموارد البشرية إن كان لديك عقد ساري.');
 }
 function epRenderLeaves(){
  const b=balance(currentEmp.id);
@@ -6511,7 +6611,7 @@ function epRenderPolicies(){
 <script>
 (function(){
 var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;background:var(--pine-soft);color:var(--pine);font-size:19px;flex-shrink:0;border:none;cursor:pointer}'
-+'#sideOverlay2{position:fixed;inset:0;background:rgba(12,26,21,.5);z-index:49;display:none}'
++'#sideOverlay2{position:fixed;inset:0;background:rgba(8,14,28,.55);z-index:49;display:none}'
 +'#sideOverlay2.on{display:block}'
 +'html,body{overflow-x:hidden}'
 +'@media(max-width:1024px){'
@@ -6532,6 +6632,24 @@ var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;backgr
 +'.btn{padding:9px 14px;font-size:13px}.btn-sm{padding:6px 10px;font-size:11.5px}'
 +'.filters>*{max-width:none;min-width:calc(50% - 5px)}'
 +'.profile-hero{padding:18px}.profile-hero h2{font-size:18px}'
+/* ===== أهداف اللمس: 44×44 كحدّ أدنى =====
+   كانت 109 عناصر قابلة للضغط دون هذا الحد على عرض 390px —
+   أزرار بارتفاع 29px وصناديق اختيار 13px. الارتفاع يأتي من
+   min-height لا من padding حتى لا يتمدّد النص الطويل. */
++'.btn{min-height:44px;padding:10px 16px;font-size:13.5px}'
++'.btn-sm{min-height:44px;padding:8px 14px;font-size:12.5px}'
++'.nav-item,.nav-group-head{min-height:48px}'
++'.dn-item{min-height:44px}'
++'input,select,textarea{min-height:44px;font-size:16px}'   /* 16px يمنع تكبير iOS التلقائي */
++'input[type=checkbox],input[type=radio]{width:22px;height:22px;min-height:22px}'
+/* "تحديد الكل" في رأس الجدول: 44 يشوّه ارتفاع الصف، و26 يستوفي
+   الحدّ الأدنى 24×24 في WCAG 2.5.8 */
++'th input[type=checkbox]{width:26px;height:26px;min-height:26px}'
++'label:has(>input[type=checkbox]),label:has(>input[type=radio]){min-height:44px;display:flex;align-items:center;gap:9px}'
++'.bell,.menu-btn{width:44px;height:44px;min-height:44px}'
++'.tabs button,.subtabs button{min-height:44px}'
++'td .btn,td .btn-sm{min-height:40px}'   /* داخل الجداول: 40 حتى لا يتضخّم الصف */
+/* تراكب القائمة الجانبية كان بلون مائل للأخضر من اللوحة القديمة */
 +'}';
 var st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 var ov=document.createElement('div');ov.id='sideOverlay2';document.body.appendChild(ov);
@@ -7596,6 +7714,33 @@ if(typeof window.renderExtraModuleBody==='function'){
 .dash-group.act .dg-n{color:var(--st-warn);background:var(--st-warn-bg);border-color:var(--st-warn-line)}
 .dash-group .dg-head::after{content:"";flex:1;height:1px;background:var(--line)}
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+/* ===== بطاقة الدوام في صدر شاشة الموظف ===== */
+.chk-hero{display:flex;align-items:center;gap:18px;background:var(--card);
+ border:1px solid var(--line);border-inline-start:5px solid var(--st-neut-line);
+ border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:18px}
+.chk-hero.idle{border-inline-start-color:var(--st-warn-line)}
+.chk-hero.in  {border-inline-start-color:var(--st-good-line)}
+.chk-hero.done{border-inline-start-color:var(--st-neut-line)}
+.chk-dot{flex-shrink:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+ background:var(--st-neut-bg)}
+.chk-dot span{width:14px;height:14px;border-radius:50%;background:var(--st-neut-line);display:block}
+.chk-hero.idle .chk-dot{background:var(--st-warn-bg)} .chk-hero.idle .chk-dot span{background:var(--st-warn-line)}
+.chk-hero.in   .chk-dot{background:var(--st-good-bg)} .chk-hero.in   .chk-dot span{background:var(--st-good-line)}
+/* نبضة خفيفة أثناء الدوام فقط — إشارة أنك مسجَّل الآن */
+.chk-hero.in .chk-dot span{animation:chkPulse 2.4s ease-in-out infinite}
+@keyframes chkPulse{0%,100%{box-shadow:0 0 0 0 var(--st-good-line);opacity:1}50%{box-shadow:0 0 0 7px transparent;opacity:.75}}
+@media (prefers-reduced-motion:reduce){.chk-hero.in .chk-dot span{animation:none}}
+.chk-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.chk-txt b{font-size:17px;color:var(--ink);font-weight:800}
+.chk-txt small{font-size:12.5px;color:var(--muted);font-weight:600}
+.chk-zone:empty{display:none}
+.chk-zone{margin-top:6px;font-size:12px}
+.chk-act{flex-shrink:0}
+.chk-btn{min-height:48px;padding:0 26px;font-size:15px;font-weight:800;border-radius:12px}
+@media(max-width:1024px){
+ .chk-hero{flex-wrap:wrap;gap:14px;padding:16px}
+ .chk-act{width:100%} .chk-btn{width:100%}
+}
 /* auto-fit لا auto-fill: المسارات الفارغة تنطوي فتتمدّد البطاقات
    وتملأ الصف، بدل أن تُترك فجوة في آخره. */
 /* المجموعة الأولى أبرز: رقم أكبر وإطار أوضح */
