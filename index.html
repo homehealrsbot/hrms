@@ -1808,6 +1808,11 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <h3 id="confirmModalTitle" style="margin:12px 0 6px">تأكيد الحذف</h3>
     <p id="confirmModalMsg" style="color:var(--muted);font-size:14px"></p>
   </div>
+  <div id="confirmModalInputWrap" style="display:none;margin-top:4px">
+    <label id="confirmModalInputLabel" style="display:block;margin-bottom:6px;font-weight:700;font-size:13px"></label>
+    <textarea id="confirmModalInput" rows="3" style="width:100%"></textarea>
+    <small id="confirmModalInputErr" style="color:var(--danger);display:none;margin-top:5px">هذا الحقل إلزامي</small>
+  </div>
   <div class="modal-foot" style="justify-content:center">
     <button class="btn btn-danger" id="confirmModalOk" onclick="resolveConfirm(true)">نعم، احذف نهائياً</button>
     <button class="btn btn-ghost" onclick="resolveConfirm(false)">إلغاء</button>
@@ -2464,7 +2469,7 @@ async function loadAll(){
   const maxVersion=Math.max(...rows.map(r=>+r.version||0),0);
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,maxVersion,file:cur.pdf_url,history:rows}});
  contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
- leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,substituteId:r.substitute_id,substitute:r.substitute_name,notes:r.notes}));
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,substituteId:r.substitute_id,substitute:r.substitute_name,notes:r.notes,rejectReason:r.rejection_reason}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
@@ -2480,7 +2485,7 @@ async function loadAll(){
  }
  /* حركات الدوام الجغرافي لم تعد تُجلب هنا — تُجلب عند فتح التقارير فقط
     عبر ensureAttendanceEvents()، وبنطاق التاريخ المختار. */
- permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,rejectReason:r.rejection_reason,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
@@ -2560,9 +2565,23 @@ async function registerFile(file,category,source,path){
  await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
 }
 let _confirmResolve=null;
+/* opts.input = {label, placeholder, required} يحوّل المودال إلى
+   سؤال بسبب. يُرجَع نصّ السبب بدل true. */
 function showConfirm(message,opts){
  opts=opts||{};
  $('confirmModalMsg').textContent=message;
+ const iw=$('confirmModalInputWrap');
+ if(iw){
+  _confirmInput=opts.input||null;
+  iw.style.display=_confirmInput?'block':'none';
+  $('confirmModalInputErr').style.display='none';
+  if(_confirmInput){
+   $('confirmModalInputLabel').textContent=_confirmInput.label||'السبب';
+   const ta=$('confirmModalInput');
+   ta.value='';ta.placeholder=_confirmInput.placeholder||'';
+   setTimeout(()=>ta.focus(),80);
+  }
+ }
  if($('confirmModalIcon'))  $('confirmModalIcon').textContent = opts.icon  || '🗑️';
  if($('confirmModalTitle')) $('confirmModalTitle').textContent= opts.title || 'تأكيد الحذف';
  const ok=$('confirmModalOk');
@@ -2573,7 +2592,20 @@ function showConfirm(message,opts){
  openModal('confirmModal');
  return new Promise(res=>{_confirmResolve=res});
 }
-function resolveConfirm(val){closeModal('confirmModal');if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val)}}
+let _confirmInput=null;
+function resolveConfirm(val){
+ /* الإلزام يُفحص قبل الإغلاق: المودال يبقى مفتوحاً والسبب المكتوب
+    لا يضيع، بدل إغلاقه ثم إظهار toast يطالب بإعادة كل شيء. */
+ if(val&&_confirmInput&&_confirmInput.required){
+  const t=($('confirmModalInput').value||'').trim();
+  if(t.length<3){$('confirmModalInputErr').style.display='block';$('confirmModalInput').focus();return}
+  val=t;
+ }else if(val&&_confirmInput){
+  val=($('confirmModalInput').value||'').trim()||true;
+ }
+ closeModal('confirmModal');_confirmInput=null;
+ if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val)}
+}
 function pickFile(accept){return new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept=accept||'';i.onchange=()=>res(i.files[0]||null);i.click()})}
 const staged={};
 async function stageFile(key,accept,boxId){
@@ -3945,6 +3977,12 @@ async function setLeaveStatus(id,status,subDone){
  // نفس القاعدة حتى في الاعتماد المباشر/النهائي: ما في إجازة سنوية معتمدة بدون بديل
  if(status==='تمت الموافقة'&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>setLeaveStatus(id,status,true));return}
  const patch={status};
+ /* الرفض بلا سبب يصل الموظف كـ«تم الرفض» مجرّداً، فيعود يسأل
+    رئيسه ويضيع وقت الاثنين. السبب إلزامي ويُعرض له مع الطلب. */
+ if(status==='تم الرفض'){
+  const why=await askRejectReason('طلبه'); if(!why)return;
+  patch.rejection_reason=why;
+ }
  if(me.role==='manager'){patch.dept_head=me.name}else{patch.admin_manager=me.name}
  const {error}=await sb.from('leaves').update(patch).eq('id',id);
  if(error){err(error);return}
@@ -4091,7 +4129,7 @@ function renderPermits(){
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
  syncPolicyTexts();
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
-  <td><b>${esc(p.emp)}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td>
+  <td><b>${esc(p.emp)}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${esc(p.type)}</td>
   <td><span class="tag ${stTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td>${esc(p.notes||'—')}</td>
   <td style="white-space:nowrap">${prBtn(p)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد استئذانات</td></tr>';
 }
@@ -4102,13 +4140,31 @@ function permitApprovalError(p){
  if(b.used+h>b.limit)return `لا يمكن الاعتماد: ${p.emp} استهلك ${fmtHours(b.used)} من رصيد ${fmtHours(b.limit)} لهذا الشهر، وهذا الطلب (${fmtHours(h)}) يتجاوز الرصيد`;
  return null;
 }
+/* سبب رفض موحّد لكل مسارات الرفض (الإجازة والاستئذان، من رئيس
+   القسم أو من الإدارة) — فلا يختلف السلوك بحسب الزر المضغوط. */
+/* السبب يُعرض للموظف تحت طلبه مباشرة — جمعه بلا عرضه بلا فائدة. */
+function rejNote(x){
+ return x&&x.rejectReason
+  ? `<div class="rej-note"><span>✖</span> سبب الرفض: ${esc(x.rejectReason)}</div>` : '';
+}
+async function askRejectReason(what){
+ return showConfirm(`سيُعرض السبب للموظف مع ${what}.`,{
+  icon:'📝',title:'سبب الرفض',okText:'تأكيد الرفض',okClass:'btn-danger',
+  input:{label:'لماذا رُفض الطلب؟',placeholder:'مثال: تعارض مع ارتباط في نفس الوقت',required:true}});
+}
 async function setPermit(id,status){
  if(status==='معتمد'){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
- const {error}=await sb.from('permits').update({status}).eq('id',id);
+ const patch={status};
+ if(status==='مرفوض'||status==='تم الرفض'){
+  const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why;
+ }
+ const {error}=await sb.from('permits').update(patch).eq('id',id);
  if(error){err(error);return} await refresh();toast('تم تحديث حالة الاستئذان')}
 async function mgrDecidePermit(id,approve){
  if(approve){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
- const {error}=await sb.from('permits').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
+ const patch={status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name};
+ if(!approve){const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('permits').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
@@ -5016,6 +5072,8 @@ const SCHEMA_CHECKS=[
  {t:'leaves',label:'بديل الإجازة السنوية',type:{substitute_id:'uuid',substitute_name:'text'}},
  {t:'permits',label:'ساعات الاستئذان',type:{permit_hours:'numeric(4,2)'}},
  {t:'company_settings',label:'رصيد الاستئذان الشهري',type:{permit_monthly_hours:'numeric(4,2)'}},
+ {t:'leaves', label:'سبب رفض الإجازة',   type:{rejection_reason:'text'}},
+ {t:'permits',label:'سبب رفض الاستئذان', type:{rejection_reason:'text'}},
 ];
 let _schemaChecked=false;
 async function checkSchema(){
@@ -6327,7 +6385,7 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}${rejNote(l)}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 let editingLeaveId=null;
 function epNewLeave(){
@@ -6433,7 +6491,7 @@ function epRenderPermits(){
   ];
   $('epPermitStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  }
- $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${esc(p.notes||'—')}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+ $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${esc(p.status)}</span>${rejNote(p)}</td><td>${esc(p.notes||'—')}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
 }
 const monthLabel=m=>{const p=String(m||'').split('-');return (MONTH_NAMES[+p[1]-1]||'')+' '+(p[0]||'')};
 /* تحديث ملخّص الرصيد داخل مودال الاستئذان لحظة بلحظة */
@@ -7816,6 +7874,9 @@ if(typeof window.renderExtraModuleBody==='function'){
  background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
  padding:7px 11px;margin:-2px 0 12px}
 .window-note:empty{display:none}
+.rej-note{display:flex;align-items:flex-start;gap:6px;margin-top:6px;font-size:12px;
+ color:var(--st-bad);background:var(--st-bad-bg);border:1px solid var(--danger);
+ border-radius:8px;padding:6px 9px;line-height:1.65;max-width:46ch}
 /* ===== لوحة انتهاء الجلسة وتحذير الخمول ===== */
 .session-gate{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;
  background:rgba(8,14,28,.72);backdrop-filter:blur(3px);padding:20px}
