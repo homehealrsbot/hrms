@@ -1048,6 +1048,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
         </select>
         <input class="af-q" id="notifQ" placeholder="🔍 بحث بالبريد" oninput="loadNotifLog()">
         <button class="btn btn-ghost btn-sm" onclick="loadNotifLog()">↻ تحديث</button>
+        <button class="btn btn-primary btn-sm" onclick="flushNotifications(this)">📤 إرسال المعلّق الآن</button>
       </div>
       <div class="tbl-wrap"><table>
         <thead><tr><th>الوقت</th><th>المستلم</th><th>النوع</th><th>الموضوع</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
@@ -4976,6 +4977,24 @@ const NOTIF_KINDS={leave_decision:'قرار إجازة',permit_decision:'قرا�
  warning:'إنذار',contract_expiry:'انتهاء عقد',manager_digest:'ملخّص رئيس قسم'};
 const NOTIF_ST={pending:{t:'في الانتظار',k:'sand'},sent:{t:'أُرسلت',k:'ok'},
  failed:{t:'فشلت',k:'danger'},skipped:{t:'متخطّاة',k:'gray'}};
+/* إرسال يدوي: يتيح اختبار المسار كاملاً قبل جدولة التكرار، ويعطي
+   مخرجاً حين يتعطّل الجدول. الدالة تتحقق أن المستدعي مدير نظام. */
+async function flushNotifications(btn){
+ const old=btn.textContent; btn.disabled=true; btn.textContent='جارٍ الإرسال…';
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){toast('انتهت جلستك — سجّل دخولك من جديد');return}
+  const r=await fetch(SUPABASE_URL+'/functions/v1/send-notifications',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY},
+   body:'{}'});
+  const d=await r.json().catch(()=>({ok:false,error:'ردّ غير مفهوم من الخادم'}));
+  if(!d.ok){toast('تعذّر الإرسال: '+(d.error||r.status));return}
+  toast(d.sent?`تم إرسال ${arNum(d.sent,'رسالة واحدة','رسالتين','رسائل','رسالة')}${d.failed?` وفشلت ${d.failed}`:''}`
+              :'لا رسائل معلّقة');
+ }catch(e){ err(e) }
+ finally{ btn.disabled=false; btn.textContent=old; loadNotifLog(); }
+}
 async function loadNotifLog(){
  const tb=$('notifTbody'); if(!tb)return;
  let q=sb.from('notification_outbox').select('*').order('created_at',{ascending:false}).limit(200);
