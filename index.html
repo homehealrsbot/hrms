@@ -1012,6 +1012,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <div class="tabs">
     <button class="active" onclick="auditTabSwitch('actions',this)">الإجراءات</button>
     <button onclick="auditTabSwitch('logins',this)">الدخول والخروج</button>
+    <button onclick="auditTabSwitch('notif',this)">📧 بريد الإشعارات</button>
   </div>
   <div id="audit-actions">
     <div class="card">
@@ -1032,6 +1033,26 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <div class="card"><div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>الحدث</th><th>الوقت</th></tr></thead>
       <tbody id="loginLogTbody"></tbody></table></div></div>
+  </div>
+  <!-- بريد الإشعارات: بلا هذه الصفحة يصير الفشل غير مرئي — تظن
+       الموظف أُشعر وهو لم يُشعر. -->
+  <div id="audit-notif" style="display:none">
+    <div class="card">
+      <div class="stats" id="notifStats"></div>
+      <div class="att-bar">
+        <select id="notifStatusF" onchange="loadNotifLog()">
+          <option value="">الحالة: الكل</option>
+          <option value="pending">في الانتظار</option>
+          <option value="sent">أُرسلت</option>
+          <option value="failed">فشلت</option>
+        </select>
+        <input class="af-q" id="notifQ" placeholder="🔍 بحث بالبريد" oninput="loadNotifLog()">
+        <button class="btn btn-ghost btn-sm" onclick="loadNotifLog()">↻ تحديث</button>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>الوقت</th><th>المستلم</th><th>النوع</th><th>الموضوع</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
+        <tbody id="notifTbody"></tbody></table></div>
+    </div>
   </div>
 </section>
 
@@ -1810,6 +1831,15 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <div class="section-note">يمكنك تعديل رقم الجوال والمدينة فقط — بقية البيانات تُعدَّل عبر الموارد البشرية.</div>
   <div class="field"><label>رقم الجوال</label><input id="sePhone"></div>
   <div class="field"><label>الدولة / المدينة</label><input id="seCity"></div>
+  <div class="field" style="margin-top:4px">
+    <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:600">
+      <input type="checkbox" id="seNotify" style="width:20px;height:20px;flex-shrink:0">
+      <span>وصّلني بالبريد عند تحديثات طلباتي</span>
+    </label>
+    <small style="color:var(--muted);font-size:11.5px;display:block;margin-top:5px;line-height:1.7">
+      قرار الطلب والإنذار يصلانك دائماً — هذا الخيار لبقية الإشعارات.
+      ولا يُرسَل في البريد أي راتب أو رقم هوية.</small>
+  </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="saveSelfEdit()">حفظ التعديلات</button><button class="btn btn-ghost" onclick="closeModal('selfEditModal')">إلغاء</button></div>
 </div></div>
 
@@ -2419,7 +2449,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,activationCode:r.activation_code}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,notifyEmail:r.notify_email,activationCode:r.activation_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 /* ============================================================
@@ -4898,7 +4928,9 @@ function auditTabSwitch(tab,btn){
  document.querySelectorAll('#page-auditLog .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  $('audit-actions').style.display=tab==='actions'?'block':'none';
  $('audit-logins').style.display=tab==='logins'?'block':'none';
+ $('audit-notif').style.display=tab==='notif'?'block':'none';
  if(tab==='logins')loadLoginLog();
+ if(tab==='notif')loadNotifLog();
 }
 function auditDiffSummary(r){
  if(r.action==='INSERT')return 'إضافة سجل جديد';
@@ -4937,6 +4969,40 @@ async function loadAuditLog(append){
  if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
  else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="4" class="empty">لا توجد سجلات مطابقة</td></tr>';
  $('auditLoadMoreBtn').style.display=data.length<AUDIT_PAGE_SIZE?'none':'inline-block';
+}
+/* سجل بريد الإشعارات: يقرأ صندوق الصادر مباشرة. السياسة تحصره
+   في مدير النظام، فلا حاجة لفحص صلاحية هنا — القاعدة تتكفّل. */
+const NOTIF_KINDS={leave_decision:'قرار إجازة',permit_decision:'قرار استئذان',
+ warning:'إنذار',contract_expiry:'انتهاء عقد',manager_digest:'ملخّص رئيس قسم'};
+const NOTIF_ST={pending:{t:'في الانتظار',k:'sand'},sent:{t:'أُرسلت',k:'ok'},
+ failed:{t:'فشلت',k:'danger'},skipped:{t:'متخطّاة',k:'gray'}};
+async function loadNotifLog(){
+ const tb=$('notifTbody'); if(!tb)return;
+ let q=sb.from('notification_outbox').select('*').order('created_at',{ascending:false}).limit(200);
+ const st=$('notifStatusF').value; if(st)q=q.eq('status',st);
+ const em=$('notifQ').value.trim(); if(em)q=q.ilike('to_email','%'+em+'%');
+ const {data,error}=await q;
+ if(error){
+  /* الجدول غير موجود بعد = الهجرة لم تُنفَّذ، وهذه ليست عطلاً */
+  tb.innerHTML=emptyRow(6,'📧','لم تُفعَّل إشعارات البريد بعد',
+   'نفّذ سكربت الإشعارات في Supabase ثم ارجع هنا — ستظهر كل رسالة وحالتها.');
+  $('notifStats').innerHTML=''; return;
+ }
+ const rows=data||[];
+ const c=k=>rows.filter(r=>r.status===k).length;
+ $('notifStats').innerHTML=[
+  {n:c('sent'),l:'أُرسلت',k:'st-good'},{n:c('pending'),l:'في الانتظار',k:'st-warn'},
+  {n:c('failed'),l:'فشلت',k:c('failed')?'st-bad':'st-neut'},
+ ].map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
+ tb.innerHTML=rows.length?rows.map(r=>{
+  const s2=NOTIF_ST[r.status]||{t:r.status,k:'gray'};
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td>
+   <td dir="ltr" style="text-align:right">${esc(r.to_email)}</td>
+   <td>${esc(NOTIF_KINDS[r.kind]||r.kind)}</td>
+   <td>${esc(r.subject)}</td>
+   <td><span class="tag ${s2.k}">${s2.t}</span></td>
+   <td style="font-size:12px;color:var(--muted)">${r.last_error?esc(String(r.last_error).slice(0,70)):(r.attempts>1?arNum(r.attempts,'محاولة','محاولتان','محاولات','محاولة'):'—')}</td></tr>`;
+ }).join(''):emptyRow(6,'📭','لا رسائل بعد','ستظهر هنا أول رسالة فور صدور قرار على طلب.','',1);
 }
 async function loadLoginLog(){
  const {data,error}=await sb.from('login_log').select('*').order('created_at',{ascending:false}).limit(200);
@@ -6792,9 +6858,21 @@ async function epAddPermit(){
  document.querySelector('#epPermitModal .btn-primary').textContent='إرسال الطلب';
  closeModal('epPermitModal');await refresh();toast(wasEdit?'تم حفظ التعديل على طلبك':'تم إرسال طلب الاستئذان — سيمر على رئيس القسم ثم الاعتماد النهائي');
 }
-function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';openModal('selfEditModal')}
+function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';
+ if($('seNotify'))$('seNotify').checked=currentEmp.notifyEmail!==false;
+ openModal('selfEditModal')}
 async function saveSelfEdit(){
  const {error}=await sb.rpc('update_my_profile',{p_phone:$('sePhone').value,p_city:$('seCity').value});
+ /* التفضيل منفصل عن الـRPC: ذاك يعدّل حقلين مسموحين فقط، وهذا
+    حقل على صفّ الموظف نفسه تحكمه سياسة «صفّي أنا». لو لم تُنفَّذ
+    الهجرة بعد، الفشل صامت ولا يُعطّل حفظ الجوال والمدينة. */
+ if($('seNotify')){
+  const want=$('seNotify').checked;
+  if(want!==(currentEmp.notifyEmail!==false)){
+   const r=await sb.from('employees').update({notify_email:want}).eq('id',currentEmp.id);
+   if(r.error)hhQuiet('حفظ تفضيل الإشعارات',r.error); else currentEmp.notifyEmail=want;
+  }
+ }
  if(error){err(error);return}
  closeModal('selfEditModal');await loadAll();
  if(isBackoffice()){renderAll();}else{currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();}
