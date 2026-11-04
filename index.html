@@ -3019,6 +3019,42 @@ function wqRow(o){
    <span class="wq-body"><b>${esc(o.title)}</b><small>${esc(o.sub)}</small></span>
    ${o.due!=null?dueTag(o.due):waitTag(o.wait)}<span class="wq-chev">‹</span></button>`;
 }
+/* بريد لا يعمل: عنوان ميت يعني موظفاً لا تصله قرارات طلباته ولا
+   إنذاراته — وهو لا يعلم، والموارد البشرية تظنه أُشعر. اكتشفنا
+   أول حالة بالصدفة لأننا كنا ننظر في السجل؛ هذا يجعلها تُعلن
+   نفسها في طابور العمل.
+   استعلام منفصل خفيف: اللوحة لا تُحمّل صندوق الصادر، وسياسته
+   تحصره في مدير النظام فيرجع فارغاً لغيره بلا ضرر. */
+async function checkFailedNotifications(){
+ const box=$('dashWorkQueue'); if(!box||!me) return;
+ let data;
+ try{
+  const r=await sb.from('notification_outbox')
+    .select('to_email').in('status',['failed','skipped']).limit(200);
+  if(r.error) return;                 /* الجدول غير موجود أو لا صلاحية */
+  data=r.data;
+ }catch(e){ return }
+ if(!data||!data.length) return;
+ const emails=[...new Set(data.map(r=>r.to_email).filter(Boolean))];
+ const names=emails.map(e=>{
+  const emp=employees.find(x=>String(x.email||'').toLowerCase()===String(e).toLowerCase());
+  return emp?emp.name:e;
+ });
+ const row=document.createElement('div');
+ row.innerHTML=wqRow({
+  ic:'✖',k:'bad',wait:0,due:null,
+  title:arNum(emails.length,'موظف لا يصله البريد','موظفان لا يصلهما البريد',
+                            'موظفين لا يصلهم البريد','موظفاً لا يصله البريد'),
+  sub:names.slice(0,3).join('، ')+(names.length>3?` و${names.length-3} غيرهم`:'')
+      +' — قرارات الطلبات والإنذارات لا تصلهم',
+  go:"go('auditLog');setTimeout(()=>{const t=[...document.querySelectorAll('#page-auditLog .tabs button')].find(x=>/بريد/.test(x.textContent));if(t)auditTabSwitch('notif',t)},60)"
+ });
+ const el=row.firstElementChild;
+ el.querySelector('.wq-wait').textContent='يحتاج تصحيحاً';
+ el.querySelector('.wq-wait').className='wq-wait bad';
+ /* في الصدارة: موظف لا تصله قراراته أهمّ من طلب ينتظر يومين */
+ box.insertBefore(el, box.firstChild);
+}
 function renderWorkQueue(ACT){
  const box=$('dashWorkQueue'); if(!box)return;
  const items=[];
@@ -3132,6 +3168,7 @@ function renderDashboard(){
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
 
  renderWorkQueue(ACT);
+ checkFailedNotifications();
  const statCard=s=>`<div class="stat ${s.k}${(+s.n)?'':' is-zero'}" onclick="dashNav('${s.a}')" title="اضغط للانتقال والفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`;
  const openCount=ACT.reduce((t,s)=>t+(+s.n||0),0);
  /* صفّ الإجراءات ببطاقات، والقوة العاملة بشريط واحد هادئ:
