@@ -3688,8 +3688,8 @@ function renderAttendance(){
   return out;
  };
  const dayName=d=>new Date(d).toLocaleDateString('ar',{weekday:'long'});
- $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
- $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
+ $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${meetTime(r.date,r.time)}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
+ $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${meetTime(r.date,r.time)}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('siteAttTbody').innerHTML=f(siteAtt,'siteAtt').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${esc(r.emp)}</td><td>${esc(r.dept)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
  $('siteAbsTbody').innerHTML=f(siteAbs,'siteAbs').map(r=>`<tr><td>${dayName(r.date)}</td><td>${fmt(r.date)}</td><td>${esc(r.emp)}</td><td>${esc(r.dept)}</td><td>${esc(r.reason||'—')}</td><td>${r.sickPath?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${r.sickPath}','تقرير طبي - ${esc(r.emp)}')">عرض التقرير</button>`:'<span class="tag gray">لا</span>'}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>';
 }
@@ -4066,7 +4066,7 @@ function renderMeetings(){
     : (g.why==='closed'
         ? '<span class="tag gray">🔒 مجمّد</span>'
         : `<span class="tag sand">يفتح ${clockStr(g.opensAt)}</span>`);
-  return `<tr><td><b>${esc(m.meeting_name)}</b></td><td>${esc(m.title||'—')}</td><td>${esc(m.department)}</td><td>${fmt(m.meeting_date)}</td><td>${tfmt(m.meeting_time)}</td>
+  return `<tr><td><b>${esc(m.meeting_name)}</b></td><td>${esc(m.title||'—')}</td><td>${esc(m.department)}</td><td>${fmt(m.meeting_date)}</td><td>${meetTime(m.meeting_date,m.meeting_time)}</td>
   <td>${invCell}</td>
   <td><span class="tag ok">${att} حاضر</span> ${linkTag}</td>
   <td style="white-space:nowrap">
@@ -4133,6 +4133,21 @@ function meetingStartsAt(m){
  return (!dt||isNaN(dt.getTime()))?null:dt;
 }
 /* هل يختلف توقيت جهاز القارئ عن توقيت الشركة الآن؟ */
+/* عرض وقت الاجتماع بساعة القارئ.
+   الوقت مخزَّن بتوقيت الشركة؛ من كان في منطقة أخرى يرى وقته هو،
+   وتلميح يكشف الأصل عند التحويل. ولا يُلمَس وقت الاستئذان: ذاك
+   يكتبه الموظف بساعته هو، فتحويله يقلبه. */
+function meetTime(dateStr,timeStr){
+ const t=tfmt(timeStr);
+ if(t==='—'||!dateStr)return t;
+ if(!tzDiffersFromCompany())return t;
+ const dt=zonedTime(String(dateStr).slice(0,10),t,companyTz());
+ if(!dt)return t;
+ const loc=clockStr(dt);
+ if(loc===t)return t;
+ return `<span title="${t} بتوقيت الشركة (${esc(companyTz())})" `
+      + `style="border-bottom:1px dotted var(--muted);cursor:help">${loc}</span>`;
+}
 function tzDiffersFromCompany(){
  try{ const dev=Intl.DateTimeFormat().resolvedOptions().timeZone;
       if(dev===companyTz())return false;
@@ -4205,12 +4220,12 @@ async function runCheckin(){
  openModal('checkinModal');
  if(existing&&existing.length){
   $('checkinBody').innerHTML=`
-   <div class="section-note">📅 <b>${m.meeting_name}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${m.department}</div>
+   <div class="section-note">📅 <b>${m.meeting_name}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${meetTime(m.meeting_date,m.meeting_time)} · قسم ${m.department}</div>
    <p style="text-align:center;font-weight:700;color:var(--ok);padding:10px">✅ حضورك مسجّل مسبقاً لهذا الاجتماع</p>
    ${m.meet_link?`<button class="btn btn-primary btn-block" onclick="openExt('${m.meet_link}')">↗ الانتقال للاجتماع الآن</button>`:''}`;
   return;
  }
- const head=`<div class="section-note">📅 <b>${esc(m.meeting_name)}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${tfmt(m.meeting_time)} · قسم ${esc(m.department)}</div>`;
+ const head=`<div class="section-note">📅 <b>${esc(m.meeting_name)}</b> — ${esc(m.title||'')}<br>${fmt(m.meeting_date)} ${meetTime(m.meeting_date,m.meeting_time)} · قسم ${esc(m.department)}</div>`;
  /* البوابة تأتي بعد فحص «مسجّل مسبقاً»: من سجّل حضوره يرى تأكيده
     ورابط الاجتماع حتى لو جُمّد الرابط بعده. */
  const gate=checkinGate(m);
@@ -6974,8 +6989,8 @@ function epRenderAttendance(){
  }
  $('epSiteAttTbody').innerHTML=siteAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${r.in}</td><td>${r.out}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات حضور</td></tr>';
  $('epSiteAbsTbody').innerHTML=siteAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td>${fmt(r.date)}</td><td>${esc(r.reason||'—')}</td><td><span class="tag ${r.sick==='نعم'?'info':'gray'}">${r.sick}</span></td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
- $('epMeetAttTbody').innerHTML=meetAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.title||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات</td></tr>';
- $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.title||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
+ $('epMeetAttTbody').innerHTML=meetAtt.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.title||'—')}</td><td>${fmt(r.date)}</td><td>${meetTime(r.date,r.time)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سجلات</td></tr>';
+ $('epMeetAbsTbody').innerHTML=meetAbs.filter(r=>r.employee_id===eid).map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.title||'—')}</td><td>${fmt(r.date)}</td><td>${meetTime(r.date,r.time)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غيابات ✅</td></tr>';
 }
 function epRenderPermits(){
  const rows=permits.filter(p=>p.employee_id===currentEmp.id);
@@ -9472,7 +9487,7 @@ function drawAttendance(body,full){
    T(['الاجتماع','العنوان','القسم','التاريخ','الوقت','الحضور','إجراء'],
     meetingsList.map(m=>{const att=meetAtt.filter(r=>r.meeting_id===m.id).length;
      return `<tr><td><b>${m.meeting_name}</b></td><td>${esc(m.title||'—')}</td><td>${m.department}</td>
-      <td>${fmt(m.meeting_date)}</td><td dir="ltr">${tfmt(m.meeting_time)}</td>
+      <td>${fmt(m.meeting_date)}</td><td dir="ltr">${meetTime(m.meeting_date,m.meeting_time)}</td>
       <td><span class="tag ok">${att} حاضر</span></td>
       <td style="white-space:nowrap">
        <button class="btn btn-primary btn-sm" onclick="copyCheckinLink('${m.code}')">📋 نسخ الرابط</button>
