@@ -1012,6 +1012,7 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <div class="tabs">
     <button class="active" onclick="auditTabSwitch('actions',this)">الإجراءات</button>
     <button onclick="auditTabSwitch('logins',this)">الدخول والخروج</button>
+    <button onclick="auditTabSwitch('notif',this)">📧 بريد الإشعارات</button>
   </div>
   <div id="audit-actions">
     <div class="card">
@@ -1032,6 +1033,27 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <div class="card"><div class="tbl-wrap"><table>
       <thead><tr><th>الموظف</th><th>الحدث</th><th>الوقت</th></tr></thead>
       <tbody id="loginLogTbody"></tbody></table></div></div>
+  </div>
+  <!-- بريد الإشعارات: بلا هذه الصفحة يصير الفشل غير مرئي — تظن
+       الموظف أُشعر وهو لم يُشعر. -->
+  <div id="audit-notif" style="display:none">
+    <div class="card">
+      <div class="stats" id="notifStats"></div>
+      <div class="att-bar">
+        <select id="notifStatusF" onchange="loadNotifLog()">
+          <option value="">الحالة: الكل</option>
+          <option value="pending">في الانتظار</option>
+          <option value="sent">أُرسلت</option>
+          <option value="failed">فشلت</option>
+        </select>
+        <input class="af-q" id="notifQ" placeholder="🔍 بحث بالبريد" oninput="loadNotifLog()">
+        <button class="btn btn-ghost btn-sm" onclick="loadNotifLog()">↻ تحديث</button>
+        <button class="btn btn-primary btn-sm" onclick="flushNotifications(this)">📤 إرسال المعلّق الآن</button>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>الوقت</th><th>المستلم</th><th>النوع</th><th>الموضوع</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
+        <tbody id="notifTbody"></tbody></table></div>
+    </div>
   </div>
 </section>
 
@@ -1810,6 +1832,15 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
   <div class="section-note">يمكنك تعديل رقم الجوال والمدينة فقط — بقية البيانات تُعدَّل عبر الموارد البشرية.</div>
   <div class="field"><label>رقم الجوال</label><input id="sePhone"></div>
   <div class="field"><label>الدولة / المدينة</label><input id="seCity"></div>
+  <div class="field" style="margin-top:4px">
+    <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:600">
+      <input type="checkbox" id="seNotify" style="width:20px;height:20px;flex-shrink:0">
+      <span>وصّلني بالبريد عند تحديثات طلباتي</span>
+    </label>
+    <small style="color:var(--muted);font-size:11.5px;display:block;margin-top:5px;line-height:1.7">
+      قرار الطلب والإنذار يصلانك دائماً — هذا الخيار لبقية الإشعارات.
+      ولا يُرسَل في البريد أي راتب أو رقم هوية.</small>
+  </div>
   <div class="modal-foot"><button class="btn btn-primary" onclick="saveSelfEdit()">حفظ التعديلات</button><button class="btn btn-ghost" onclick="closeModal('selfEditModal')">إلغاء</button></div>
 </div></div>
 
@@ -1936,6 +1967,49 @@ function empLocation(empId){const e=empById[empId];if(!e||!e.locationId)return n
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
 const WARN_P1='بانتظار مراجعة الموارد البشرية', WARN_P2='بانتظار الاعتماد النهائي';
+/* البنوك السعودية ورموزها (بادئة SWIFT) — يُحفظ الرمز ويُعرض الاسم.
+   كان الحقل نصّاً حرّاً «مثال: RJHI»، وهذا الرمز يدخل ملف حماية
+   الأجور الذي يُرفع للبنك وتُصرَف به الرواتب — فخطأ حرف واحد
+   يُفشل الكشف كاملاً. «أخرى» تُبقي الإدخال اليدوي متاحاً لأي بنك
+   خارج القائمة. */
+const SA_BANKS=[
+ {c:'RJHI',n:'مصرف الراجحي'},
+ {c:'NCBK',n:'البنك الأهلي السعودي (SNB)'},
+ {c:'RIBL',n:'بنك الرياض'},
+ {c:'SABB',n:'البنك السعودي الأول (SAB)'},
+ {c:'BSFR',n:'البنك السعودي الفرنسي'},
+ {c:'ARNB',n:'البنك العربي الوطني'},
+ {c:'ALBI',n:'بنك البلاد'},
+ {c:'INMA',n:'مصرف الإنماء'},
+ {c:'BJAZ',n:'بنك الجزيرة'},
+ {c:'SIBC',n:'البنك السعودي للاستثمار'},
+];
+const bankName=c=>{const b=SA_BANKS.find(x=>x.c===String(c||'').toUpperCase());return b?b.n:(c||'—')};
+/* يبني القائمة بجانب حقل الرمز القائم ويُبقيه مصدر القيمة الوحيد،
+   فلا يتغيّر شيء في الحفظ ولا في التصدير. */
+function initBankSelect(inputId){
+ const inp=$(inputId); if(!inp||inp._bankWired)return; inp._bankWired=true;
+ const sel=document.createElement('select');
+ sel.id=inputId+'Sel';
+ sel.innerHTML='<option value="">— اختر البنك —</option>'
+  +SA_BANKS.map(b=>`<option value="${b.c}">${esc(b.n)} — ${b.c}</option>`).join('')
+  +'<option value="__other__">بنك آخر — أُدخل الرمز يدوياً</option>';
+ inp.parentNode.insertBefore(sel,inp);
+ inp.style.marginTop='7px';
+ const sync=()=>{
+  if(sel.value==='__other__'){inp.style.display='';inp.placeholder='رمز البنك (4 أحرف)';return}
+  inp.style.display='none';
+  if(sel.value)inp.value=sel.value;
+ };
+ sel.onchange=()=>{if(sel.value&&sel.value!=='__other__')inp.value=sel.value;else if(sel.value==='__other__')inp.value='';sync()};
+ /* عند فتح النموذج بقيمة محفوظة: اختر البنك المطابق أو أظهر اليدوي */
+ inp._bankSync=()=>{
+  const v=String(inp.value||'').toUpperCase();
+  sel.value=SA_BANKS.some(b=>b.c===v)?v:(v?'__other__':'');
+  sync();
+ };
+ inp._bankSync();
+}
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 /* عملة الموظف الفعلية — لا نفترض الريال أبداً، كل موظف له عملة راتبه المسجّلة */
 function empCurrency(empId){return (empById[empId]&&empById[empId].currency)||'ريال سعودي'}
@@ -2376,7 +2450,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,activationCode:r.activation_code}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,notifyEmail:r.notify_email,activationCode:r.activation_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 /* ============================================================
@@ -3317,7 +3391,7 @@ function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textConten
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
  fillLocationSelect();$('eLocation').value=e.locationId||'';
- $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';
+ $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';initBankSelect('eBankCode');$('eBankCode')._bankSync&&$('eBankCode')._bankSync();
  applyEmpPayGate();
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
@@ -3415,7 +3489,7 @@ async function addContract(){
 }
 
 /* ================= الحضور والغياب ================= */
-let attFilters={meetAtt:'',siteAtt:'',meetAbs:'',siteAbs:''};
+let attFilters={meetAtt:{},siteAtt:{},meetAbs:{},siteAbs:{}};
 async function renderLiveStatusBoard(){
  if(!$('liveStatusTbody'))return;
  const {data,error}=await sb.from('attendance_events').select('*').eq('event_date',D(0)).order('created_at',{ascending:true});
@@ -3431,10 +3505,56 @@ async function renderLiveStatusBoard(){
 function setAttTab(t,btn){document.querySelectorAll('#page-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  document.querySelectorAll('.att-tab').forEach(d=>d.style.display='none');$('att-'+t).style.display='block';
  if(t==='liveStatus')renderLiveStatusBoard();}
-function deptChips(cid,key){$(cid).innerHTML=['الكل',...DEPTS].map(d=>`<button class="${(attFilters[key]===(d==='الكل'?'':d))?'active':''}" onclick="attFilters['${key}']='${d==='الكل'?'':d}';renderAttendance()">${d}</button>`).join('')}
+/* ===== فلاتر الحضور =====
+   كان القسم وحده. سلامة طلب الاسم واليوم والتاريخ معه — ومع نمو
+   السجلات صار التصفّح بلا فلتر غير عملي.
+   كل تبويب يحتفظ بفلاتره مستقلةً، فالانتقال بينها لا يمسح ما اخترت. */
+const AR_DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+function attSet(key,field,val){attFilters[key][field]=val;renderAttendance()}
+function attReset(key){attFilters[key]={};renderAttendance()}
+function attBar(cid,key,withDate){
+ const F=attFilters[key]||{};
+ const active=Object.values(F).filter(v=>v!==''&&v!=null).length;
+ $(cid).innerHTML=
+  `<div class="att-bar">
+    <input class="af-q" placeholder="🔍 بحث باسم الموظف" value="${esc(F.q||'')}"
+      oninput="attSet('${key}','q',this.value)">
+    <select onchange="attSet('${key}','dept',this.value)">
+      <option value="">القسم: الكل</option>
+      ${DEPTS.map(d=>`<option value="${esc(d)}"${F.dept===d?' selected':''}>${esc(d)}</option>`).join('')}
+    </select>`
+  +(withDate?`<select onchange="attSet('${key}','day',this.value)">
+      <option value="">اليوم: الكل</option>
+      ${AR_DAYS.map((d,i)=>`<option value="${i}"${String(F.day)===String(i)?' selected':''}>${d}</option>`).join('')}
+    </select>
+    <input type="date" title="من تاريخ" value="${esc(F.from||'')}" onchange="attSet('${key}','from',this.value)">
+    <input type="date" title="إلى تاريخ" value="${esc(F.to||'')}"   onchange="attSet('${key}','to',this.value)">`:'')
+  +(active?`<button class="btn btn-ghost btn-sm" onclick="attReset('${key}')">مسح الفلاتر (${active})</button>`:'')
+  +`<span class="af-count" id="${cid}Count"></span>
+  </div>`;
+}
 function renderAttendance(){
- deptChips('meetAttFilter','meetAtt');deptChips('siteAttFilter','siteAtt');deptChips('meetAbsFilter','meetAbs');deptChips('siteAbsFilter','siteAbs');
- const f=(arr,k)=>arr.filter(r=>!attFilters[k]||r.dept===attFilters[k]);
+ attBar('meetAttFilter','meetAtt',1);attBar('siteAttFilter','siteAtt',1);
+ attBar('meetAbsFilter','meetAbs',1);attBar('siteAbsFilter','siteAbs',1);
+ const f=(arr,k)=>{
+  const F=attFilters[k]||{}, q=normAr(F.q||'');
+  const out=arr.filter(r=>{
+   if(F.dept&&r.dept!==F.dept)return false;
+   if(q&&!normAr(r.emp||'').includes(q))return false;
+   const d=String(r.date||'').slice(0,10);
+   if(F.from&&d&&d<F.from)return false;
+   if(F.to  &&d&&d>F.to  )return false;
+   /* اليوم: getDay على تاريخ نصّي ISO يُفسَّر UTC، ونحن نقارن يوماً
+      محلياً — فنبني التاريخ من أجزائه لتفادي انزياح يوم كامل. */
+   if(F.day!==''&&F.day!=null&&d){
+    const p=d.split('-');
+    if(new Date(+p[0],+p[1]-1,+p[2]).getDay()!==+F.day)return false;
+   }
+   return true;
+  });
+  const c=$(k+'FilterCount'); if(c)c.textContent=out.length===arr.length?'':`${out.length} من ${arr.length}`;
+  return out;
+ };
  const dayName=d=>new Date(d).toLocaleDateString('ar',{weekday:'long'});
  $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
@@ -4809,7 +4929,9 @@ function auditTabSwitch(tab,btn){
  document.querySelectorAll('#page-auditLog .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  $('audit-actions').style.display=tab==='actions'?'block':'none';
  $('audit-logins').style.display=tab==='logins'?'block':'none';
+ $('audit-notif').style.display=tab==='notif'?'block':'none';
  if(tab==='logins')loadLoginLog();
+ if(tab==='notif')loadNotifLog();
 }
 function auditDiffSummary(r){
  if(r.action==='INSERT')return 'إضافة سجل جديد';
@@ -4848,6 +4970,58 @@ async function loadAuditLog(append){
  if(append)$('auditLogTbody').insertAdjacentHTML('beforeend',rowsHtml);
  else $('auditLogTbody').innerHTML=rowsHtml||'<tr><td colspan="4" class="empty">لا توجد سجلات مطابقة</td></tr>';
  $('auditLoadMoreBtn').style.display=data.length<AUDIT_PAGE_SIZE?'none':'inline-block';
+}
+/* سجل بريد الإشعارات: يقرأ صندوق الصادر مباشرة. السياسة تحصره
+   في مدير النظام، فلا حاجة لفحص صلاحية هنا — القاعدة تتكفّل. */
+const NOTIF_KINDS={leave_decision:'قرار إجازة',permit_decision:'قرار استئذان',
+ warning:'إنذار',contract_expiry:'انتهاء عقد',manager_digest:'ملخّص رئيس قسم'};
+const NOTIF_ST={pending:{t:'في الانتظار',k:'sand'},sent:{t:'أُرسلت',k:'ok'},
+ failed:{t:'فشلت',k:'danger'},skipped:{t:'متخطّاة',k:'gray'}};
+/* إرسال يدوي: يتيح اختبار المسار كاملاً قبل جدولة التكرار، ويعطي
+   مخرجاً حين يتعطّل الجدول. الدالة تتحقق أن المستدعي مدير نظام. */
+async function flushNotifications(btn){
+ const old=btn.textContent; btn.disabled=true; btn.textContent='جارٍ الإرسال…';
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){toast('انتهت جلستك — سجّل دخولك من جديد');return}
+  const r=await fetch(SUPABASE_URL+'/functions/v1/send-notifications',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY},
+   body:'{}'});
+  const d=await r.json().catch(()=>({ok:false,error:'ردّ غير مفهوم من الخادم'}));
+  if(!d.ok){toast('تعذّر الإرسال: '+(d.error||r.status));return}
+  toast(d.sent?`تم إرسال ${arNum(d.sent,'رسالة واحدة','رسالتين','رسائل','رسالة')}${d.failed?` وفشلت ${d.failed}`:''}`
+              :'لا رسائل معلّقة');
+ }catch(e){ err(e) }
+ finally{ btn.disabled=false; btn.textContent=old; loadNotifLog(); }
+}
+async function loadNotifLog(){
+ const tb=$('notifTbody'); if(!tb)return;
+ let q=sb.from('notification_outbox').select('*').order('created_at',{ascending:false}).limit(200);
+ const st=$('notifStatusF').value; if(st)q=q.eq('status',st);
+ const em=$('notifQ').value.trim(); if(em)q=q.ilike('to_email','%'+em+'%');
+ const {data,error}=await q;
+ if(error){
+  /* الجدول غير موجود بعد = الهجرة لم تُنفَّذ، وهذه ليست عطلاً */
+  tb.innerHTML=emptyRow(6,'📧','لم تُفعَّل إشعارات البريد بعد',
+   'نفّذ سكربت الإشعارات في Supabase ثم ارجع هنا — ستظهر كل رسالة وحالتها.');
+  $('notifStats').innerHTML=''; return;
+ }
+ const rows=data||[];
+ const c=k=>rows.filter(r=>r.status===k).length;
+ $('notifStats').innerHTML=[
+  {n:c('sent'),l:'أُرسلت',k:'st-good'},{n:c('pending'),l:'في الانتظار',k:'st-warn'},
+  {n:c('failed'),l:'فشلت',k:c('failed')?'st-bad':'st-neut'},
+ ].map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
+ tb.innerHTML=rows.length?rows.map(r=>{
+  const s2=NOTIF_ST[r.status]||{t:r.status,k:'gray'};
+  return `<tr><td dir="ltr" style="text-align:right">${fmtDateTime(r.created_at)}</td>
+   <td dir="ltr" style="text-align:right">${esc(r.to_email)}</td>
+   <td>${esc(NOTIF_KINDS[r.kind]||r.kind)}</td>
+   <td>${esc(r.subject)}</td>
+   <td><span class="tag ${s2.k}">${s2.t}</span></td>
+   <td style="font-size:12px;color:var(--muted)">${r.last_error?esc(String(r.last_error).slice(0,70)):(r.attempts>1?arNum(r.attempts,'محاولة','محاولتان','محاولات','محاولة'):'—')}</td></tr>`;
+ }).join(''):emptyRow(6,'📭','لا رسائل بعد','ستظهر هنا أول رسالة فور صدور قرار على طلب.','',1);
 }
 async function loadLoginLog(){
  const {data,error}=await sb.from('login_log').select('*').order('created_at',{ascending:false}).limit(200);
@@ -5991,7 +6165,7 @@ function togglePayrollSelectAll(cb){
 function fillCompanySettingsForm(){
  if(!$('csBankCode'))return;
  const cs=companySettings||{};
- $('csBankCode').value=cs.bank_code||'';
+ $('csBankCode').value=cs.bank_code||'';initBankSelect('csBankCode');$('csBankCode')._bankSync&&$('csBankCode')._bankSync();
  $('csEstablishmentId').value=cs.establishment_id||'';
  $('csBankAccount').value=cs.bank_account_number||'';
  $('csMolId').value=cs.mol_establishment_id||'';
@@ -6703,9 +6877,21 @@ async function epAddPermit(){
  document.querySelector('#epPermitModal .btn-primary').textContent='إرسال الطلب';
  closeModal('epPermitModal');await refresh();toast(wasEdit?'تم حفظ التعديل على طلبك':'تم إرسال طلب الاستئذان — سيمر على رئيس القسم ثم الاعتماد النهائي');
 }
-function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';openModal('selfEditModal')}
+function openSelfEdit(){$('sePhone').value=currentEmp.phone||'';$('seCity').value=currentEmp.city||'';
+ if($('seNotify'))$('seNotify').checked=currentEmp.notifyEmail!==false;
+ openModal('selfEditModal')}
 async function saveSelfEdit(){
  const {error}=await sb.rpc('update_my_profile',{p_phone:$('sePhone').value,p_city:$('seCity').value});
+ /* التفضيل منفصل عن الـRPC: ذاك يعدّل حقلين مسموحين فقط، وهذا
+    حقل على صفّ الموظف نفسه تحكمه سياسة «صفّي أنا». لو لم تُنفَّذ
+    الهجرة بعد، الفشل صامت ولا يُعطّل حفظ الجوال والمدينة. */
+ if($('seNotify')){
+  const want=$('seNotify').checked;
+  if(want!==(currentEmp.notifyEmail!==false)){
+   const r=await sb.from('employees').update({notify_email:want}).eq('id',currentEmp.id);
+   if(r.error)hhQuiet('حفظ تفضيل الإشعارات',r.error); else currentEmp.notifyEmail=want;
+  }
+ }
  if(error){err(error);return}
  closeModal('selfEditModal');await loadAll();
  if(isBackoffice()){renderAll();}else{currentEmp=empById[currentEmp.id]||currentEmp;initEmpPortal();}
@@ -8030,6 +8216,15 @@ if(typeof window.renderExtraModuleBody==='function'){
 .window-note:empty{display:none}
 /* ===== تخطيط اللوحة: العمل يسار، المرجع يمين ===== */
 /* شريط القوة العاملة المرجعي */
+/* شريط فلاتر الحضور */
+.att-bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:12px}
+.att-bar>*{flex:0 1 auto;width:auto}
+.att-bar input,.att-bar select{min-height:40px;font-size:13px;width:auto}
+.att-bar .af-q{flex:1 1 200px;min-width:170px;max-width:270px}
+.att-bar select{min-width:150px;max-width:190px}
+.att-bar input[type=date]{min-width:146px;max-width:168px}
+.att-bar .af-count{font-size:12px;color:var(--muted);font-weight:700;margin-inline-start:auto}
+@media(max-width:700px){.att-bar>*{flex:1 1 calc(50% - 5px);min-width:0;max-width:none}}
 .ref-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 22px}
 .ref-chip{display:inline-flex;align-items:baseline;gap:7px;background:var(--card);
  border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
