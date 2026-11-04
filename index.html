@@ -2875,6 +2875,18 @@ function applyChartTheme(cfg){
   ax.grid=Object.assign({color:line},ax.grid||{});
   if(ax.title)ax.title.color=muted;
  }
+ /* تناسب الأعمدة مع عدد الفئات: maxBarThickness ثابت يترك ثلاثة
+    أعمدة نحيلة ضائعة في بطاقة عريضة، وعشرين عموداً متلاصقة.
+    نرفع السقف حين تقلّ الفئات ونخفضه حين تكثر. */
+ const n=(cfg.data&&cfg.data.labels&&cfg.data.labels.length)||0;
+ if(cfg.type==='bar'&&n){
+  const cap=n<=3?96:n<=5?74:n<=8?56:40;
+  (cfg.data.datasets||[]).forEach(d=>{
+   if(d.maxBarThickness==null||d.maxBarThickness<cap)d.maxBarThickness=cap;
+  });
+ }
+ /* الدونت: فتحة أوسع حين تقلّ الشرائح فلا تبدو كتلة ثقيلة */
+ if(cfg.type==='doughnut'&&o.cutout==null)o.cutout=n<=3?'64%':'55%';
  return cfg;
 }
 const DASH_CFG={};                       /* نحفظ الإعدادات لإعادة الرسم عند تبديل السمة */
@@ -6916,7 +6928,7 @@ var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;backgr
 +'.btn{min-height:44px;padding:10px 16px;font-size:13.5px}'
 +'.btn-sm{min-height:44px;padding:8px 14px;font-size:12.5px}'
 +'.nav-item,.nav-group-head{min-height:48px}'
-+'.dn-item{min-height:44px}'
+
 +'input,select,textarea{min-height:44px;font-size:16px}'   /* 16px يمنع تكبير iOS التلقائي */
 +'input[type=checkbox],input[type=radio]{width:22px;height:22px;min-height:22px}'
 /* "تحديد الكل" في رأس الجدول: 44 يشوّه ارتفاع الصف، و26 يستوفي
@@ -8021,13 +8033,13 @@ if(typeof window.renderExtraModuleBody==='function'){
 .ref-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 22px}
 .ref-chip{display:inline-flex;align-items:baseline;gap:7px;background:var(--card);
  border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
- font-family:inherit;transition:border-color .14s,background .14s;min-height:38px}
+ font-family:inherit;transition:border-color .14s,background .14s;min-height:44px}
 .ref-chip:hover{background:var(--st-neut-bg);border-color:var(--muted)}
 .ref-chip b{font-family:'IBM Plex Sans Arabic';font-size:16px;font-weight:800;color:var(--ink);
  font-variant-numeric:tabular-nums}
 .ref-chip span{font-size:12px;color:var(--muted);font-weight:600}
 .ref-chip.st-good b{color:var(--st-good)}
-@media(max-width:560px){.ref-chip{padding:6px 12px;min-height:34px}.ref-chip b{font-size:14px}}
+@media(max-width:560px){.ref-chip{padding:6px 12px}.ref-chip b{font-size:14px}}
 .dash-main{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);gap:18px;align-items:start}
 .dash-col-work,.dash-col-ref{display:flex;flex-direction:column;gap:16px;min-width:0}
 .work-card{padding-bottom:10px}
