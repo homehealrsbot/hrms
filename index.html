@@ -2307,7 +2307,7 @@ const err=(e,extra)=>{
    ============================================================ */
 const IDLE_LOGOUT_MIN=45;        /* خمول قبل الخروج التلقائي */
 const IDLE_WARN_MIN=2;           /* تحذير قبل الخروج */
-let sessionEndedShown=false;
+window.sessionEndedShown=false;
 
 /* علامات انقضاء الجلسة أو انحراف ساعة الجهاز */
 /* ساعة الجهاز متقدّمة على الخادم: الرسالة نفسها تصل كانتهاء جلسة
@@ -2318,7 +2318,7 @@ function sessionDead(m){
  return /PGRST303|JWT expired|JWT issued at future|invalid claim|token is expired|refresh_token_not_found|Invalid Refresh Token/i.test(m);
 }
 function showSessionEnded(reason){
- if(sessionEndedShown)return; sessionEndedShown=true;
+ if(window.sessionEndedShown)return; window.sessionEndedShown=true;
  try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){}
  const skew=reason==='skew';
  const box=document.createElement('div');
@@ -2499,6 +2499,7 @@ function initRealtime(){
     فلا نحمّل مرتين لنفس الدقيقة. */
  setInterval(()=>{
   if(document.visibilityState!=='visible')return;
+  if(window.sessionEndedShown)return;      /* الجلسة انتهت — لا طرق بلا هوية */
   const everyMs=window._rtOk?60000:15000;
   if(_rfLastAt&&Date.now()-_rfLastAt<everyMs-1500)return;
   refresh().catch(()=>{});
@@ -2581,6 +2582,18 @@ const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
 async function loadAll(){
+ /* حارس الجلسة — الباب الوحيد لكل استعلامات التحميل.
+    مؤقّت التحديث يمرّ كل 15 ثانية ولا يعرف أن الجلسة انتهت، فكان
+    يطرق القاعدة كـanon فتردّ «permission denied for table warnings»
+    ثم تُرسم الصفحة بـme=null فتنهار على قراءة .name.
+    الفحص محلي (getSession يقرأ التخزين لا الشبكة) فلا يكلّف شيئاً. */
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+   if(me&&typeof showSessionEnded==='function')showSessionEnded();
+   return;
+  }
+ }catch(e){ return }
  _loadErrShown=false;
  /* ============================================================
     كانت استعلامات التحميل تُنفَّذ على عشر دفعات متتابعة: كل دفعة تنتظر
@@ -4087,12 +4100,44 @@ async function createMeeting(){
    استدعاء الـAPI مباشرة متجاوزاً الصفحة.
    ============================================================ */
 const CHECKIN_EARLY_MIN=2;
+/* توقيت الشركة: مواعيد الاجتماعات تُكتب به ويُفهم به عند الجميع.
+   كان «20:00» يُقرأ بتوقيت جهاز القارئ، فاجتماعٌ حدّده أحدٌ في
+   الرياض يراه زميله في مصر متأخراً ساعة — ولم تظهر العلّة قبل
+   انتهاء التوقيت الصيفي المصري لأن البلدين تطابقا. */
+const COMPANY_TZ='Asia/Riyadh';
+function companyTz(){
+ try{ const t=(typeof companySettings!=='undefined'&&companySettings&&companySettings.timezone)||COMPANY_TZ;
+      new Intl.DateTimeFormat('en',{timeZone:t}); return t; }catch(e){ return COMPANY_TZ }
+}
+/* إزاحة المنطقة عند لحظة بعينها — تتبع التوقيت الصيفي تلقائياً */
+function tzOffsetMs(utcMs,tz){
+ const f=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour12:false,
+   year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ const p={}; f.formatToParts(new Date(utcMs)).forEach(x=>p[x.type]=x.value);
+ return Date.UTC(+p.year,+p.month-1,+p.day,(+p.hour)%24,+p.minute,+p.second)-utcMs;
+}
+/* «التاريخ والوقت في منطقة كذا» → اللحظة المطلقة.
+   مرّتان: الأولى تقديرية والثانية تصحّحها عند حدود التوقيت الصيفي. */
+function zonedTime(dateStr,timeStr,tz){
+ const naive=Date.parse(dateStr+'T'+timeStr+':00Z');
+ if(isNaN(naive))return null;
+ let ms=naive-tzOffsetMs(naive,tz);
+ ms=naive-tzOffsetMs(ms,tz);
+ return new Date(ms);
+}
 function meetingStartsAt(m){
  if(!m||!m.meeting_date)return null;
  const d=String(m.meeting_date).slice(0,10);
  const t=String(m.meeting_time||'00:00').slice(0,5);
- const dt=new Date(d+'T'+t);          // بلا Z: يُقرأ بتوقيت الجهاز المحلي
- return isNaN(dt.getTime())?null:dt;
+ const dt=zonedTime(d,t,companyTz());   // بتوقيت الشركة لا الجهاز
+ return (!dt||isNaN(dt.getTime()))?null:dt;
+}
+/* هل يختلف توقيت جهاز القارئ عن توقيت الشركة الآن؟ */
+function tzDiffersFromCompany(){
+ try{ const dev=Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if(dev===companyTz())return false;
+      return tzOffsetMs(Date.now(),dev)!==tzOffsetMs(Date.now(),companyTz());
+ }catch(e){ return false }
 }
 /* يرجع {ok} أو {ok:false, why, opensAt} */
 function checkinGate(m){
@@ -4174,7 +4219,8 @@ async function runCheckin(){
    ? `<p style="text-align:center;font-weight:700;color:var(--danger);padding:16px">🔒 أُغلق تسجيل الحضور لهذا الاجتماع<br>
       <small style="font-weight:600;color:var(--muted)">تواصل مع منظّم الاجتماع إن كنت حاضراً ولم تسجّل</small></p>`
    : `<p style="text-align:center;font-weight:700;color:var(--sand);padding:16px">⏳ لم يُفتح التسجيل بعد<br>
-      <small style="font-weight:600;color:var(--muted)">يفتح الرابط الساعة ${clockStr(gate.opensAt)} — قبل الموعد بدقيقتين</small></p>`);
+      <small style="font-weight:600;color:var(--muted)">يفتح الرابط الساعة ${clockStr(gate.opensAt)} بتوقيتك — قبل الموعد بدقيقتين</small>
+      ${tzDiffersFromCompany()?`<br><small style="font-weight:600;color:var(--muted);font-size:11.5px">موعد الاجتماع مكتوب بتوقيت الشركة (${esc(companyTz())})، والساعة أعلاه محوَّلة لتوقيت جهازك.</small>`:''}</p>`);
   return;
  }
  $('checkinBody').innerHTML=head+
