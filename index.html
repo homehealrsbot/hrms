@@ -882,6 +882,33 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
       <div><label>رصيد ساعات الاستئذان الشهري لكل موظف</label><input id="csPermitHours" type="number" min="0" step="0.5" placeholder="4"></div>
     </div>
     <div class="section-note">رصيد الاستئذان الشهري يُطبَّق على كل الموظفين — إذا تجاوز الموظف ساعاته الشهرية لا يسمح له النظام بتقديم استئذان جديد. اتركه فارغاً ليعمل بالقيمة الافتراضية (4 ساعات).</div>
+    <hr style="margin:18px 0;border:0;border-top:1px solid var(--line)">
+
+    <h4 style="margin-bottom:4px">🕐 الغياب التلقائي</h4>
+    <div class="section-note" style="margin-bottom:12px">
+      في الأيام والساعة المحدَّدة أدناه، يُسجَّل غياب كل موظف نشط لم يُسجَّل له
+      حضور ذلك اليوم. من هو في <b>إجازة معتمدة</b> أو سُجِّل غيابه يدوياً مُستثنى،
+      ولا يتكرّر التسجيل مرتين. الغياب الآلي يظهر في «الغياب في المقر» ويُعدَّل
+      أو يُحذف يدوياً إن تبيّن أنه بعذر.
+    </div>
+    <div class="auto-abs">
+      <label class="aa-toggle">
+        <input type="checkbox" id="csAutoAbsEnabled">
+        <span>تفعيل الغياب التلقائي</span>
+      </label>
+      <div class="aa-fields">
+        <div>
+          <label>أيام العمل</label>
+          <div class="aa-days" id="csAutoAbsDays"></div>
+        </div>
+        <div style="max-width:170px">
+          <label>الساعة</label>
+          <select id="csAutoAbsHour"></select>
+        </div>
+      </div>
+      <div class="aa-note" id="csAutoAbsSummary"></div>
+    </div>
+
     <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveCompanySettings()">💾 حفظ بيانات المنشأة</button></div>
   </div>
 
@@ -1987,6 +2014,48 @@ const SA_BANKS=[
 const bankName=c=>{const b=SA_BANKS.find(x=>x.c===String(c||'').toUpperCase());return b?b.n:(c||'—')};
 /* يبني القائمة بجانب حقل الرمز القائم ويُبقيه مصدر القيمة الوحيد،
    فلا يتغيّر شيء في الحفظ ولا في التصدير. */
+/* ===== ضبط الغياب التلقائي =====
+   الأيام والساعة في قاعدة البيانات لا في جدولة cron: تغييرها من
+   هنا يسري فوراً بلا تعديل SQL. المهمة تمرّ كل ساعة وتقرأ هذه
+   القيم لتقرّر هل تعمل. */
+const AA_DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+function aaBuild(){
+ const box=$('csAutoAbsDays'); if(!box||box._built)return; box._built=true;
+ box.innerHTML=AA_DAYS.map((d,i)=>
+  `<label class="aa-day" data-d="${i}"><input type="checkbox" value="${i}" onchange="aaSync()">${d}</label>`).join('');
+ const h=$('csAutoAbsHour');
+ h.innerHTML=Array.from({length:24},(_,i)=>
+  `<option value="${i}">${String(i).padStart(2,'0')}:00</option>`).join('');
+ h.onchange=aaSync;
+ $('csAutoAbsEnabled').onchange=aaSync;
+}
+function aaRead(){
+ return {
+  enabled:$('csAutoAbsEnabled').checked,
+  days:[...document.querySelectorAll('#csAutoAbsDays input:checked')].map(c=>+c.value).sort((a,b)=>a-b),
+  hour:+$('csAutoAbsHour').value||17,
+ };
+}
+function aaSync(){
+ const v=aaRead(), wrap=document.querySelector('.auto-abs');
+ if(wrap)wrap.classList.toggle('off',!v.enabled);
+ document.querySelectorAll('#csAutoAbsDays .aa-day').forEach(l=>
+  l.classList.toggle('on', l.querySelector('input').checked));
+ const note=$('csAutoAbsSummary'); if(!note)return;
+ if(!v.enabled){note.textContent='الغياب التلقائي متوقّف — لا يُسجَّل شيء آلياً.';return}
+ if(!v.days.length){note.innerHTML='<b style="color:var(--st-bad)">لم تُحدَّد أيام عمل — لن تعمل المهمة.</b>';return}
+ note.innerHTML=`يُسجَّل الغياب في <b>${v.days.map(d=>AA_DAYS[d]).join('، ')}</b>`
+  +` الساعة <b>${String(v.hour).padStart(2,'0')}:00</b> بتوقيت الرياض،`
+  +` لكل موظف نشط لم يُسجَّل له حضور.`;
+}
+function aaFill(cs){
+ aaBuild();
+ $('csAutoAbsEnabled').checked = !!(cs&&cs.auto_absence_enabled);
+ const days=String((cs&&cs.auto_absence_days)||'0,1,2,3,4').split(',').map(x=>x.trim());
+ document.querySelectorAll('#csAutoAbsDays input').forEach(c=>c.checked=days.includes(c.value));
+ $('csAutoAbsHour').value = (cs&&cs.auto_absence_hour!=null)?cs.auto_absence_hour:17;
+ aaSync();
+}
 function initBankSelect(inputId){
  const inp=$(inputId); if(!inp||inp._bankWired)return; inp._bankWired=true;
  const sel=document.createElement('select');
@@ -5390,6 +5459,7 @@ const SCHEMA_CHECKS=[
  {t:'leaves', label:'سبب رفض الإجازة',   type:{rejection_reason:'text'}},
  {t:'permits',label:'سبب رفض الاستئذان', type:{rejection_reason:'text'}},
  {t:'form_submissions',label:'سبب رفض النموذج', type:{rejection_reason:'text'}},
+ {t:'company_settings',label:'ضبط الغياب التلقائي', type:{auto_absence_enabled:'boolean',auto_absence_days:'text',auto_absence_hour:'int'}},
 ];
 let _schemaChecked=false;
 async function checkSchema(){
@@ -6202,7 +6272,7 @@ function togglePayrollSelectAll(cb){
 function fillCompanySettingsForm(){
  if(!$('csBankCode'))return;
  const cs=companySettings||{};
- $('csBankCode').value=cs.bank_code||'';initBankSelect('csBankCode');$('csBankCode')._bankSync&&$('csBankCode')._bankSync();
+ $('csBankCode').value=cs.bank_code||'';initBankSelect('csBankCode');$('csBankCode')._bankSync&&$('csBankCode')._bankSync();aaFill(cs);
  $('csEstablishmentId').value=cs.establishment_id||'';
  $('csBankAccount').value=cs.bank_account_number||'';
  $('csMolId').value=cs.mol_establishment_id||'';
@@ -6210,6 +6280,11 @@ function fillCompanySettingsForm(){
 }
 async function saveCompanySettings(){
  const row={id:1,bank_code:$('csBankCode').value.trim().toUpperCase(),establishment_id:$('csEstablishmentId').value.trim(),bank_account_number:$('csBankAccount').value.trim(),mol_establishment_id:$('csMolId').value.trim(),permit_monthly_hours:(+$('csPermitHours').value>0?+$('csPermitHours').value:PERMIT_MONTHLY_HOURS_DEFAULT),updated_by:me.name,updated_at:new Date().toISOString()};
+ const aa=aaRead();
+ if(aa.enabled&&!aa.days.length){toast('حدّد يوم عمل واحداً على الأقل للغياب التلقائي');return}
+ row.auto_absence_enabled=aa.enabled;
+ row.auto_absence_days=aa.days.join(',');
+ row.auto_absence_hour=aa.hour;
  const {error}=await sb.from('company_settings').upsert(row);
  if(error){err(error);return}
  await refresh();toast('تم حفظ بيانات المنشأة ✅');
@@ -8254,6 +8329,19 @@ if(typeof window.renderExtraModuleBody==='function'){
 /* ===== تخطيط اللوحة: العمل يسار، المرجع يمين ===== */
 /* شريط القوة العاملة المرجعي */
 /* شريط فلاتر الحضور */
+/* ضبط الغياب التلقائي */
+.auto-abs{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.aa-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:13.5px;min-height:44px}
+.aa-toggle input{width:20px;height:20px;flex-shrink:0}
+.aa-fields{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;margin-top:6px}
+.aa-days{display:flex;flex-wrap:wrap;gap:6px}
+.aa-day{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+ border-radius:999px;padding:7px 13px;cursor:pointer;font-size:12.5px;font-weight:600;min-height:40px;user-select:none}
+.aa-day.on{background:var(--pine-soft);border-color:var(--pine);color:var(--pine);font-weight:800}
+.aa-day input{display:none}
+.aa-note{margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.8;
+ background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.auto-abs.off .aa-fields,.auto-abs.off .aa-note{opacity:.45;pointer-events:none}
 .att-bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:12px}
 .att-bar>*{flex:0 1 auto;width:auto}
 .att-bar input,.att-bar select{min-height:40px;font-size:13px;width:auto}
