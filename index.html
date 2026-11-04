@@ -2307,7 +2307,7 @@ const err=(e,extra)=>{
    ============================================================ */
 const IDLE_LOGOUT_MIN=45;        /* خمول قبل الخروج التلقائي */
 const IDLE_WARN_MIN=2;           /* تحذير قبل الخروج */
-let sessionEndedShown=false;
+window.sessionEndedShown=false;
 
 /* علامات انقضاء الجلسة أو انحراف ساعة الجهاز */
 /* ساعة الجهاز متقدّمة على الخادم: الرسالة نفسها تصل كانتهاء جلسة
@@ -2318,7 +2318,7 @@ function sessionDead(m){
  return /PGRST303|JWT expired|JWT issued at future|invalid claim|token is expired|refresh_token_not_found|Invalid Refresh Token/i.test(m);
 }
 function showSessionEnded(reason){
- if(sessionEndedShown)return; sessionEndedShown=true;
+ if(window.sessionEndedShown)return; window.sessionEndedShown=true;
  try{if(typeof stopLiveZoneMonitoring==='function')stopLiveZoneMonitoring()}catch(e){}
  const skew=reason==='skew';
  const box=document.createElement('div');
@@ -2499,6 +2499,7 @@ function initRealtime(){
     فلا نحمّل مرتين لنفس الدقيقة. */
  setInterval(()=>{
   if(document.visibilityState!=='visible')return;
+  if(window.sessionEndedShown)return;      /* الجلسة انتهت — لا طرق بلا هوية */
   const everyMs=window._rtOk?60000:15000;
   if(_rfLastAt&&Date.now()-_rfLastAt<everyMs-1500)return;
   refresh().catch(()=>{});
@@ -2581,6 +2582,18 @@ const empName=id=>empById[id]?empById[id].name:'—';
 const empDept=id=>empById[id]?empById[id].dept:'—';
 
 async function loadAll(){
+ /* حارس الجلسة — الباب الوحيد لكل استعلامات التحميل.
+    مؤقّت التحديث يمرّ كل 15 ثانية ولا يعرف أن الجلسة انتهت، فكان
+    يطرق القاعدة كـanon فتردّ «permission denied for table warnings»
+    ثم تُرسم الصفحة بـme=null فتنهار على قراءة .name.
+    الفحص محلي (getSession يقرأ التخزين لا الشبكة) فلا يكلّف شيئاً. */
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+   if(me&&typeof showSessionEnded==='function')showSessionEnded();
+   return;
+  }
+ }catch(e){ return }
  _loadErrShown=false;
  /* ============================================================
     كانت استعلامات التحميل تُنفَّذ على عشر دفعات متتابعة: كل دفعة تنتظر
