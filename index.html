@@ -1606,6 +1606,19 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
       <div><label>رقم هوية الموظف</label><input id="eId"></div>
       <div><label>تاريخ الميلاد</label><input id="eBirth" type="date"></div>
       <div><label>الدولة / المدينة</label><input id="eCity"></div>
+      <div><label>المنطقة الزمنية</label>
+        <select id="eTimezone">
+          <option value="Asia/Riyadh">السعودية — الرياض (UTC+3)</option>
+          <option value="Africa/Cairo">مصر — القاهرة (صيفي/شتوي)</option>
+          <option value="Asia/Dubai">الإمارات — دبي (UTC+4)</option>
+          <option value="Asia/Amman">الأردن — عمّان</option>
+          <option value="Asia/Beirut">لبنان — بيروت</option>
+          <option value="Africa/Khartoum">السودان — الخرطوم</option>
+          <option value="Asia/Karachi">باكستان — كراتشي</option>
+          <option value="Asia/Manila">الفلبين — مانيلا</option>
+          <option value="Asia/Kolkata">الهند — نيودلهي</option>
+        </select>
+      </div>
       <div><label>إيميل الموظف <b style="color:var(--danger)">*</b></label><input id="eEmail" type="email"></div>
       <div><label>رقم الجوال</label><input id="ePhone"></div>
       <div><label>الجنس</label><select id="eGender"><option>ذكر</option><option>أنثى</option></select></div>
@@ -2519,7 +2532,7 @@ async function saveNewPassword(){
 sb.auth.getSession().then(({data:{session}})=>{if(session&&!recovering)enterApp();if(recovering)openModal('newPassModal')});
 
 /* ================= تحميل البيانات من قاعدة البيانات ================= */
-function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,notifyEmail:r.notify_email,activationCode:r.activation_code}}
+function mapEmp(r){return {id:r.id,num:r.emp_num,name:r.full_name,nat:r.nationality,natId:r.national_id,birth:r.birth_date,city:r.city,email:r.email,phone:r.phone,gender:r.gender,hire:r.hire_date,probStart:r.probation_start,probEnd:r.probation_end,job:r.job_title,dept:r.department,type:r.employment_type,salary:r.salary,currency:r.currency,work:r.work_type,contractDur:r.contract_duration,status:r.status,role:r.role,auth_id:r.auth_id,financeAccess:!!r.finance_access,locationId:r.location_id,iban:r.bank_iban,bankCode:r.bank_code,notifyEmail:r.notify_email,tz:r.timezone,activationCode:r.activation_code}}
 /* صلاحية الوصول للنظام المالي: محاسب دائماً يملكها، أدمن يحتاج منح صريح */
 /* دالة توافق قديمة (لأي استخدام متبقٍ) — الآن مبنية على نظام الصلاحيات العام */
 /* ============================================================
@@ -3497,7 +3510,7 @@ function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textConten
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
  fillLocationSelect();$('eLocation').value=e.locationId||'';
- $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';initBankSelect('eBankCode');$('eBankCode')._bankSync&&$('eBankCode')._bankSync();
+ $('eIban').value=e.iban||'';$('eTimezone').value=e.tz||'Asia/Riyadh';$('eBankCode').value=e.bankCode||'';initBankSelect('eBankCode');$('eBankCode')._bankSync&&$('eBankCode')._bankSync();
  applyEmpPayGate();
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
@@ -3509,7 +3522,7 @@ async function saveEmployee(){
  if(!$('eName').value.trim()||!$('eNum').value.trim()||!$('eEmail').value.trim()){toast('رقم الموظف والاسم الرباعي والبريد الإلكتروني حقول إلزامية');return}
  if(!/^\S+@\S+\.\S+$/.test($('eEmail').value.trim())){toast('صيغة البريد الإلكتروني غير صحيحة');return}
  if($('eProbStart').value&&$('eProbEnd').value&&$('eProbEnd').value<$('eProbStart').value){toast('نهاية فترة التجربة لا يمكن أن تسبق بدايتها');return}
- const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null,bank_iban:$('eIban').value.trim().toUpperCase()||null,bank_code:$('eBankCode').value.trim().toUpperCase()||null};
+ const row={emp_num:$('eNum').value.trim(),full_name:$('eName').value.trim(),nationality:$('eNat').value,national_id:$('eId').value,birth_date:$('eBirth').value||null,city:$('eCity').value,email:$('eEmail').value.trim().toLowerCase(),phone:$('ePhone').value,gender:$('eGender').value,hire_date:$('eHire').value||null,probation_start:$('eProbStart').value||null,probation_end:$('eProbEnd').value||null,job_title:$('eJob').value,department:$('eDept').value,employment_type:$('eType').value,salary:+$('eSalary').value||null,currency:$('eCurrency').value,work_type:$('eWork').value,contract_duration:$('eContractDur').value,status:$('eStatus').value,role:(editId&&empById[editId]&&empById[editId].role==='admin')?'admin':$('eRole').value,location_id:$('eLocation').value||null,bank_iban:$('eIban').value.trim().toUpperCase()||null,bank_code:$('eBankCode').value.trim().toUpperCase()||null,timezone:$('eTimezone').value||'Asia/Riyadh'};
  /* حماية من المسح الصامت: من لا يرى الحقول المالية لا يرسلها أصلاً */
  if(!canSeePay()){delete row.salary;delete row.currency;delete row.bank_iban;delete row.bank_code}
  const q=editId? sb.from('employees').update(row).eq('id',editId) : sb.from('employees').insert(row);
@@ -5459,6 +5472,7 @@ const SCHEMA_CHECKS=[
  {t:'leaves', label:'سبب رفض الإجازة',   type:{rejection_reason:'text'}},
  {t:'permits',label:'سبب رفض الاستئذان', type:{rejection_reason:'text'}},
  {t:'form_submissions',label:'سبب رفض النموذج', type:{rejection_reason:'text'}},
+ {t:'employees',label:'المنطقة الزمنية للموظف', type:{timezone:'text'}},
  {t:'company_settings',label:'ضبط الغياب التلقائي', type:{auto_absence_enabled:'boolean',auto_absence_days:'text',auto_absence_hour:'int'}},
 ];
 let _schemaChecked=false;
