@@ -1936,6 +1936,49 @@ function empLocation(empId){const e=empById[empId];if(!e||!e.locationId)return n
 let paymentRequests=[],custodyRecords=[],payrollRuns=[],payrollItems=[],deductionRequests=[],warnings=[];
 const DED_P1='بانتظار مراجعة الموارد البشرية', DED_P2='بانتظار الاعتماد المالي النهائي';
 const WARN_P1='بانتظار مراجعة الموارد البشرية', WARN_P2='بانتظار الاعتماد النهائي';
+/* البنوك السعودية ورموزها (بادئة SWIFT) — يُحفظ الرمز ويُعرض الاسم.
+   كان الحقل نصّاً حرّاً «مثال: RJHI»، وهذا الرمز يدخل ملف حماية
+   الأجور الذي يُرفع للبنك وتُصرَف به الرواتب — فخطأ حرف واحد
+   يُفشل الكشف كاملاً. «أخرى» تُبقي الإدخال اليدوي متاحاً لأي بنك
+   خارج القائمة. */
+const SA_BANKS=[
+ {c:'RJHI',n:'مصرف الراجحي'},
+ {c:'NCBK',n:'البنك الأهلي السعودي (SNB)'},
+ {c:'RIBL',n:'بنك الرياض'},
+ {c:'SABB',n:'البنك السعودي الأول (SAB)'},
+ {c:'BSFR',n:'البنك السعودي الفرنسي'},
+ {c:'ARNB',n:'البنك العربي الوطني'},
+ {c:'ALBI',n:'بنك البلاد'},
+ {c:'INMA',n:'مصرف الإنماء'},
+ {c:'BJAZ',n:'بنك الجزيرة'},
+ {c:'SIBC',n:'البنك السعودي للاستثمار'},
+];
+const bankName=c=>{const b=SA_BANKS.find(x=>x.c===String(c||'').toUpperCase());return b?b.n:(c||'—')};
+/* يبني القائمة بجانب حقل الرمز القائم ويُبقيه مصدر القيمة الوحيد،
+   فلا يتغيّر شيء في الحفظ ولا في التصدير. */
+function initBankSelect(inputId){
+ const inp=$(inputId); if(!inp||inp._bankWired)return; inp._bankWired=true;
+ const sel=document.createElement('select');
+ sel.id=inputId+'Sel';
+ sel.innerHTML='<option value="">— اختر البنك —</option>'
+  +SA_BANKS.map(b=>`<option value="${b.c}">${esc(b.n)} — ${b.c}</option>`).join('')
+  +'<option value="__other__">بنك آخر — أُدخل الرمز يدوياً</option>';
+ inp.parentNode.insertBefore(sel,inp);
+ inp.style.marginTop='7px';
+ const sync=()=>{
+  if(sel.value==='__other__'){inp.style.display='';inp.placeholder='رمز البنك (4 أحرف)';return}
+  inp.style.display='none';
+  if(sel.value)inp.value=sel.value;
+ };
+ sel.onchange=()=>{if(sel.value&&sel.value!=='__other__')inp.value=sel.value;else if(sel.value==='__other__')inp.value='';sync()};
+ /* عند فتح النموذج بقيمة محفوظة: اختر البنك المطابق أو أظهر اليدوي */
+ inp._bankSync=()=>{
+  const v=String(inp.value||'').toUpperCase();
+  sel.value=SA_BANKS.some(b=>b.c===v)?v:(v?'__other__':'');
+  sync();
+ };
+ inp._bankSync();
+}
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 /* عملة الموظف الفعلية — لا نفترض الريال أبداً، كل موظف له عملة راتبه المسجّلة */
 function empCurrency(empId){return (empById[empId]&&empById[empId].currency)||'ريال سعودي'}
@@ -3317,7 +3360,7 @@ function editEmp(id){editId=id;const e=empById[id];$('empModalTitle').textConten
  $('eNum').value=e.num||'';$('eName').value=e.name||'';$('eNat').value=e.nat||'';$('eId').value=e.natId||'';$('eBirth').value=e.birth||'';$('eCity').value=e.city||'';$('eEmail').value=e.email||'';$('ePhone').value=e.phone||'';$('eGender').value=e.gender||'ذكر';
  $('eHire').value=e.hire||'';$('eProbStart').value=e.probStart||'';$('eProbEnd').value=e.probEnd||'';$('eJob').value=e.job||'';$('eDept').value=e.dept||'التسويق';$('eType').value=e.type||'حضوري';$('eSalary').value=e.salary||'';$('eCurrency').value=e.currency||'ريال سعودي';$('eWork').value=e.work||'كامل';$('eContractDur').value=e.contractDur||'';$('eStatus').value=e.status||'نشط';$('eRole').value=(e.role==='manager'?'manager':'employee');$('eRole').disabled=(e.role==='admin');
  fillLocationSelect();$('eLocation').value=e.locationId||'';
- $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';
+ $('eIban').value=e.iban||'';$('eBankCode').value=e.bankCode||'';initBankSelect('eBankCode');$('eBankCode')._bankSync&&$('eBankCode')._bankSync();
  applyEmpPayGate();
  empSnapshot=empFormSnapshot();$('empSaveBtn').disabled=true;
  openModal('empModal')}
@@ -3415,7 +3458,7 @@ async function addContract(){
 }
 
 /* ================= الحضور والغياب ================= */
-let attFilters={meetAtt:'',siteAtt:'',meetAbs:'',siteAbs:''};
+let attFilters={meetAtt:{},siteAtt:{},meetAbs:{},siteAbs:{}};
 async function renderLiveStatusBoard(){
  if(!$('liveStatusTbody'))return;
  const {data,error}=await sb.from('attendance_events').select('*').eq('event_date',D(0)).order('created_at',{ascending:true});
@@ -3431,10 +3474,56 @@ async function renderLiveStatusBoard(){
 function setAttTab(t,btn){document.querySelectorAll('#page-attendance .tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
  document.querySelectorAll('.att-tab').forEach(d=>d.style.display='none');$('att-'+t).style.display='block';
  if(t==='liveStatus')renderLiveStatusBoard();}
-function deptChips(cid,key){$(cid).innerHTML=['الكل',...DEPTS].map(d=>`<button class="${(attFilters[key]===(d==='الكل'?'':d))?'active':''}" onclick="attFilters['${key}']='${d==='الكل'?'':d}';renderAttendance()">${d}</button>`).join('')}
+/* ===== فلاتر الحضور =====
+   كان القسم وحده. سلامة طلب الاسم واليوم والتاريخ معه — ومع نمو
+   السجلات صار التصفّح بلا فلتر غير عملي.
+   كل تبويب يحتفظ بفلاتره مستقلةً، فالانتقال بينها لا يمسح ما اخترت. */
+const AR_DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+function attSet(key,field,val){attFilters[key][field]=val;renderAttendance()}
+function attReset(key){attFilters[key]={};renderAttendance()}
+function attBar(cid,key,withDate){
+ const F=attFilters[key]||{};
+ const active=Object.values(F).filter(v=>v!==''&&v!=null).length;
+ $(cid).innerHTML=
+  `<div class="att-bar">
+    <input class="af-q" placeholder="🔍 بحث باسم الموظف" value="${esc(F.q||'')}"
+      oninput="attSet('${key}','q',this.value)">
+    <select onchange="attSet('${key}','dept',this.value)">
+      <option value="">القسم: الكل</option>
+      ${DEPTS.map(d=>`<option value="${esc(d)}"${F.dept===d?' selected':''}>${esc(d)}</option>`).join('')}
+    </select>`
+  +(withDate?`<select onchange="attSet('${key}','day',this.value)">
+      <option value="">اليوم: الكل</option>
+      ${AR_DAYS.map((d,i)=>`<option value="${i}"${String(F.day)===String(i)?' selected':''}>${d}</option>`).join('')}
+    </select>
+    <input type="date" title="من تاريخ" value="${esc(F.from||'')}" onchange="attSet('${key}','from',this.value)">
+    <input type="date" title="إلى تاريخ" value="${esc(F.to||'')}"   onchange="attSet('${key}','to',this.value)">`:'')
+  +(active?`<button class="btn btn-ghost btn-sm" onclick="attReset('${key}')">مسح الفلاتر (${active})</button>`:'')
+  +`<span class="af-count" id="${cid}Count"></span>
+  </div>`;
+}
 function renderAttendance(){
- deptChips('meetAttFilter','meetAtt');deptChips('siteAttFilter','siteAtt');deptChips('meetAbsFilter','meetAbs');deptChips('siteAbsFilter','siteAbs');
- const f=(arr,k)=>arr.filter(r=>!attFilters[k]||r.dept===attFilters[k]);
+ attBar('meetAttFilter','meetAtt',1);attBar('siteAttFilter','siteAtt',1);
+ attBar('meetAbsFilter','meetAbs',1);attBar('siteAbsFilter','siteAbs',1);
+ const f=(arr,k)=>{
+  const F=attFilters[k]||{}, q=normAr(F.q||'');
+  const out=arr.filter(r=>{
+   if(F.dept&&r.dept!==F.dept)return false;
+   if(q&&!normAr(r.emp||'').includes(q))return false;
+   const d=String(r.date||'').slice(0,10);
+   if(F.from&&d&&d<F.from)return false;
+   if(F.to  &&d&&d>F.to  )return false;
+   /* اليوم: getDay على تاريخ نصّي ISO يُفسَّر UTC، ونحن نقارن يوماً
+      محلياً — فنبني التاريخ من أجزائه لتفادي انزياح يوم كامل. */
+   if(F.day!==''&&F.day!=null&&d){
+    const p=d.split('-');
+    if(new Date(+p[0],+p[1]-1,+p[2]).getDay()!==+F.day)return false;
+   }
+   return true;
+  });
+  const c=$(k+'FilterCount'); if(c)c.textContent=out.length===arr.length?'':`${out.length} من ${arr.length}`;
+  return out;
+ };
  const dayName=d=>new Date(d).toLocaleDateString('ar',{weekday:'long'});
  $('meetAttTbody').innerHTML=f(meetAtt,'meetAtt').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
  $('meetAbsTbody').innerHTML=f(meetAbs,'meetAbs').map(r=>`<tr><td><b>${esc(r.meet)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.title||'—')}</td><td>${esc(r.goal||'—')}</td><td>${fmt(r.date)}</td><td>${r.time}</td><td>${esc(r.emp)}</td><td>${esc(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>';
@@ -5991,7 +6080,7 @@ function togglePayrollSelectAll(cb){
 function fillCompanySettingsForm(){
  if(!$('csBankCode'))return;
  const cs=companySettings||{};
- $('csBankCode').value=cs.bank_code||'';
+ $('csBankCode').value=cs.bank_code||'';initBankSelect('csBankCode');$('csBankCode')._bankSync&&$('csBankCode')._bankSync();
  $('csEstablishmentId').value=cs.establishment_id||'';
  $('csBankAccount').value=cs.bank_account_number||'';
  $('csMolId').value=cs.mol_establishment_id||'';
@@ -8030,6 +8119,15 @@ if(typeof window.renderExtraModuleBody==='function'){
 .window-note:empty{display:none}
 /* ===== تخطيط اللوحة: العمل يسار، المرجع يمين ===== */
 /* شريط القوة العاملة المرجعي */
+/* شريط فلاتر الحضور */
+.att-bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:12px}
+.att-bar>*{flex:0 1 auto;width:auto}
+.att-bar input,.att-bar select{min-height:40px;font-size:13px;width:auto}
+.att-bar .af-q{flex:1 1 200px;min-width:170px;max-width:270px}
+.att-bar select{min-width:150px;max-width:190px}
+.att-bar input[type=date]{min-width:146px;max-width:168px}
+.att-bar .af-count{font-size:12px;color:var(--muted);font-weight:700;margin-inline-start:auto}
+@media(max-width:700px){.att-bar>*{flex:1 1 calc(50% - 5px);min-width:0;max-width:none}}
 .ref-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 22px}
 .ref-chip{display:inline-flex;align-items:baseline;gap:7px;background:var(--card);
  border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
