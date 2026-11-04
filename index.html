@@ -457,22 +457,27 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
    <div class="tag info" id="todayDateBadge" style="font-size:13px;padding:8px 16px"></div></div>
   <div id="schemaWarnBox"></div>
   <div class="stats" id="dashStats"><div class="stats-row"><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div></div></div>
-  <!-- التنبيهات صعدت فوق الرسوم: ما يحتاج تصرفاً يُقرأ أولاً،
-       وكانت تحت ثماني رسوم مرجعية فلا تُرى إلا بتمرير طويل. -->
-  <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div><button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
-  <!-- مطوية افتراضياً: ثماني رسوم بنفس وزن بطاقات المؤشرات تجعل اللوحة
-       تبدو مبعثرة، وهي مرجعية لا يُتصرّف بها يومياً. تُفتح عند الحاجة
-       وتبقى مفتوحة بعدها (محفوظة محلياً). -->
-  <details class="dash-fold" id="foldTrends">
-   <summary><span class="ft">📊 المؤشرات والاتجاهات</span>
-    <span class="fs">توزيعات مرجعية — للاطلاع لا للتصرّف</span></summary>
-  <div class="dash-charts-grid">
-    <div class="card"><h3>👥 توزيع الموظفين النشطين حسب القسم</h3><div class="chart-box"><canvas id="chartDept"></canvas></div></div>
-    <div class="card"><h3>📋 الطلبات المعلّقة حسب النوع</h3><div class="chart-box"><canvas id="chartPending"></canvas></div></div>
-    <div class="card"><h3>🌴 أيام الإجازات المعتمدة هذا العام</h3><div class="chart-box"><canvas id="chartLeaves"></canvas></div></div>
-    <div class="card"><h3>📈 اتجاه طلبات الإجازة — آخر 6 أشهر</h3><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
+  <!-- قلب اللوحة: الطلبات نفسها بأسمائها وتواريخها وأزرارها.
+       كانت اللوحة تعرض العدد «3» فيضطر المسؤول للانتقال لصفحة
+       أخرى ليرى ما هي — فصارت فهرساً لا لوحة. -->
+  <div class="dash-main">
+    <div class="dash-col-work">
+      <div class="card work-card">
+        <h3>⚡ ما ينتظر قرارك</h3>
+        <div id="dashWorkQueue"></div>
+      </div>
+      <div class="card"><h3>🔔 أحدث التنبيهات</h3><div id="dashAlerts"></div>
+        <button class="btn btn-ghost btn-sm" onclick="go('alerts')">عرض جميع التنبيهات</button></div>
+    </div>
+    <div class="dash-col-ref">
+      <div class="card"><h3>👥 توزيع الموظفين النشطين</h3>
+        <div class="chart-box sm"><canvas id="chartDept"></canvas></div></div>
+      <div class="card"><h3>📈 اتجاه طلبات الإجازة — 6 أشهر</h3>
+        <div class="chart-box sm"><canvas id="chartTrend"></canvas></div></div>
+    </div>
   </div>
-    </details>
+  <!-- الطيّة أُزيلت: رسماها المفيدان (الأقسام والاتجاه) انتقلا إلى
+       عمود المرجع بجانب طابور العمل، ويبقى الباقي في صفحاته. -->
   <div id="dashFinanceSection" style="display:none">
     <div class="page-head" style="margin-top:6px"><div><h1 style="font-size:20px">💰 النظرة المالية</h1><p>مؤشرات الرواتب والعهد والمصروفات</p></div></div>
     <div class="stats" id="dashFinanceStats"></div>
@@ -1250,8 +1255,15 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 
 <section class="page" id="ep-approvals">
   <div class="page-head"><div><h1>اعتمادات القسم</h1><p>طلبات إجازات موظفي قسمك — اعتمادك يحوّلها للاعتماد النهائي لدى الإدارة</p></div></div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>المرفق</th><th>إجراء</th></tr></thead>
+  <div class="card">
+    <div id="mgrBulkBar" class="bulk-bar" style="display:none">
+      <b id="mgrBulkCount">0 محدَّد</b>
+      <button class="btn btn-ok btn-sm" onclick="mgrBulkApprove()">✅ اعتماد المحدَّد</button>
+      <button class="btn btn-ghost btn-sm" onclick="mgrClearSel()">إلغاء التحديد</button>
+      <small id="mgrBulkNote"></small>
+    </div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th style="width:38px"><input type="checkbox" id="mgrSelAll" onchange="mgrToggleAll(this.checked)" title="تحديد الكل"></th><th>الموظف</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>المرفق</th><th>إجراء</th></tr></thead>
     <tbody id="mgrApprovalsTbody"></tbody></table></div></div>
   <div class="card"><h3>سجل ما سبق اعتماده أو رفضه في قسمك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النوع</th><th>الفترة</th><th>الحالة</th></tr></thead>
@@ -1807,6 +1819,11 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
     <div id="confirmModalIcon" style="font-size:42px;line-height:1">🗑️</div>
     <h3 id="confirmModalTitle" style="margin:12px 0 6px">تأكيد الحذف</h3>
     <p id="confirmModalMsg" style="color:var(--muted);font-size:14px"></p>
+  </div>
+  <div id="confirmModalInputWrap" style="display:none;margin-top:4px">
+    <label id="confirmModalInputLabel" style="display:block;margin-bottom:6px;font-weight:700;font-size:13px"></label>
+    <textarea id="confirmModalInput" rows="3" style="width:100%"></textarea>
+    <small id="confirmModalInputErr" style="color:var(--danger);display:none;margin-top:5px">هذا الحقل إلزامي</small>
   </div>
   <div class="modal-foot" style="justify-content:center">
     <button class="btn btn-danger" id="confirmModalOk" onclick="resolveConfirm(true)">نعم، احذف نهائياً</button>
@@ -2464,7 +2481,7 @@ async function loadAll(){
   const maxVersion=Math.max(...rows.map(r=>+r.version||0),0);
   return {id:cur.id,employee_id:eid,emp:empName(eid),start:cur.start_date,end:cur.end_date,dur:cur.duration,versions:rows.length,maxVersion,file:cur.pdf_url,history:rows}});
  contracts.sort((a,b)=>new Date(a.end)-new Date(b.end));
- leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,substituteId:r.substitute_id,substitute:r.substitute_name,notes:r.notes}));
+ leaves=(L.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),job:empById[r.employee_id]?empById[r.employee_id].job:'—',type:r.leave_type,req:r.request_date,start:r.start_date,end:r.end_date,days:r.days,reason:r.reason,status:r.status,head:r.dept_head,manager:r.admin_manager,attachment:r.attachment_url,contact_phone:r.contact_phone,contact_email:r.contact_email,commitAccepted:r.commitment_accepted,substituteId:r.substitute_id,substitute:r.substitute_name,notes:r.notes,rejectReason:r.rejection_reason}));
  meetAtt=[];meetAbs=[];
  (M.data||[]).forEach(r=>{const rec={id:r.id,employee_id:r.employee_id,meeting_id:r.meeting_id,meet:r.meeting_name,dept:r.department,title:r.meeting_title,goal:r.meeting_goal,date:r.meeting_date,time:tfmt(r.meeting_time),emp:empName(r.employee_id),notes:r.notes};(r.record_type==='حضور'?meetAtt:meetAbs).push(rec)});
  siteAtt=[];siteAbs=[];
@@ -2480,7 +2497,7 @@ async function loadAll(){
  }
  /* حركات الدوام الجغرافي لم تعد تُجلب هنا — تُجلب عند فتح التقارير فقط
     عبر ensureAttendanceEvents()، وبنطاق التاريخ المختار. */
- permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,created_at:r.created_at}));
+ permits=(P.data||[]).map(r=>({id:r.id,employee_id:r.employee_id,emp:empName(r.employee_id),dept:empDept(r.employee_id),date:r.permit_date,time:tfmt(r.permit_time),type:r.permit_type,hours:r.permit_hours,status:r.status,head:r.dept_head,notes:r.notes,rejectReason:r.rejection_reason,created_at:r.created_at}));
  policies=(PL.data||[]).map(r=>({id:r.id,name:r.name,status:r.status,ver:r.version,updated:r.updated_at,file:r.file_url}));
  filesData=(FL.data||[]).map(r=>({id:r.id,name:r.file_name,type:r.file_type,size:r.file_size,up:r.uploaded_at,by:r.uploaded_by,last:r.updated_at,src:r.source,cat:r.category,sub:r.subcategory,path:r.storage_path,employee_id:r.employee_id}));
  formsData=(FM.data||[]).map(r=>({id:r.id,name:r.name,goal:r.goal,date:r.created_at,doc:r.doc_url,pdf:r.pdf_url,fillable:r.fillable,template:r.template||null,fields:(()=>{try{return JSON.parse(r.fields||'[]')}catch(e){return[]}})()}));
@@ -2560,9 +2577,23 @@ async function registerFile(file,category,source,path){
  await sb.from('files_registry').insert({file_name:file.name,file_type:(file.name.split('.').pop()||'').toUpperCase(),file_size:(file.size/1024/1024).toFixed(2)+' MB',category,source,uploaded_by:me.name,storage_path:path});
 }
 let _confirmResolve=null;
+/* opts.input = {label, placeholder, required} يحوّل المودال إلى
+   سؤال بسبب. يُرجَع نصّ السبب بدل true. */
 function showConfirm(message,opts){
  opts=opts||{};
  $('confirmModalMsg').textContent=message;
+ const iw=$('confirmModalInputWrap');
+ if(iw){
+  _confirmInput=opts.input||null;
+  iw.style.display=_confirmInput?'block':'none';
+  $('confirmModalInputErr').style.display='none';
+  if(_confirmInput){
+   $('confirmModalInputLabel').textContent=_confirmInput.label||'السبب';
+   const ta=$('confirmModalInput');
+   ta.value='';ta.placeholder=_confirmInput.placeholder||'';
+   setTimeout(()=>ta.focus(),80);
+  }
+ }
  if($('confirmModalIcon'))  $('confirmModalIcon').textContent = opts.icon  || '🗑️';
  if($('confirmModalTitle')) $('confirmModalTitle').textContent= opts.title || 'تأكيد الحذف';
  const ok=$('confirmModalOk');
@@ -2573,7 +2604,20 @@ function showConfirm(message,opts){
  openModal('confirmModal');
  return new Promise(res=>{_confirmResolve=res});
 }
-function resolveConfirm(val){closeModal('confirmModal');if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val)}}
+let _confirmInput=null;
+function resolveConfirm(val){
+ /* الإلزام يُفحص قبل الإغلاق: المودال يبقى مفتوحاً والسبب المكتوب
+    لا يضيع، بدل إغلاقه ثم إظهار toast يطالب بإعادة كل شيء. */
+ if(val&&_confirmInput&&_confirmInput.required){
+  const t=($('confirmModalInput').value||'').trim();
+  if(t.length<3){$('confirmModalInputErr').style.display='block';$('confirmModalInput').focus();return}
+  val=t;
+ }else if(val&&_confirmInput){
+  val=($('confirmModalInput').value||'').trim()||true;
+ }
+ closeModal('confirmModal');_confirmInput=null;
+ if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val)}
+}
 function pickFile(accept){return new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept=accept||'';i.onchange=()=>res(i.files[0]||null);i.click()})}
 const staged={};
 async function stageFile(key,accept,boxId){
@@ -2831,6 +2875,18 @@ function applyChartTheme(cfg){
   ax.grid=Object.assign({color:line},ax.grid||{});
   if(ax.title)ax.title.color=muted;
  }
+ /* تناسب الأعمدة مع عدد الفئات: maxBarThickness ثابت يترك ثلاثة
+    أعمدة نحيلة ضائعة في بطاقة عريضة، وعشرين عموداً متلاصقة.
+    نرفع السقف حين تقلّ الفئات ونخفضه حين تكثر. */
+ const n=(cfg.data&&cfg.data.labels&&cfg.data.labels.length)||0;
+ if(cfg.type==='bar'&&n){
+  const cap=n<=3?96:n<=5?74:n<=8?56:40;
+  (cfg.data.datasets||[]).forEach(d=>{
+   if(d.maxBarThickness==null||d.maxBarThickness<cap)d.maxBarThickness=cap;
+  });
+ }
+ /* الدونت: فتحة أوسع حين تقلّ الشرائح فلا تبدو كتلة ثقيلة */
+ if(cfg.type==='doughnut'&&o.cutout==null)o.cutout=n<=3?'64%':'55%';
  return cfg;
 }
 const DASH_CFG={};                       /* نحفظ الإعدادات لإعادة الرسم عند تبديل السمة */
@@ -2855,6 +2911,79 @@ function redrawChartsForTheme(){
   if(DASH_CHARTS[id])DASH_CHARTS[id].destroy();
   try{DASH_CHARTS[id]=new Chart(el.getContext('2d'),applyChartTheme(DASH_CFG[id]))}catch(e){}
  }
+}
+/* ===== طابور العمل =====
+   اللوحة كانت تعرض «3 إجازات بانتظار قرارك» فيضطر المسؤول للانتقال
+   إلى صفحة الإجازات ليعرف أيّها ولمن. الآن تعرض الطلبات نفسها:
+   الاسم والنوع والفترة وكم انتظر الطلب — وزرّ الفتح بجانبه.
+   الأقدم أولاً: الطلب الذي نام أسبوعاً أولى بالقراءة من طلب اليوم. */
+function daysWaiting(d){
+ const t=Date.parse(String(d||'').slice(0,10)); if(isNaN(t))return 0;
+ return Math.max(0,Math.floor((Date.now()-t)/864e5));
+}
+/* وسمان مختلفا الدلالة: الطلب *ينتظر* قراراً منذ كذا، والعقد
+   *ينتهي* بعد كذا. خلطهما في رقم واحد يُنتج «عقد منتظر 18 يوماً»
+   وهي جملة بلا معنى. ولكلٍّ سلّم إلحاحه. */
+function waitTag(n){
+ const d=arNum(n,'يوماً','يومين','أيام','يوماً');
+ if(n>=7) return `<span class="wq-wait bad">منتظر ${d}</span>`;
+ if(n>=3) return `<span class="wq-wait warn">منتظر ${d}</span>`;
+ return `<span class="wq-wait">${n===0?'وصل اليوم':'منتظر '+d}</span>`;
+}
+function dueTag(n){
+ const d=arNum(n,'يوم واحد','يومين','أيام','يوماً');
+ if(n<=7)  return `<span class="wq-wait bad">ينتهي بعد ${d}</span>`;
+ if(n<=14) return `<span class="wq-wait warn">ينتهي بعد ${d}</span>`;
+ return `<span class="wq-wait">ينتهي بعد ${d}</span>`;
+}
+/* تاريخ مضغوط للصفّ: الصيغة الكاملة (هجري + ميلادي) تحتل سطرين
+   في صفّ ارتفاعه 56px. */
+const fmtShort=d=>d?fmtGreg(d):null;
+function wqRow(o){
+ return `<button class="wq-row" onclick="${o.go}">
+   <span class="wq-ic ${o.k}">${o.ic}</span>
+   <span class="wq-body"><b>${esc(o.title)}</b><small>${esc(o.sub)}</small></span>
+   ${o.due!=null?dueTag(o.due):waitTag(o.wait)}<span class="wq-chev">‹</span></button>`;
+}
+function renderWorkQueue(ACT){
+ const box=$('dashWorkQueue'); if(!box)return;
+ const items=[];
+ leaves.filter(l=>l.status===LV_P1||l.status===LV_P2).forEach(l=>items.push({
+  ic:'🌴',k:'warn',wait:daysWaiting(l.req||l.start),
+  title:`${l.emp} — إجازة ${l.type}`,
+  sub:`${fmtShort(l.start)||'—'} ← ${fmtShort(l.end)||'—'} · ${arNum(l.days,'يوم واحد','يومان','أيام','يوماً')}${l.dept?' · '+l.dept:''}`,
+  go:"dashNav('leavesPending')"}));
+ permits.filter(x=>x.status===LV_P1||x.status===LV_P2).forEach(x=>items.push({
+  ic:'🚪',k:'warn',wait:daysWaiting(x.created_at||x.date),
+  title:`${x.emp||'موظف'} — استئذان`,
+  sub:[fmtShort(x.date),x.time&&x.time!=='—'?x.time:null,x.type,x.dept].filter(Boolean).join(' · ')||'بانتظار الاعتماد',
+  go:"dashNav('permits')"}));
+ formSubs.filter(x=>x.status===LV_P1||x.status===LV_P2).forEach(x=>{
+  const fm=(typeof formsData!=='undefined'?formsData:[]).find(f=>f.id===x.form_id)||{};
+  items.push({ic:'📄',k:'warn',wait:daysWaiting(x.created_at),
+   title:`${x.emp||'موظف'} — نموذج`,sub:fm.name||'نموذج بانتظار الاعتماد',
+   go:"dashNav('forms')"});
+ });
+ contracts.filter(c=>{const n=daysTo(c.end);return n>=0&&n<=30}).forEach(c=>items.push({
+  ic:'✍',k:'bad',wait:0,due:daysTo(c.end),
+  title:`${c.emp} — تجديد عقد`,
+  sub:`ينتهي ${fmtShort(c.end)||'—'}${empById[c.employee_id]?' · '+(empById[c.employee_id].dept||''):''}`,
+  go:"dashNav('contracts30')"}));
+
+ if(!items.length){
+  box.innerHTML=emptyState('✅','لا شيء ينتظر قرارك',
+   'كل الطلبات معالَجة ولا عقود تنتهي خلال شهر. ستظهر الطلبات الجديدة هنا فور وصولها.','',1);
+  return;
+ }
+ /* الترتيب بـ«كم يوماً حتى يصير هذا مشكلة»، تصاعدياً.
+    الطلب يصير مشكلة بعد 3 أيام من انتظاره، والعقد قبل انتهائه
+    بأسبوع. هكذا يسبق طلبٌ نام أربعة أيام عقداً ينتهي بعد شهر،
+    ويسبق العقدُ كلَّ شيء حين يقترب موعده فعلاً. */
+ const risk=o=>o.due!=null?Math.max(0,o.due-7):Math.max(0,3-o.wait);
+ items.sort((a,b)=>risk(a)-risk(b)||(b.wait||0)-(a.wait||0));
+ const shown=items.slice(0,8), rest=items.length-shown.length;
+ box.innerHTML=shown.map(wqRow).join('')
+  +(rest?`<button class="wq-more" onclick="dashNav('leavesPending')">و${arNum(rest,'بند آخر','بندان آخران','بنود أخرى','بنداً آخر')} — عرض الكل</button>`:'');
 }
 function renderDashboard(){
  if($('todayDateBadge'))$('todayDateBadge').textContent=todayFullStr();
@@ -2928,15 +3057,19 @@ function renderDashboard(){
  drawChart('chartTrend',{type:'line',data:{labels:months.map(m=>m.label),datasets:[{data:trendData,borderColor:CH.pine,backgroundColor:alphaCol(tok('--pine','#103080'),.10),fill:true,tension:.35,pointBackgroundColor:CH.pine,pointRadius:4}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Tajawal'}}},x:{ticks:{font:{family:'Tajawal'}}}}}});
 
+ renderWorkQueue(ACT);
  const statCard=s=>`<div class="stat ${s.k}${(+s.n)?'':' is-zero'}" onclick="dashNav('${s.a}')" title="اضغط للانتقال والفلترة"><span class="num">${s.n}</span><span class="lbl">${s.l}</span></div>`;
  const openCount=ACT.reduce((t,s)=>t+(+s.n||0),0);
+ /* صفّ الإجراءات ببطاقات، والقوة العاملة بشريط واحد هادئ:
+    أرقام مرجعية بوزن البطاقات كانت تزاحم ما يحتاج قراراً، وتملأ
+    صفّاً كاملاً بخمس بطاقات لا يُضغط عليها إلا نادراً. */
+ const refChip=x=>`<button class="ref-chip ${x.k}" onclick="dashNav('${x.a}')">`
+  +`<b>${x.n}</b><span>${x.l}</span></button>`;
  $('dashStats').innerHTML=
   `<div class="dash-group act"><div class="dg-head"><span class="dg-t">⚡ يحتاج تصرّفك</span>`+
-  `<span class="dg-n">${openCount?openCount+' بند مفتوح':'لا شيء معلّق'}</span></div>`+
+  `<span class="dg-n">${openCount?arNum(openCount,'بند واحد مفتوح','بندان مفتوحان','بنود مفتوحة','بنداً مفتوحاً'):'لا شيء معلّق'}</span></div>`+
   `<div class="stats-row">${ACT.map(statCard).join('')}</div></div>`+
-  `<div class="dash-group wrk"><div class="dg-head"><span class="dg-t">👥 القوة العاملة</span>`+
-  `<span class="dg-n">للاطلاع</span></div>`+
-  `<div class="stats-row">${WRK.map(statCard).join('')}</div></div>`;
+  `<div class="ref-strip">${WRK.map(refChip).join('')}</div>`;
  $('dashContracts').innerHTML=contracts.filter(c=>daysTo(c.end)<=30).map(c=>`<tr><td>${esc(c.emp)}</td><td>${fmt(c.end)}</td><td>${contractTag(c)}</td></tr>`).join('')||emptyRow(3,'✅','لا عقود قريبة الانتهاء','كل العقود السارية أمامها أكثر من 30 يوماً.','',1);
 
  // === 💰 النظرة المالية — تظهر فقط لمن يملك صلاحية على أي قسم مالي ===
@@ -3941,10 +4074,17 @@ async function addLeave(){
   ['lvStart','lvEnd','lvDays','lvNotes','lvReason'].forEach(id=>$(id).value='');
  }catch(e){err(e)}
 }
-async function setLeaveStatus(id,status,subDone){
+async function setLeaveStatus(id,status,subPatch){
  // نفس القاعدة حتى في الاعتماد المباشر/النهائي: ما في إجازة سنوية معتمدة بدون بديل
- if(status==='تمت الموافقة'&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>setLeaveStatus(id,status,true));return}
+ if(status==='تمت الموافقة'&&!subPatch&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,pt=>setLeaveStatus(id,status,pt));return}
  const patch={status};
+ if(subPatch&&typeof subPatch==='object')Object.assign(patch,subPatch);
+ /* الرفض بلا سبب يصل الموظف كـ«تم الرفض» مجرّداً، فيعود يسأل
+    رئيسه ويضيع وقت الاثنين. السبب إلزامي ويُعرض له مع الطلب. */
+ if(status==='تم الرفض'){
+  const why=await askRejectReason('طلبه'); if(!why)return;
+  patch.rejection_reason=why;
+ }
  if(me.role==='manager'){patch.dept_head=me.name}else{patch.admin_manager=me.name}
  const {error}=await sb.from('leaves').update(patch).eq('id',id);
  if(error){err(error);return}
@@ -4071,15 +4211,17 @@ async function confirmSubstitute(){
  const opt=sel.options[sel.selectedIndex];
  if(opt&&opt.disabled){toast('هذا الموظف في إجازة خلال نفس الفترة — اختر بديلاً غيره');return}
  const e=empById[id]||{},l=leaves.find(x=>x.id===_subCtx.leaveId)||{};
+ /* كان هذا يكتب البديل وحده ثم يعتمد في كتابة ثانية. سياسة RLS
+    تسمح لرئيس القسم بتحديث انتقال الحالة، والكتابة الأولى ليست
+    انتقالاً — فتُرفض برسالة «لا تملك صلاحية هذا الإجراء» قبل أن
+    يصل الاعتماد أصلاً. ولو نجحت الأولى وفشلت الثانية لبقي الطلب
+    معلّقاً وله بديل. الآن حقول البديل تُسلَّم لمن يعتمد فتُكتب
+    معه في تحديث واحد. */
  const patch={substitute_id:id,substitute_name:e.name||''};
  const extra=$('subNotes').value.trim();
  if(extra)patch.notes=(l.notes?l.notes+' — ':'')+'تسليم للبديل: '+extra;
- const {error}=await sb.from('leaves').update(patch).eq('id',_subCtx.leaveId);
- if(error){err(error);return}
- l.substituteId=id;l.substitute=e.name||'';
  const after=_subCtx.after;_subCtx=null;closeModal('substituteModal');
- toast('تم تعيين '+(e.name||'')+' بديلاً عن '+(l.emp||'الموظف'));
- if(after)await after();
+ if(after)await after(patch);
 }
 
 /* ================= الاستئذانات ================= */
@@ -4091,7 +4233,7 @@ function renderPermits(){
    :p.status===LV_P1?`<button class="btn btn-sand btn-sm" onclick="setPermit('${p.id}','معتمد')">اعتماد مباشر (تجاوز)</button> <button class="btn btn-danger btn-sm" onclick="setPermit('${p.id}','مرفوض')">رفض</button>`:'—';
  syncPolicyTexts();
  $('permitTbody').innerHTML=rows.length?rows.map(p=>`<tr>
-  <td><b>${esc(p.emp)}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td>
+  <td><b>${esc(p.emp)}</b></td><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${esc(p.type)}</td>
   <td><span class="tag ${stTag(p.status)}">${p.status}</span>${p.head?' — '+p.head:''}</td><td>${esc(p.notes||'—')}</td>
   <td style="white-space:nowrap">${prBtn(p)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد استئذانات</td></tr>';
 }
@@ -4102,13 +4244,31 @@ function permitApprovalError(p){
  if(b.used+h>b.limit)return `لا يمكن الاعتماد: ${p.emp} استهلك ${fmtHours(b.used)} من رصيد ${fmtHours(b.limit)} لهذا الشهر، وهذا الطلب (${fmtHours(h)}) يتجاوز الرصيد`;
  return null;
 }
+/* سبب رفض موحّد لكل مسارات الرفض (الإجازة والاستئذان، من رئيس
+   القسم أو من الإدارة) — فلا يختلف السلوك بحسب الزر المضغوط. */
+/* السبب يُعرض للموظف تحت طلبه مباشرة — جمعه بلا عرضه بلا فائدة. */
+function rejNote(x){
+ return x&&x.rejectReason
+  ? `<div class="rej-note"><span>✖</span> سبب الرفض: ${esc(x.rejectReason)}</div>` : '';
+}
+async function askRejectReason(what){
+ return showConfirm(`سيُعرض السبب للموظف مع ${what}.`,{
+  icon:'📝',title:'سبب الرفض',okText:'تأكيد الرفض',okClass:'btn-danger',
+  input:{label:'لماذا رُفض الطلب؟',placeholder:'مثال: تعارض مع ارتباط في نفس الوقت',required:true}});
+}
 async function setPermit(id,status){
  if(status==='معتمد'){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
- const {error}=await sb.from('permits').update({status}).eq('id',id);
+ const patch={status};
+ if(status==='مرفوض'||status==='تم الرفض'){
+  const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why;
+ }
+ const {error}=await sb.from('permits').update(patch).eq('id',id);
  if(error){err(error);return} await refresh();toast('تم تحديث حالة الاستئذان')}
 async function mgrDecidePermit(id,approve){
  if(approve){const e=permitApprovalError(permits.find(x=>x.id===id));if(e){toast(e);return}}
- const {error}=await sb.from('permits').update({status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name}).eq('id',id);
+ const patch={status:approve?LV_P2:'مرفوض',dept_head:currentEmp.name};
+ if(!approve){const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('permits').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
@@ -5016,6 +5176,9 @@ const SCHEMA_CHECKS=[
  {t:'leaves',label:'بديل الإجازة السنوية',type:{substitute_id:'uuid',substitute_name:'text'}},
  {t:'permits',label:'ساعات الاستئذان',type:{permit_hours:'numeric(4,2)'}},
  {t:'company_settings',label:'رصيد الاستئذان الشهري',type:{permit_monthly_hours:'numeric(4,2)'}},
+ {t:'leaves', label:'سبب رفض الإجازة',   type:{rejection_reason:'text'}},
+ {t:'permits',label:'سبب رفض الاستئذان', type:{rejection_reason:'text'}},
+ {t:'form_submissions',label:'سبب رفض النموذج', type:{rejection_reason:'text'}},
 ];
 let _schemaChecked=false;
 async function checkSchema(){
@@ -6261,21 +6424,69 @@ function mgrRenderApprovals(){
   <td><b>${esc(s.emp)}</b></td><td>${esc(fm.name||'—')}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
+  <td>${needsSubstitute(l)
+    ? '<span title="يحتاج تعيين بديل — يُعتمد فرادى" style="color:var(--muted)">👥</span>'
+    : `<input type="checkbox" class="mgr-sel" value="${l.id}" onchange="mgrSelChanged()">`}</td>
   <td><b>${esc(l.emp)}</b></td><td>${esc(l.type)}${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
  $('mgrHistoryTbody').innerHTML=hist.length?hist.map(l=>`<tr><td>${esc(l.emp)}</td><td>${l.type}</td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد سجل بعد</td></tr>';
 }
-async function mgrDecide(id,approve,subDone){
+/* ===== الاعتماد الجماعي لرئيس القسم =====
+   عشرون طلباً كانت عشرين ضغطة، كلٌّ منها يعيد تحميل البيانات ورسم
+   الجدول. الآن تحديد ثم اعتماد واحد، مع إعادة تحميل واحدة في آخره.
+
+   الإجازات التي تحتاج بديلاً مستثناة عمداً: اعتمادها يفتح نافذة
+   اختيار البديل لكل طلب، فجمعها في ضغطة واحدة يُنتج سلسلة نوافذ
+   أسوأ من الضغطات. تُعتمد فرادى ويُشار إليها بعلامة 👥.
+   والرفض لا يُجمَّع أصلاً: لكل رفض سببه. */
+/* تمييز العدد في العربية: الواحد والاثنان لهما صيغتهما، و3–10
+   جمع قلّة، و11 فأكثر مفرد منصوب. «3 طلباً» خطأ شائع في الواجهات. */
+function arNum(n,one,two,few,many){
+ n=+n||0;
+ if(n===1)return one;
+ if(n===2)return two;
+ if(n>=3&&n<=10)return n+' '+few;
+ return n+' '+many;
+}
+function mgrSelIds(){return [...document.querySelectorAll('.mgr-sel:checked')].map(c=>c.value)}
+function mgrSelChanged(){
+ const n=mgrSelIds().length, bar=$('mgrBulkBar');
+ if(bar){bar.style.display=n?'flex':'none'; $('mgrBulkCount').textContent=arNum(n,'واحد محدَّد','اثنان محدَّدان','محدَّدة','محدَّداً');}
+ const all=document.querySelectorAll('.mgr-sel');
+ const sa=$('mgrSelAll'); if(sa){sa.checked=n>0&&n===all.length; sa.indeterminate=n>0&&n<all.length;}
+ const skipped=document.querySelectorAll('#mgrApprovalsTbody tr').length-all.length;
+ if($('mgrBulkNote'))$('mgrBulkNote').textContent=skipped?`(${arNum(skipped,'طلب واحد يحتاج','طلبان يحتاجان','طلبات تحتاج','طلباً يحتاج')} تعيين بديل — تُعتمد فرادى)`:'';
+}
+function mgrToggleAll(on){document.querySelectorAll('.mgr-sel').forEach(c=>c.checked=on);mgrSelChanged()}
+function mgrClearSel(){mgrToggleAll(false)}
+async function mgrBulkApprove(){
+ const ids=mgrSelIds(); if(!ids.length)return;
+ const names=ids.map(id=>(leaves.find(l=>l.id===id)||{}).emp).filter(Boolean);
+ if(!(await showConfirm(`سيُعتمد ${arNum(ids.length,'طلب واحد','طلبان','طلبات','طلباً')} ويُرفع للإدارة: ${names.slice(0,4).join('، ')}${names.length>4?` و${names.length-4} غيرهم`:''}.`,
+   {icon:'✅',title:'اعتماد جماعي',okText:`نعم، اعتمد ${ids.length}`,okClass:'btn-ok'})))return;
+ /* تحديث واحد لكل المحدَّد بدل نداء لكل طلب */
+ const {error}=await sb.from('leaves')
+   .update({status:LV_P2,dept_head:currentEmp.name}).in('id',ids);
+ if(error){err(error);return}
+ await refresh();
+ toast(`تم اعتماد ${arNum(ids.length,'طلب واحد','طلبين','طلبات','طلباً')} ورُفعت للإدارة`);
+}
+async function mgrDecide(id,approve,subPatch){
  // الإجازة السنوية لا تُعتمد إلا بعد تحديد بديل يمسك مكان الموظف خلال إجازته
- if(approve&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>mgrDecide(id,true,true));return}
- const {error}=await sb.from('leaves').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
+ if(approve&&!subPatch&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,pt=>mgrDecide(id,true,pt));return}
+ const patch={status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name};
+ if(subPatch&&typeof subPatch==='object')Object.assign(patch,subPatch);
+ if(!approve){const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('leaves').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
 async function mgrDecideForm(id,approve){
- const {error}=await sb.from('form_submissions').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
+ const patch={status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name};
+ if(!approve){const why=await askRejectReason('نموذجه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('form_submissions').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم اعتماد النموذج ورُفع للإدارة للاعتماد النهائي':'تم رفض النموذج');
 }
@@ -6327,7 +6538,7 @@ function epRenderLeaves(){
  ];
  $('epLeaveStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  const stTag=lvTag;
- $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
+ $('epLeaveTbody').innerHTML=my.length?my.map(l=>`<tr><td><b>${esc(l.type)}</b>${l.reason?' — '+esc(l.reason):''}${rejNote(l)}</td><td>${fmt(l.req)}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td><span class="tag ${stTag(l.status)}">${l.status}</span></td><td>${esc(l.substitute||'—')}</td><td>${esc(l.notes||'—')}</td><td>${l.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditLeave('${l.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات إجازة</td></tr>';
 }
 let editingLeaveId=null;
 function epNewLeave(){
@@ -6433,7 +6644,7 @@ function epRenderPermits(){
   ];
   $('epPermitStats').innerHTML=S.map(x=>`<div class="stat ${x.k}"><span class="num">${x.n}</span><span class="lbl">${x.l}</span></div>`).join('');
  }
- $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${p.status}</span></td><td>${esc(p.notes||'—')}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
+ $('epPermitTbody').innerHTML=rows.length?rows.map(p=>`<tr><td>${fmt(p.date)}</td><td>${p.time}</td><td>${hoursNum(permitHoursOf(p))}</td><td>${p.type}</td><td><span class="tag ${lvTag(p.status)}">${esc(p.status)}</span>${rejNote(p)}</td><td>${esc(p.notes||'—')}</td><td>${p.status===LV_P1?`<button class="btn btn-ghost btn-sm" onclick="epEditPermit('${p.id}')">✎ تعديل</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">لا توجد استئذانات</td></tr>';
 }
 const monthLabel=m=>{const p=String(m||'').split('-');return (MONTH_NAMES[+p[1]-1]||'')+' '+(p[0]||'')};
 /* تحديث ملخّص الرصيد داخل مودال الاستئذان لحظة بلحظة */
@@ -6717,7 +6928,7 @@ var css='.menu-btn{display:none;width:40px;height:40px;border-radius:10px;backgr
 +'.btn{min-height:44px;padding:10px 16px;font-size:13.5px}'
 +'.btn-sm{min-height:44px;padding:8px 14px;font-size:12.5px}'
 +'.nav-item,.nav-group-head{min-height:48px}'
-+'.dn-item{min-height:44px}'
+
 +'input,select,textarea{min-height:44px;font-size:16px}'   /* 16px يمنع تكبير iOS التلقائي */
 +'input[type=checkbox],input[type=radio]{width:22px;height:22px;min-height:22px}'
 /* "تحديد الكل" في رأس الجدول: 44 يشوّه ارتفاع الصف، و26 يستوفي
@@ -7785,6 +7996,7 @@ if(typeof window.renderExtraModuleBody==='function'){
    وأرقام القوة العاملة في صفّ أهدأ تحتها ===== */
 #dashStats{display:block;margin-bottom:22px}
 .dash-group+.dash-group{margin-top:18px}
+.dash-group.act{margin-bottom:14px}
 .dash-group .dg-head{display:flex;align-items:center;gap:10px;margin:0 0 9px}
 .dash-group .dg-t{font-weight:800;font-size:13.5px;color:var(--ink)}
 .dash-group .dg-n{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--bg);
@@ -7816,6 +8028,64 @@ if(typeof window.renderExtraModuleBody==='function'){
  background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
  padding:7px 11px;margin:-2px 0 12px}
 .window-note:empty{display:none}
+/* ===== تخطيط اللوحة: العمل يسار، المرجع يمين ===== */
+/* شريط القوة العاملة المرجعي */
+.ref-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 22px}
+.ref-chip{display:inline-flex;align-items:baseline;gap:7px;background:var(--card);
+ border:1px solid var(--line);border-radius:999px;padding:7px 15px;cursor:pointer;
+ font-family:inherit;transition:border-color .14s,background .14s;min-height:44px}
+.ref-chip:hover{background:var(--st-neut-bg);border-color:var(--muted)}
+.ref-chip b{font-family:'IBM Plex Sans Arabic';font-size:16px;font-weight:800;color:var(--ink);
+ font-variant-numeric:tabular-nums}
+.ref-chip span{font-size:12px;color:var(--muted);font-weight:600}
+.ref-chip.st-good b{color:var(--st-good)}
+@media(max-width:560px){.ref-chip{padding:6px 12px}.ref-chip b{font-size:14px}}
+.dash-main{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);gap:18px;align-items:start}
+.dash-col-work,.dash-col-ref{display:flex;flex-direction:column;gap:16px;min-width:0}
+.work-card{padding-bottom:10px}
+.chart-box.sm{height:208px}
+@media(max-width:1180px){.dash-main{grid-template-columns:1fr}}
+
+/* ===== صفّ طابور العمل ===== */
+#dashWorkQueue{display:flex;flex-direction:column;gap:2px;margin:4px -6px 0}
+.wq-row{display:flex;align-items:center;gap:12px;width:100%;text-align:start;
+ background:none;border:0;border-radius:10px;padding:11px 10px;cursor:pointer;
+ font-family:inherit;transition:background .14s;min-height:56px}
+.wq-row:hover{background:var(--st-neut-bg)}
+.wq-row+.wq-row{border-top:1px solid var(--line)}
+.wq-ic{flex-shrink:0;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+ font-size:16px;background:var(--st-neut-bg)}
+.wq-ic.warn{background:var(--st-warn-bg)} .wq-ic.bad{background:var(--st-bad-bg)}
+.wq-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.wq-body b{font-size:13.5px;color:var(--ink);font-weight:700;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wq-body small{font-size:11.5px;color:var(--muted);
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wq-wait{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+ background:var(--st-neut-bg);color:var(--muted);white-space:nowrap}
+.wq-wait.warn{background:var(--st-warn-bg);color:var(--st-warn)}
+.wq-wait.bad {background:var(--st-bad-bg); color:var(--st-bad)}
+.wq-chev{flex-shrink:0;color:var(--muted);font-size:17px;opacity:.5}
+.wq-more{width:100%;background:none;border:0;border-top:1px solid var(--line);margin-top:4px;
+ padding:11px;color:var(--pine);font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+.wq-more:hover{background:var(--st-neut-bg)}
+@media(max-width:560px){.wq-chev{display:none}.wq-body small{white-space:normal}}
+
+/* بطاقات المؤشرات صارت شريطاً مرجعياً: العمل هو البطل الآن */
+#dashStats .dash-group.act .stat .num{font-size:25px}
+#dashStats .dash-group .stat{padding:11px 14px}
+#dashStats .dash-group .stat .lbl{font-size:11.5px}
+#dashStats .dash-group.wrk .stat .num{font-size:19px}
+/* الشارة تكرّر التسمية في صفّ الإجراءات («بانتظار قرارك» مرتين) */
+#dashStats .dash-group.act .stat .st-note{display:none}
+#dashStats .dash-group.act .stat.is-zero .st-note{display:inline-flex}
+.bulk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+ padding:10px 14px;background:var(--st-good-bg);border:1px solid var(--st-good-line);border-radius:10px}
+.bulk-bar b{font-size:13.5px;color:var(--st-good)}
+.bulk-bar small{color:var(--muted);font-size:11.5px}
+.rej-note{display:flex;align-items:flex-start;gap:6px;margin-top:6px;font-size:12px;
+ color:var(--st-bad);background:var(--st-bad-bg);border:1px solid var(--danger);
+ border-radius:8px;padding:6px 9px;line-height:1.65;max-width:46ch}
 /* ===== لوحة انتهاء الجلسة وتحذير الخمول ===== */
 .session-gate{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;
  background:rgba(8,14,28,.72);backdrop-filter:blur(3px);padding:20px}
@@ -7876,40 +8146,7 @@ if(typeof window.renderExtraModuleBody==='function'){
 #page-dashboard table th{background:var(--st-neut-bg);color:var(--ink);border-bottom:1px solid var(--hair);font-size:12px}
 #page-dashboard table tbody tr:nth-child(even){background:var(--card)}
 #page-dashboard table td{border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
-/* مفتاح الألوان */
-#stLegend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--card);
-  border:1px solid var(--hair);border-radius:12px;padding:10px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted)}
-#stLegend b{color:var(--ink);font-weight:800;margin-inline-end:4px}
-#stLegend span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
-#stLegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-/* التبويب */
-#dashShell{display:grid;grid-template-columns:236px 1fr;gap:20px;align-items:start}
-#dashNav{position:sticky;top:74px;background:var(--card);border:1px solid var(--hair);border-radius:14px;
-  padding:9px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
-#dashNav .dn-title{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--muted);padding:8px 11px 6px}
-.dn-item{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-radius:10px;
-  margin-bottom:3px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--muted);text-align:right;
-  background:none;border:none;cursor:pointer;transition:background .14s,color .14s;position:relative}
-.dn-item:hover{background:var(--st-neut-bg);color:var(--ink)}
-.dn-item.on{background:var(--pine);color:var(--on-pine);font-weight:700;box-shadow:0 2px 8px rgba(20,48,135,.25)}
-.dn-item .dn-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
-.dn-item .dn-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dn-count{font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;background:var(--st-neut-bg);
-  color:var(--muted);font-variant-numeric:tabular-nums}
-.dn-item.on .dn-count{background:rgba(255,255,255,.22);color:#fff}
-.dn-dot{width:8px;height:8px;border-radius:50%;background:var(--st-bad-line);flex-shrink:0;
-  box-shadow:0 0 0 3px rgba(179,38,30,.14)}
-.dash-sec{display:none}
-.dash-sec.on{display:block;animation:dnFade .22s ease}
-@keyframes dnFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media(max-width:1024px){
-  #dashShell{grid-template-columns:1fr;gap:14px}
-  #dashNav{position:static;display:flex;gap:7px;overflow-x:auto;padding:8px;scrollbar-width:none}
-  #dashNav::-webkit-scrollbar{display:none}
-  #dashNav .dn-title{display:none}
-  .dn-item{width:auto;flex:0 0 auto;margin-bottom:0;padding:9px 14px;font-size:12.5px;white-space:nowrap}
-  .dn-item .dn-lbl{overflow:visible}
-}
+/* تنسيقات «أقسام اللوحة» ودلالة الألوان أُزيلت مع طبقتها. */
 </style>
 
 <script>
@@ -8134,142 +8371,11 @@ function apply(card){
 }
 window.__colorTick=function(){document.querySelectorAll('#page-dashboard .stat').forEach(apply)};
 })();
-
-/* ============================================================
-   الجزء 3 — التبويب الداخلي (يتولّى الترتيب أيضاً)
-   ============================================================ */
-(function(){
-"use strict";
-const SECS=[
- {id:'glKpiSection',ic:'📒',lbl:'المؤشرات المحاسبية'},
- {id:'dashFinanceSection',ic:'💰',lbl:'النظرة المالية'},
- {id:'dashEmpGroup',ic:'👥',lbl:'نظرة الموظفين'},
- {id:'dashAlertsGroup',ic:'🔔',lbl:'التنبيهات والمهام'},
-];
-const HIDE_CHARTS=['chartLeaves','chartTrend'];   /* الشارتان المخفيان */
-let active=null;
-const getTab=()=>{try{return sessionStorage.getItem('dashTab')}catch(e){return null}};
-const setTab=v=>{try{sessionStorage.setItem('dashTab',v)}catch(e){}};
-
-function legend(){
- const page=document.getElementById('page-dashboard');
- if(!page||document.getElementById('stLegend'))return;
- const h=page.querySelector(':scope > .page-head');if(!h)return;
- const d=document.createElement('div');d.id='stLegend';
- d.innerHTML='<b>دلالة الألوان:</b>'
-  +'<span><i style="background:var(--st-good-line)"></i> سليم</span>'
-  +'<span><i style="background:var(--st-warn-line)"></i> يحتاج متابعة</span>'
-  +'<span><i style="background:var(--st-bad-line)"></i> يتطلب إجراءً عاجلاً</span>'
-  +'<span><i style="background:var(--st-neut-line)"></i> معلومة عامة</span>';
- h.parentNode.insertBefore(d,h.nextSibling);
-}
-function build(){
- const page=document.getElementById('page-dashboard');
- if(!page)return false;
- if(document.getElementById('dashShell'))return true;
- const kpi=document.getElementById('glKpiSection');
- const fin=document.getElementById('dashFinanceSection');
- const stats=document.getElementById('dashStats');
- if(!kpi||!fin||!stats)return false;
-
- HIDE_CHARTS.forEach(id=>{const c=document.getElementById(id),card=c&&c.closest('.card');if(card)card.style.display='none'});
-
- const head=page.querySelector(':scope > .page-head');
- const grid=[...page.children].find(el=>el.classList&&el.classList.contains('dash-charts-grid'));
- const alerts=document.getElementById('dashAlerts')&&document.getElementById('dashAlerts').closest('.card');
-
- const empHd=document.createElement('div');
- empHd.id='dashEmpHead';empHd.className='page-head';empHd.style.marginTop='6px';
- empHd.innerHTML='<div><h1 style="font-size:20px">👥 نظرة الموظفين</h1><p>أعداد الموظفين والطلبات المعلّقة والغياب</p></div>';
- const empGroup=document.createElement('div');empGroup.id='dashEmpGroup';
- empGroup.appendChild(empHd);empGroup.appendChild(stats);if(grid)empGroup.appendChild(grid);
-
- const alHd=document.createElement('div');alHd.className='page-head';alHd.style.marginTop='6px';
- alHd.innerHTML='<div><h1 style="font-size:20px">🔔 التنبيهات والمهام</h1><p>ما يحتاج قراراً أو متابعة منك</p></div>';
- const alGroup=document.createElement('div');alGroup.id='dashAlertsGroup';
- alGroup.appendChild(alHd);if(alerts)alGroup.appendChild(alerts);
-
- const shell=document.createElement('div');shell.id='dashShell';
- const nav=document.createElement('div');nav.id='dashNav';
- nav.innerHTML='<div class="dn-title">أقسام اللوحة</div>';
- const content=document.createElement('div');content.id='dashContent';
- [kpi,fin,empGroup,alGroup].forEach(el=>{el.classList.add('dash-sec');content.appendChild(el)});
- SECS.forEach(s=>{
-  const b=document.createElement('button');b.className='dn-item';b.dataset.sec=s.id;
-  b.innerHTML=`<span class="dn-ic">${s.ic}</span><span class="dn-lbl">${s.lbl}</span><span class="dn-count" style="display:none"></span>`;
-  b.onclick=()=>show(s.id);nav.appendChild(b);
- });
- shell.appendChild(nav);shell.appendChild(content);
- page.appendChild(shell);
- legend();
- if(head)page.insertBefore(head,page.firstChild);
- const lg=document.getElementById('stLegend');if(lg&&head)page.insertBefore(lg,head.nextSibling);
- show(active||getTab()||SECS[0].id);
- return true;
-}
-function show(id){
- if(!document.getElementById(id))id=SECS[0].id;
- active=id;setTab(id);
- document.querySelectorAll('#dashContent .dash-sec').forEach(el=>el.classList.toggle('on',el.id===id));
- document.querySelectorAll('#dashNav .dn-item').forEach(b=>b.classList.toggle('on',b.dataset.sec===id));
- setTimeout(()=>{try{Object.values(DASH_CHARTS||{}).forEach(c=>{try{c.resize()}catch(e){}})}catch(e){}},60);
-}
-function badges(){
- const set=(sec,cnt,alert)=>{
-  const b=document.querySelector(`#dashNav .dn-item[data-sec="${sec}"]`);if(!b)return;
-  const c=b.querySelector('.dn-count');
-  if(cnt===null||cnt===undefined||cnt===''){c.style.display='none'}else{c.style.display='';c.textContent=cnt}
-  let d=b.querySelector('.dn-dot');
-  if(alert&&!d){d=document.createElement('span');d.className='dn-dot';b.appendChild(d)}
-  if(!alert&&d)d.remove();
- };
- const bad=s=>!!document.querySelector('#'+s+' .stat.st-bad');
- const kpiSec=document.getElementById('glKpiSection');
- const kpiBtn=document.querySelector('#dashNav .dn-item[data-sec="glKpiSection"]');
- const kpiOK=(typeof hasPerm==='function')&&hasPerm('accounting','view');
- if(kpiBtn)kpiBtn.style.display=(!kpiOK||(kpiSec&&kpiSec.dataset.allowed==='0'))?'none':'';
- /* والنظرة المالية كذلك: إخفاء زرها لمن لا يملك أي وحدة مالية */
- const finBtn=document.querySelector('#dashNav .dn-item[data-sec="dashFinanceSection"]');
- const finOK=(typeof hasFinance==='function')&&hasFinance();
- if(finBtn)finBtn.style.display=finOK?'':'none';
- /* لو كان القسم المفتوح صار محجوباً، انتقل لأول قسم مسموح */
- const cur=document.querySelector('#dashNav .dn-item.on');
- if(cur&&cur.style.display==='none'){
-  const first=[...document.querySelectorAll('#dashNav .dn-item')].find(b=>b.style.display!=='none');
-  if(first)first.click();
- }
- set('glKpiSection','',bad('glKpiSection'));
- set('dashFinanceSection','',bad('dashFinanceSection'));
- try{set('dashEmpGroup',(typeof employees!=='undefined'?employees:[]).filter(e=>e.status==='نشط').length||null,bad('dashEmpGroup'))}
- catch(e){set('dashEmpGroup',null,false)}
- try{const n=parseInt((document.getElementById('alertCount')||{}).textContent||'0',10)||0;set('dashAlertsGroup',n||null,n>0)}
- catch(e){set('dashAlertsGroup',null,false)}
-}
-function run(){
- try{if(window.__kpiTick)window.__kpiTick()}catch(e){}
- try{if(window.__colorTick)window.__colorTick()}catch(e){}
- try{if(build())badges()}catch(e){hhQuiet('بناء لوحة التحكم',e)}
-}
-if(typeof window.renderDashboard==='function'){
- const _o=window.renderDashboard;
- window.renderDashboard=function(){const r=_o.apply(this,arguments);setTimeout(run,40);return r};
-}
-setTimeout(run,2000);
-})();
 </script>
-<script>
-(function(){
- const fix=()=>{
-  const on=(document.querySelector('#dashNav .dn-item.on')||{}).dataset;
-  const id=on?on.sec:null; if(!id)return;
-  document.querySelectorAll('#dashContent > div').forEach(d=>{
-   d.style.setProperty('display', d.id===id?'block':'none', 'important');
-  });
- };
- document.addEventListener('click',e=>{ if(e.target.closest('#dashNav .dn-item'))setTimeout(fix,20) },true);
- setInterval(fix,900);
-})();
-</script>
+<!-- طبقة «أقسام اللوحة» ومؤقّت الإجبار أُزيلا: كانا يخفيان
+     التنبيهات خلف تبويب ويضيفان صندوق تنقّل وشريط دلالة ألوان
+     فوق لوحة لا محتوى فيها، ويشغّلان setInterval كل 900ms.
+     اللوحة الآن صفحة واحدة تُمرَّر، محورها العمل لا الفهرسة. -->
 <!-- ============================================================
      دورة كشف الرواتب — المرحلة 2: الواجهة
      شاشة تحضير لسلامة (بلا رواتب) + لوحة مراجعة للمحاسب
