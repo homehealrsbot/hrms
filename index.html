@@ -1250,8 +1250,15 @@ table.pay-kv td:first-child{color:var(--muted);font-weight:600;width:120px;white
 
 <section class="page" id="ep-approvals">
   <div class="page-head"><div><h1>اعتمادات القسم</h1><p>طلبات إجازات موظفي قسمك — اعتمادك يحوّلها للاعتماد النهائي لدى الإدارة</p></div></div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>الموظف</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>المرفق</th><th>إجراء</th></tr></thead>
+  <div class="card">
+    <div id="mgrBulkBar" class="bulk-bar" style="display:none">
+      <b id="mgrBulkCount">0 محدَّد</b>
+      <button class="btn btn-ok btn-sm" onclick="mgrBulkApprove()">✅ اعتماد المحدَّد</button>
+      <button class="btn btn-ghost btn-sm" onclick="mgrClearSel()">إلغاء التحديد</button>
+      <small id="mgrBulkNote"></small>
+    </div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th style="width:38px"><input type="checkbox" id="mgrSelAll" onchange="mgrToggleAll(this.checked)" title="تحديد الكل"></th><th>الموظف</th><th>النوع</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>السبب</th><th>المرفق</th><th>إجراء</th></tr></thead>
     <tbody id="mgrApprovalsTbody"></tbody></table></div></div>
   <div class="card"><h3>سجل ما سبق اعتماده أو رفضه في قسمك</h3><div class="tbl-wrap"><table>
     <thead><tr><th>الموظف</th><th>النوع</th><th>الفترة</th><th>الحالة</th></tr></thead>
@@ -5074,6 +5081,7 @@ const SCHEMA_CHECKS=[
  {t:'company_settings',label:'رصيد الاستئذان الشهري',type:{permit_monthly_hours:'numeric(4,2)'}},
  {t:'leaves', label:'سبب رفض الإجازة',   type:{rejection_reason:'text'}},
  {t:'permits',label:'سبب رفض الاستئذان', type:{rejection_reason:'text'}},
+ {t:'form_submissions',label:'سبب رفض النموذج', type:{rejection_reason:'text'}},
 ];
 let _schemaChecked=false;
 async function checkSchema(){
@@ -6319,21 +6327,68 @@ function mgrRenderApprovals(){
   <td><b>${esc(s.emp)}</b></td><td>${esc(fm.name||'—')}</td><td>${fmt(s.created_at)}</td>
   <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="showFormSubs('${s.form_id}')">عرض التفاصيل</button> <button class="btn btn-ok btn-sm" onclick="mgrDecideForm('${s.id}',true)">اعتماد ورفع للإدارة</button> <button class="btn btn-danger btn-sm" onclick="mgrDecideForm('${s.id}',false)">رفض</button></td></tr>`}).join(''):'<tr><td colspan="4" class="empty">لا توجد نماذج بانتظار اعتمادك 🎉</td></tr>';
  $('mgrApprovalsTbody').innerHTML=pending.length?pending.map(l=>`<tr>
+  <td>${needsSubstitute(l)
+    ? '<span title="يحتاج تعيين بديل — يُعتمد فرادى" style="color:var(--muted)">👥</span>'
+    : `<input type="checkbox" class="mgr-sel" value="${l.id}" onchange="mgrSelChanged()">`}</td>
   <td><b>${esc(l.emp)}</b></td><td>${esc(l.type)}${l.reason?' — '+esc(l.reason):''}</td><td>${fmt(l.start)}</td><td>${fmt(l.end)}</td><td>${l.days}</td><td>${esc(l.reason||'—')}</td>
   <td>${l.attachment?`<button class="btn btn-ghost btn-sm" onclick="openStoredFile('${l.attachment}','مرفق إجازة')">📎</button>`:'—'}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
+  <td style="white-space:nowrap"><button class="btn btn-ok btn-sm" onclick="mgrDecide('${l.id}',true)">${needsSubstitute(l)?'👥 تعيين بديل واعتماد':'اعتماد ورفع للإدارة'}</button> <button class="btn btn-danger btn-sm" onclick="mgrDecide('${l.id}',false)">رفض</button></td></tr>`).join(''):'<tr><td colspan="9" class="empty">لا توجد طلبات بانتظار اعتمادك 🎉</td></tr>';
  const hist=leaves.filter(l=>l.dept===currentEmp.dept&&l.employee_id!==currentEmp.id&&l.status!==LV_P1);
  $('mgrHistoryTbody').innerHTML=hist.length?hist.map(l=>`<tr><td>${esc(l.emp)}</td><td>${l.type}</td><td>${fmt(l.start)} → ${fmt(l.end)}</td><td><span class="tag ${lvTag(l.status)}">${l.status}</span></td></tr>`).join(''):'<tr><td colspan="4" class="empty">لا يوجد سجل بعد</td></tr>';
+}
+/* ===== الاعتماد الجماعي لرئيس القسم =====
+   عشرون طلباً كانت عشرين ضغطة، كلٌّ منها يعيد تحميل البيانات ورسم
+   الجدول. الآن تحديد ثم اعتماد واحد، مع إعادة تحميل واحدة في آخره.
+
+   الإجازات التي تحتاج بديلاً مستثناة عمداً: اعتمادها يفتح نافذة
+   اختيار البديل لكل طلب، فجمعها في ضغطة واحدة يُنتج سلسلة نوافذ
+   أسوأ من الضغطات. تُعتمد فرادى ويُشار إليها بعلامة 👥.
+   والرفض لا يُجمَّع أصلاً: لكل رفض سببه. */
+/* تمييز العدد في العربية: الواحد والاثنان لهما صيغتهما، و3–10
+   جمع قلّة، و11 فأكثر مفرد منصوب. «3 طلباً» خطأ شائع في الواجهات. */
+function arNum(n,one,two,few,many){
+ n=+n||0;
+ if(n===1)return one;
+ if(n===2)return two;
+ if(n>=3&&n<=10)return n+' '+few;
+ return n+' '+many;
+}
+function mgrSelIds(){return [...document.querySelectorAll('.mgr-sel:checked')].map(c=>c.value)}
+function mgrSelChanged(){
+ const n=mgrSelIds().length, bar=$('mgrBulkBar');
+ if(bar){bar.style.display=n?'flex':'none'; $('mgrBulkCount').textContent=arNum(n,'واحد محدَّد','اثنان محدَّدان','محدَّدة','محدَّداً');}
+ const all=document.querySelectorAll('.mgr-sel');
+ const sa=$('mgrSelAll'); if(sa){sa.checked=n>0&&n===all.length; sa.indeterminate=n>0&&n<all.length;}
+ const skipped=document.querySelectorAll('#mgrApprovalsTbody tr').length-all.length;
+ if($('mgrBulkNote'))$('mgrBulkNote').textContent=skipped?`(${arNum(skipped,'طلب واحد يحتاج','طلبان يحتاجان','طلبات تحتاج','طلباً يحتاج')} تعيين بديل — تُعتمد فرادى)`:'';
+}
+function mgrToggleAll(on){document.querySelectorAll('.mgr-sel').forEach(c=>c.checked=on);mgrSelChanged()}
+function mgrClearSel(){mgrToggleAll(false)}
+async function mgrBulkApprove(){
+ const ids=mgrSelIds(); if(!ids.length)return;
+ const names=ids.map(id=>(leaves.find(l=>l.id===id)||{}).emp).filter(Boolean);
+ if(!(await showConfirm(`سيُعتمد ${arNum(ids.length,'طلب واحد','طلبان','طلبات','طلباً')} ويُرفع للإدارة: ${names.slice(0,4).join('، ')}${names.length>4?` و${names.length-4} غيرهم`:''}.`,
+   {icon:'✅',title:'اعتماد جماعي',okText:`نعم، اعتمد ${ids.length}`,okClass:'btn-ok'})))return;
+ /* تحديث واحد لكل المحدَّد بدل نداء لكل طلب */
+ const {error}=await sb.from('leaves')
+   .update({status:LV_P2,dept_head:currentEmp.name}).in('id',ids);
+ if(error){err(error);return}
+ await refresh();
+ toast(`تم اعتماد ${arNum(ids.length,'طلب واحد','طلبين','طلبات','طلباً')} ورُفعت للإدارة`);
 }
 async function mgrDecide(id,approve,subDone){
  // الإجازة السنوية لا تُعتمد إلا بعد تحديد بديل يمسك مكان الموظف خلال إجازته
  if(approve&&!subDone&&needsSubstitute(leaves.find(x=>x.id===id))){openSubstitutePicker(id,()=>mgrDecide(id,true,true));return}
- const {error}=await sb.from('leaves').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
+ const patch={status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name};
+ if(!approve){const why=await askRejectReason('طلبه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('leaves').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم الاعتماد ورُفع الطلب للإدارة للاعتماد النهائي':'تم رفض الطلب');
 }
 async function mgrDecideForm(id,approve){
- const {error}=await sb.from('form_submissions').update({status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name}).eq('id',id);
+ const patch={status:approve?LV_P2:'تم الرفض',dept_head:currentEmp.name};
+ if(!approve){const why=await askRejectReason('نموذجه'); if(!why)return; patch.rejection_reason=why}
+ const {error}=await sb.from('form_submissions').update(patch).eq('id',id);
  if(error){err(error);return}
  await refresh();toast(approve?'تم اعتماد النموذج ورُفع للإدارة للاعتماد النهائي':'تم رفض النموذج');
 }
@@ -7874,6 +7929,10 @@ if(typeof window.renderExtraModuleBody==='function'){
  background:var(--st-neut-bg);border:1px solid var(--line);border-radius:9px;
  padding:7px 11px;margin:-2px 0 12px}
 .window-note:empty{display:none}
+.bulk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+ padding:10px 14px;background:var(--st-good-bg);border:1px solid var(--st-good-line);border-radius:10px}
+.bulk-bar b{font-size:13.5px;color:var(--st-good)}
+.bulk-bar small{color:var(--muted);font-size:11.5px}
 .rej-note{display:flex;align-items:flex-start;gap:6px;margin-top:6px;font-size:12px;
  color:var(--st-bad);background:var(--st-bad-bg);border:1px solid var(--danger);
  border-radius:8px;padding:6px 9px;line-height:1.65;max-width:46ch}
